@@ -1,0 +1,3052 @@
+<!DOCTYPE html> 
+<html lang="en">
+	<head>
+	
+		<meta charset="utf-8">
+		
+		<title>Encedo Manager</title>
+		<meta name="description" content="Encedo is a secure enclave and trusted execution environment, the source of root-of-trust in the cloud.">
+		<meta name="keywords" content="security, cybersecurity">
+		<meta name="copyright" content="All Rights Reserved">
+		<meta name="author" content="Encedo">
+		
+		<meta name="distribution" content="Global">
+		<meta name="robots" content="none">
+		<meta name="googlebot" content="none">
+		<meta name="revisit-after" content="420 days">
+
+		<meta name="HandheldFriendly" content="true">
+		<meta name="viewport" content="width=device-width, maximum-scale=5.0, user-scalable=yes">
+		
+		<base href=".">
+		<meta name="apple-mobile-web-app-capable" content="yes"> 
+		<meta name="apple-mobile-web-app-status-bar-style" content="black"> 
+		<meta name="theme-color" content="#ffffff">
+		
+		<link rel="manifest" href="manifest.webmanifest">
+		
+		<link rel="shortcut icon" href="favicon.ico"> 
+		
+	</head>
+	
+	<body itemscope="" itemtype="http://schema.org/WebPage" class="offline">
+	
+		<style>
+		/* latin */
+		@font-face {
+		  font-family: 'Inter';
+		  font-style: normal;
+		  font-weight: 300;
+		  font-display: swap;
+		  src: url(assets/font/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7.woff2) format('woff2');
+		  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+		}
+		/* latin */
+		@font-face {
+		  font-family: 'Inter';
+		  font-style: normal;
+		  font-weight: 700;
+		  font-display: swap;
+		  src: url(assets/font/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7.woff2) format('woff2');
+		  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+		}
+		.TLloading { opacity: 1; transform: translate(0px, 0px); -webkit-transform: translate(0px, 0px);-moz-transform: translate(0px, 0px);-o-transform: translate(0px, 0px);-ms-transform: translate(0px, 0px); transition-duration: .5s; position: absolute; top: 0px; left: 0px; right: 0px; bottom: 0px; display: flex; justify-content: center; align-items: center; z-index: 1; background: linear-gradient(#f3f3f3, #fff); }
+		.offline .TLloading { opacity: 0; transform: translate(0px, 80px); -webkit-transform: translate(0px, 80px);-moz-transform: translate(0px, 80px);-o-transform: translate(0px, 80px);-ms-transform: translate(0px, 80px); }
+		.TLloading .TLloading-wrapper { text-align: center; font-weight: bold; }
+		.TLloading .TLloading-wrapper p { font-size: 140%; padding: 20px; }
+		.TLloading .TLloading-wrapper img { opacity: 0; }
+		.visible .TLloading { opacity: 0; }
+
+		body.loaded .TLloading { opacity: 0 !important; }
+
+		.TPLapp { opacity: 0; transition-duration: 1s; position: relative; z-index: 2; }
+		.loaded .TPLapp { opacity: 1; }
+		.TPLapp.blurred { filter: blur(0.3rem); }
+		
+		.progressB { display: block; background: linear-gradient(-45deg, #f4f4f4, #eee, #f4f4f4); height: 6px; width: 100%; position: relative; margin-bottom: 40px; margin-left: 3px; margin-right: 3px; }
+		.progressB .bar { display: block; background: linear-gradient(-45deg, #6E358C, #2A225E, #6E358C); height: 6px; width: 0%; position: relative; transition-duration: 1s; }
+		.progressB .bar span { float: right; font-weight: bold; text-align: right; padding-top: 12px; }
+		.progressB:before { display: block; content: ""; width: 10px; height: 10px; background: #6E358C; position: absolute; top: -2px; left: -3px; border-radius: 50%; }
+		.progressB:after { display: block; content: ""; width: 10px; height: 10px; background: #6E358C; position: absolute; top: -2px; right: -3px; border-radius: 50%; }
+		</style>
+
+		<script>
+		let runtime = [];
+		const __time = parseInt(Date.now());
+		</script>
+	
+		<div class="TPLapp special transparent" id="appContainer">
+		
+			<div class="TPLsplash"></div>
+			
+			<div class="TPLmenu">
+			
+				<div class="menuWrapper">
+					<h1 class="mainH1 changePage animatedX moved moved3" rel="home"><span class="img"></span><strong>Encedo<br>Manager</strong></h1>
+					
+					<br><br><br>
+					
+					<ul class="mainMenu deader" id="menuAfterInit">
+						<li class="animatedX moved moved3"><a rel="keychain" class="changePage animatedX"><i class="icon-key"></i> Keychain</a></li>
+						<li class="animatedX moved moved3 isThereStorage index"><a rel="securestorage" class="changePage animatedX"><i class="icon-database"></i> Secure drive</a></li>
+						<li class="animatedX moved moved3"><a rel="thirdparties" class="changePage animatedX"><i class="icon-lock"></i> Trusted Apps</a></li>
+						<li class="animatedX moved moved3"><a rel="devices" class="changePage animatedX"><i class="icon-link-1"></i> Paired devices</a></li>
+						
+						<li class="animatedX moved moved3 index"><a rel="notifications" class="changePage animatedX"><i class="icon-bell"></i> Notifications</a></li>
+						<li class="animatedX moved moved3"><br><span class="separ"></span></li>
+						
+						<li class="animatedX moved moved3"><a rel="hardware" class="changePage animatedX"><i class="icon-plug"></i> Hardware status</a></li>
+						<li class="animatedX moved moved3"><a rel="consolelog" class="changePage animatedX"><i class="icon-book"></i> Operation Log</a></li>
+						<li class="animatedX moved moved3"><a rel="settings" class="changePage animatedX"><i class="icon-cog"></i> Settings</a></li>
+						<li class="animatedX moved moved3"><a rel="about" class="changePage animatedX"><i class="icon-info"></i> About</a></li>
+					</ul> 
+					
+					<ul class="mainMenu deader" id="menuBeforeInit">
+						<li class="animatedX moved moved3"><a rel="gettingStarted" class="changePage animatedX"><i class="icon-user"></i> <strong>Personalize</strong></a></li>
+						<li class="animatedX moved moved3"><a rel="update" class="changePage animatedX"><i class="icon-cog"></i> Software</a></li>
+						<li class="animatedX moved moved3"><a rel="about" class="changePage animatedX"><i class="icon-info"></i> About</a></li>
+					</ul>
+					
+					<div class="wyswig">
+						
+						<a id="resetAll" class="buttonCTA index">Reset Application | <i class="icon-plug"></i></a>
+						
+						<br>
+						
+						<a id="eraseAll" class="buttonCTA buttonCTAG index">Start tutorial | <i class="icon-unlink"></i></a>
+					
+					</div>
+				</div>
+			</div>
+			
+			<div class="TPLbreadcrumbs" id="TPLbreadcrumbs">
+
+			</div>
+			
+			<div class="TPLstatusbar">
+			
+				<span class="animatedX moved moved2 redAlert index" id="update_available"><span class="name changePage blink" rel="update">Update available</span></span>
+				<span class="animatedX moved moved2 redAlert2" id="encedo_status_head"><span class="named changePage" rel="hardware">Connecting...</span></span>
+				<span class="animatedX moved moved2 redAlert2 index"><span class="name makeAction" rel="toggleMobileAuth">Mobile auth ON</span></span>
+				
+				<div class="form-radio form-radio-full form-radio-inline animatedX moved moved2 clearfix index makeAction" style="display: inline-block; margin: -2px 0px -10px 0px;" id="mobileAuthMonit" rel="toggleMobileAuth">
+					<div class="form-radio-legend form-full-line">Mobile auth</div>
+					<label class="form-radio-label form-radio-label-short">
+						<input name="mobile_auth_checker" class="form-radio-field" type="radio" required value="1" checked data-initier="" />
+						<i class="form-radio-button"></i>
+						<span>ON</span>
+					</label>
+					<label class="form-radio-label form-radio-label-short">
+						<input name="mobile_auth_checker" class="form-radio-field" type="radio" required value="2" data-initier="" />
+						<i class="form-radio-button"></i>
+						<span>OFF</span>
+					</label>
+				</div>
+										
+				<div class="form-checkbox form-onoff form-radio-inline" style="display: none; margin: 0px;">
+					<label class="form-onoff-label">
+						<div class="form-checkbox-legend animatedX moved moved2" style="padding-top: 9px; font-size: 90%;">Mobile auth</div>
+						<input class="form-onoff-field" name="lockedOnStart" type="checkbox" value="1">
+						<div class="animatedX moved moved2"><span></span></div>
+					</label>
+				</div>
+				
+				<span class="animatedX moved moved2"><span class="sepo"></span></span>
+				<span class="animatedX moved moved2 basicOff"><span class="name changePage" rel="user" id="dashboard_username"></span></span>
+				<span class="animatedX moved moved2 basicOff"><span class="butto changePage" rel="settings"><i class="icon-cog"></i></span></span>
+				<span class="animatedX moved moved2"><span class="butto makeAction" rel="reverseColors"><i class="icon-moon"></i></span></span>
+				<span class="animatedX moved moved2"><span class="butto makeAction" rel="break"><i class="icon-logout"></i></span></span>
+				
+			</div>
+			
+			<div class="TPLfooter">
+				<span class="changePage" rel="hardware"><i class="icon-info"></i> Encedo <span id="manager_version"></span></span>
+			</div>
+			
+			<div class="TPLcontainerSpecial">
+			
+				<div class="TPLpageContainer" id="pageContainer">
+				
+					<div class="page" id="error" data-title="Ups, some error occured!" data-class="wider">
+					
+						<div class="wyswig wyswig15pax">
+						
+							<h1 class="animatedX moved"><span>Some kind of an </span><br>Error Occured</h1>
+							
+							<h2 class="animatedX moved">It looks like something is not working properly or we lost connection to USB Device.</h2>
+							
+							<br>
+							
+							<br>
+							
+							<div class="animatedX moved bounce">
+								<a class="buttonCTA refreshDashboard"> &nbsp; Refresh now &nbsp; <i class="icon-angle-right"></i> &nbsp;</a>
+							</div>
+						
+						</div>
+						
+					</div>
+					
+					
+					<div class="page" id="search" data-title="Search in manager" data-class="wider">
+						<div class="wyswig wyswig15pax">
+						
+							<h1 class="animatedX moved"><span>Let's</span><br>Search</h1>	
+
+							<form class="form-card animatedX moved" style="margin: 0;">
+				
+								<fieldset class="form-fieldset form-fieldset-nop animatedX moved">
+								
+									<legend class="form-legend index">Material Design Formular</legend>
+									
+									<div class="form-element form-input animatedX moved">
+										<input id="authenticate_search" class="form-element-field" placeholder=" " type="text">
+										<div class="form-element-bar"></div>
+										<label class="form-element-label" for="authenticate_search">What are you looking for?</label>
+									</div>
+								
+								</fieldset>
+								
+								<fieldset>
+									<p class="animatedX moved">
+										<a class="buttonCTA makeAction bounce" rel="search_now" id="search_button"> &nbsp; Search &nbsp; <i class="icon-search"></i> &nbsp;</a>
+									</p>
+								</fieldset>
+								
+							</form>
+							
+							<br><br><br><br><br>
+							
+							<div class="animatedX moved">
+								<a class="buttonCTAGX changePage animatedX moved" rel="home"> &nbsp; Back to home &nbsp; <i class="icon-home"></i> &nbsp;</a>
+							</div>
+						
+						</div>		
+					</div>
+					
+					<div class="page" id="update" data-title="Update console" data-class="wider">
+					
+						<div class="wyswig wyswig15pax">
+						
+							<h1 class="animatedX moved">Software update</h1>
+							
+							<h2 class="animatedX moved">It looks like there is a newer version of Encedo software. For security and privacy, it is crucial to keep your software up to date.</h2> 
+							
+						
+							
+							<pre></pre>
+							
+							<br><br>			
+							
+							<style>
+							
+							.TPLapp .wyswig .c3d {  }
+							.TPLapp .wyswig .c3d .updtItem { word-wrap: wrap; }
+							.TPLapp .wyswig .c3d .updtItem sup { display: inline-block; vertical-align: super; font-size: smaller; margin-top: -4px; }
+							.TPLapp .wyswig .c3d .updtItem h3 { border-bottom: 3px solid #111; padding-bottom: 12px; margin-bottom: 15px; }
+							.TPLapp .wyswig .c3d .updtItem h3 i { display: inline-block; width: 36px; }
+							.TPLapp .wyswig .c3d .updtItem p.status { display: inline-block; margin-left: 40px; line-height: 1.6; font-size: 110%; }
+							.TPLapp .wyswig .c3d .updtItem span { font-size: 110%; }
+							.TPLapp .wyswig .c3d .updtItem span.buttonCTA { font-size: 90%; }
+							.TPLapp .wyswig .c3d .updtItem .redAlert { display: block; }
+							.TPLapp .wyswig .c3d .updtItem .redAlert .name { display: inline-block; cursor: pointer; margin: 20px 0px 0px 0px; background: linear-gradient(#2A225E, #6E358C); color: #fff; font-weight: bold; text-transform: uppercase; font-size: 13px; letter-spacing: +1px; padding: 12px 22px; border-radius: 12px; }
+							
+							.TPLapp .wyswig .c3d .form-radio { margin-top: 10px; }
+							.TPLapp .wyswig .c2ds { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 50px; }
+							.TPLapp .wyswig .c21ds { display: grid; grid-template-columns: 2fr 1fr; grid-gap: 50px; }
+							.TPLapp .wyswig .c4ds { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 50px; }
+							
+							.TPLapp .wyswig .c3x { display: block; }
+							.TPLapp .wyswig .c3x .updtItem { background: #f4f4f4; padding: 30px 35px 30px 35px; border-radius: 18px; cursor: pointer; transition-duration: .5s; box-shadow: -10px -1px 22px 23px rgba(0,0,0,0.02); -webkit-box-shadow: -10px -1px 22px 23px rgba(0,0,0,0.02); -moz-box-shadow: -10px -1px 22px 23px rgba(0,0,0,0.02); position: relative; overflow: hidden; }
+							.TPLapp .wyswig .c3x .updtItem:hover { background: #fff; transition-delay: 0s !important; box-shadow: -10px -1px 82px 43px rgba(0,0,0,0.12); -webkit-box-shadow: -10px -1px 82px 43px rgba(0,0,0,0.12); -moz-box-shadow: -10px -1px 82px 43px rgba(0,0,0,0.12); overflow: visible; }
+							.TPLapp .wyswig .c3x .updtItem h3 { display: flex; border-bottom: 3px solid #fff; padding-bottom: 12px; transition-duration: .7s; color: #AD348B !important; }
+							.TPLapp .wyswig .c3x .updtItem:hover h3 { border-bottom: 3px solid #333; padding-bottom: 12px; }
+							.TPLapp .wyswig .c3x .updtItem p.status { font-size: 100%; margin-bottom: 0px; }
+							.TPLapp .wyswig .c3x .updtItem p.status span { display: block; }
+							.TPLapp .wyswig .c3x .updtItem .icons { position: absolute; top: -20px; right: -20px; transform: rotate(10deg); transition-duration: 1s; }
+							.TPLapp .wyswig .c3x .updtItem .icons i { display: inline-block; width: 40px; height: 40px; margin-left: -12px; padding-top: 10px; border-radius: 50%; background: #333; color: #fff; font-weight: bold; text-align: center; font-size: 130%; transform: translate(0px, -40px); -webkit-transform: translate(0px, -40px);-moz-transform: translate(0px, -40px);-o-transform: translate(0px, -40px);-ms-transform: translate(0px, -40px); transition-duration: 1s; opacity: 0; }
+							.TPLapp .wyswig .c3x .updtItem .icons i:hover { background: #6E358C; }
+							
+							.TPLapp .wyswig .c3x .updtItem:hover .icons { transform: rotate(0deg); }
+							.TPLapp .wyswig .c3x .updtItem:hover .icons i { margin-left: 5px; transform: translate(0px, 0px); -webkit-transform: translate(0px, 0px);-moz-transform: translate(0px, 0px);-o-transform: translate(0px, 0px);-ms-transform: translate(0px, 0px); opacity: 1; transform: rotate(0deg); }
+							
+							.TPLapp .wyswig .c3x .updtItem:hover .icons i:nth-child(1) { transition-delay: 0.1s; }
+							.TPLapp .wyswig .c3x .updtItem:hover .icons i:nth-child(2) { transition-delay: 0.2s; }
+							.TPLapp .wyswig .c3x .updtItem:hover .icons i:nth-child(3) { transition-delay: 0.3s; }
+							.TPLapp .wyswig .c3x .updtItem:hover .icons i:nth-child(4) { transition-delay: 0.4s; }
+							
+							.TPLapp .wyswig .c3x .updtItem .redAlert { display: block; }
+							.TPLapp .wyswig .c3x .updtItem .redAlert .name { display: inline-block; cursor: pointer; margin: 20px 0px 0px 0px; background: linear-gradient(#2A225E, #6E358C); color: #fff; font-weight: bold; text-transform: uppercase; font-size: 13px; letter-spacing: +1px; padding: 12px 22px; border-radius: 12px; }
+							
+							.black .TPLapp .c3x .updtItem { background: #222; color: #eee; box-shadow: -10px -1px 22px 23px rgba(255,255,255,0.02); -webkit-box-shadow: -10px -1px 22px 23px rgba(255,255,255,0.02); -moz-box-shadow: -10px -1px 22px 23px rgba(255,255,255,0.02); }
+							.black .TPLapp .c3x .updtItem:hover { background: #000000; box-shadow: -10px -1px 82px 43px rgba(255,255,255,0.18); -webkit-box-shadow: -10px -1px 82px 43px rgba(255,255,255,0.18); -moz-box-shadow: -10px -1px 82px 43px rgba(255,255,255,0.18); }
+							.black .TPLapp .c3x .updtItem h3 { border-bottom: 3px solid #999; color: #fff !important; }
+							.black .TPLapp .c3x .updtItem:hover h3 { border-bottom: 3px solid #555; }
+							.black .TPLapp .c3d .updtItem h3 { border-bottom: 3px solid #555; }
+							
+							@media screen and (min-width: 1260px) {
+								.TPLapp .wyswig .c3x { display: grid; grid-template-columns: 1fr 1fr 1fr; grid-gap: 30px; }
+								.TPLapp .wyswig .c2xd { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 30px; }
+								.TPLapp .wyswig .c4d { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; grid-gap: 50px; }
+								.TPLapp .wyswig .c3d { display: grid; grid-template-columns: 1fr 1fr 1fr; grid-gap: 50px; }
+								.TPLapp .wyswig .c2d { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 50px; }
+								.TPLapp .wyswig .c3d .form-element { position: relative; margin-top: 1.25rem; margin-bottom: 1.25rem; }
+								.TPLapp .wyswig .form-element { position: relative; margin-top: 1.25rem; margin-bottom: 1.25rem; }
+								.TPLapp .wyswig .form-element.index { display: none; }
+							}							
+							</style>
+							
+							
+							<div class="c3d c2d">
+							
+								<div class="updtItem item animatedX moved">
+									<h3 class="animatedX moved">Firmware</h3>
+									<p class="animatedX moved" id="version_firmware">Checking version ...</p>
+									<p id="update_status_info">
+										<span class="animatedX moved moved2 bounce" id="version_firmware_available"></span>
+									</p>
+								</div>
+								
+								<div class="updtItem item animatedX moved">
+									<h3 class="animatedX moved">Manager</h3>
+									<p class="animatedX moved" id="version_dashboard">Checking version ...</p>
+									<p id="update_status_info2">
+										<span class="animatedX moved moved2 bounce" id="version_dashboard_available"></span>
+									</p>
+								</div>
+								
+							</div>
+							
+							<div id="manualUpdate" class="deader">
+							
+								<br><br><br><br>
+					
+								<h2 class="animatedX moved"><i class="icon-cog"></i> Manual firmware update</h2>
+								
+								<div class="spaceLine animatedX moved"></div>
+								
+								<div id="changeFirmwareManualy2" class="disabledForm">
+								
+									<p class="animatedX moved">Using mechanism below you can install any firmware version you want.</p>
+									
+									<p class="animatedX moved">
+										<button class="buttonCTA buttonCTAS buttonCTARed makeAction" rel="manual_update_before_init" type="submit" name="submit"> &nbsp; Upload file &nbsp; <i class="icon-download"></i> &nbsp;</button>
+										<input type="file" name="manual_update_file" id="manual_update_file_before_init" style="visibility: hidden;" onchange="handleFiles(this.files)">
+									</p>
+								
+								</div>
+							
+							</div>
+							
+						</div>
+						
+					</div>
+					
+					<div class="page" id="update_firmware_page" data-title="Firmware update panel" data-class="basic">
+					
+						<div class="wyswig wyswig15pax">
+						
+							<h1 class="animatedX moved">Firmware<br>update</h1>
+							
+							<h2 class="animatedX moved">It looks like there is a newer version of Encedo firmware.</h2>
+							
+							<h2 class="animatedX moved">Before you go any further, please <strong>update your firmware</strong> first.</h2>
+							
+							<br>	
+							
+							<p class="animatedX moved">
+								<a class="buttonCTA bounce makeAction" rel="update_firmware"> &nbsp; <span id="update_infoX">Update now</span> <i class="icon-angle-right"></i> &nbsp;</a>
+								<a class="buttonCTA buttonCTAG changePage" rel="home"> &nbsp; Skip update &nbsp; <i class="icon-angle-right"></i> &nbsp;</a>
+							</p>
+							
+							<br><br>
+							
+							<h2 id="update_status_info"></h2>
+
+							<p></p>
+							
+							<div class="animatedX moved">
+								
+							</div>
+						
+						</div>
+						
+					</div>
+					
+					<div class="page" id="update_dashboard_page" data-title="Manager update panel" data-class="basic">
+					
+						<div class="wyswig wyswig15pax">
+						
+							<h1 class="animatedX moved">Manager<br>update</h1>
+							
+							<h2 class="animatedX moved">It looks like there is a newer version of Encedo Manager.</h2>
+							
+							<h2 class="animatedX moved">Before you go any further, please <strong>update your manager app</strong> first.</h2>
+							
+							<br>	
+							
+							<p class="animatedX moved">
+								<a class="buttonCTA bounce makeAction" rel="update_dashboard"> &nbsp; <span id="update_infoX2">Update now</span> <i class="icon-angle-right"></i> 
+								<a class="buttonCTA buttonCTAG changePage" rel="home"> &nbsp; Skip update &nbsp; <i class="icon-angle-right"></i> &nbsp;</a>&nbsp;</a>
+							</p>
+							
+							<br><br>
+							
+							<h2 id="update_status_info2"></h2>
+
+							<p></p>
+							
+							<div class="animatedX moved">
+								
+							</div>
+						
+						</div>
+						
+					</div>
+					
+					<div class="page" id="update_bootloader_page" data-title="Bootloader update panel" data-class="basic">
+					
+						<div class="wyswig wyswig15pax">
+						
+							<h1 class="animatedX moved">Bootloader<br>update</h1>
+							
+							<h2 class="animatedX moved">It looks like there is a newer version of Encedo bootloader.</h2>
+							
+							<h2 class="animatedX moved">Before you go any further, please <strong>update your bootloader</strong> first.</h2>
+							
+							<br>	
+							
+							<p class="animatedX moved">
+								<a class="buttonCTA bounce makeAction" rel="update_bootloader"> &nbsp; <span id="update_infoX2">Update now</span> <i class="icon-angle-right"></i> 
+								<a class="buttonCTA buttonCTAG changePage" rel="home"> &nbsp; Skip update &nbsp; <i class="icon-angle-right"></i> &nbsp;</a>&nbsp;</a>
+							</p>
+							
+							<br><br>
+							
+							<h2 id="update_status_info2"></h2>
+
+							<p></p>
+							
+							<div class="animatedX moved">
+								
+							</div>
+						
+						</div>
+						
+					</div>
+				
+					<div class="page" id="problems_with_login" data-title="Do you have any problems?" data-class="basic">
+					
+						<div class="wyswig wyswig15pax">
+												
+						
+							<h1 class="animatedX moved"><span>Do you have</span><br>problem with login?</h1>
+							
+							<br>
+							
+							<br>
+							
+							<p class="animatedX moved">Donec suscipit ligula ut tincidunt ornare. In hac habitasse platea dictumst. Curabitur faucibus nulla sapien, non tempor est interdum quis. Nunc ultricies maximus massa sit amet cursus. Nunc at magna et ligula feugiat faucibus sed vel lectus. Proin dignissim purus quis blandit feugiat. Aliquam hendrerit turpis ut mi scelerisque, ut dictum erat varius. Duis rutrum, urna vitae condimentum vulputate, magna tortor tempus tellus, nec commodo magna dui vel risus. Donec a purus dui. Curabitur sed mauris varius, hendrerit leo quis, interdum quam. Curabitur ut mattis dui. Etiam rutrum sapien nec lacus semper, eu aliquet orci interdum.</p>
+					
+							<h4 class="animatedX moved">How to maintain privacy?</h4>
+							
+							<p class="animatedX moved">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas lobortis ex at viverra tincidunt. Donec efficitur ornare auctor. Donec sollicitudin ligula eget libero ornare, ac cursus mi posuere. Sed tempus enim laoreet erat tincidunt, ut egestas arcu condimentum. Cras sit amet enim condimentum augue luctus suscipit. Duis ante augue, tempor sit amet lacus sit amet, fringilla congue nisi. Aliquam eu euismod massa.</p> 
+							
+							<p class="animatedX moved">Duis blandit vel libero et placerat. Mauris id feugiat lacus. Vestibulum nec ultrices felis. Cras placerat efficitur aliquam. Nunc in tellus dapibus, imperdiet magna sit amet, suscipit magna. Phasellus vel consequat orci.</p>
+							
+							<br> 
+							<div class="animatedX moved">
+								<a class="buttonCTA buttonCTAG changePage animatedX moved bounce" rel="authenticate"> &nbsp; Back to sign in &nbsp; <i class="icon-angle-right"></i> &nbsp;</a>
+							</div>
+						
+						</div>
+						
+					</div>
+					
+					<div class="page" id="beforeStart" data-title="Encedo personalisation" data-class="basic">
+					
+						<div class="wyswig wyswig15pax">
+												
+						
+							<h1 class="animatedX moved">Welcome to<br>Encedo Manager</h1>
+							
+							<br>
+							
+							<h2 class="animatedX moved">It looks like your USB device has <strong>not been personalized</strong> yet.</h2>								
+							
+							<h2 class="animatedX moved">Before you go any further, please <strong>finish the personalization process</strong>.</h2>
+							
+							<br><br>
+							
+							<p class="animatedX moved bounce">
+								<a class="buttonCTA changePage" rel="gettingStarted"> &nbsp; Start now &nbsp; <i class="icon-angle-right"></i> &nbsp;</a>
+								<a class="buttonCTA makeAction index" rel="tutorial2"> &nbsp; Start now &nbsp; <i class="icon-angle-right"></i> &nbsp;</a>
+							</p>
+						
+						</div>
+						
+					</div>
+				
+					<div class="page" id="gettingStarted" data-preinit="true" data-title="Getting started" data-class="basic">
+					
+						<div class="wyswig wyswig15pax">
+						
+							<h1 class="animatedX moved">Let’s personalize!</h1>
+							
+							<iframe class="animatedX moved" id="init_iframe2" width="100%" style="width: 100%; height: 1px; border-radius: 12px; visibility: hidden;"></iframe>
+							
+							<h2 class="animatedX moved index">Let's start! <span class="changePage" rel="gettingStarted2">Shall we?</span></h2>
+							
+							<form class="form-card async animatedX moved" id="gettingStartedInitForm" data-action="start_init" autocomplete="off">
+							
+								<p class="animatedX moved fullEPAonly">Every new <strong>EPA</strong> that comes out of the box has not been initialized yet. Before you can use it, some action is required. Do not worry! It will take about one minute.</p>
+								
+								<p class="animatedX moved fullPPAonly">Every new <strong>Personal Private Assistant (PPA)</strong> that comes out of the box has not been initialized yet. Before you can use it, some action is required. Do not worry! It will take about one minute.</p>
+				
+								<fieldset class="form-fieldset form-fieldset-nop animatedX moved c3d">
+									
+									<div class="form-element form-input animatedX moved">
+										<input id="fields_init_userid" class="form-element-field" placeholder=" " type="text" minlength="2" maxlength="63" required="required" pattern="[a-zA-Z0-9 ]{2,63}">
+										<div class="form-element-bar"></div>
+										<label class="form-element-label" for="fields_init_userid">Nickname</label>
+									</div>
+									
+									<div class="form-element form-input animatedX moved">
+										<input id="fields_init_pass" class="form-element-field" placeholder=" " type="password" minlength="10" maxlength="63" required="required">
+										<div class="form-element-bar"></div>
+										<label class="form-element-label" for="fields_init_pass">Password</label>
+										<p class="passwordInfo" id="password_checker"></p>
+									</div>
+									
+									<div class="form-element form-input animatedX moved">
+										<input id="fields_init_passr" class="form-element-field" placeholder=" " type="password" minlength="10" maxlength="63" required="required">
+										<div class="form-element-bar"></div>
+										<label class="form-element-label" for="fields_init_passr">Re-type password</label>
+										<p class="passwordInfo" id="password_repeated"></p>
+									</div>
+								
+								</fieldset>
+								
+								<h2 class="animatedX moved toggle" rel="init_advanced_options" data-class="uptogo"><i class="icon-user iconRotate"></i> Hostname and Settings <span>(optional)</span> <i class="icon-angle-down"></i><i class="icon-angle-up"></i></h2>
+								
+								<div id="init_advanced_options" class="toggled dead">
+								
+									<div class="spaceLine"></div>
+								
+									<p class="animatedX moved fulled fullEPAonly">More experienced users may want to customize their EPA for a better experience while using. If you are not sure what to do below, please leave it default.</p>
+									
+									<p class="animatedX moved fulled fullPPAonly">More experienced users may want to customize their PPA for a better experience while using. If you are not sure what to do below, please leave it default.</p>
+									
+									<br>
+									
+									<fieldset class="form-fieldset form-fieldset-nop animatedX moved c3d" id="initHostnameDetailsFields">
+										
+										<div class="form-element form-select animatedX moved fullPPAonly index">
+											<select id="fields_init_hostname" class="form-element-field -hasvalue">
+												<option disabled="" value="" class="form-select-placeholder"></option>
+												<option value="my" selected="">my.ence.do</option>
+												<option value="dev">dev.ence.do</option>
+												<option value="devel">devel.ence.do</option>
+												<option value="moje">moje.ence.do</option>
+												<option value="custom">custom prefix</option>
+											</select>
+											<label class="form-element-label" for="fields_init_hostname">Hostname</label>
+											<div class="form-element-bar"></div>
+											<small class="form-element-hint">The device will be accessible by this domain address.<a href="#" target="_blank" class="readMore"><i class="icon-info"></i> Read more</a></small>
+										</div>
+										
+										<div class="form-element form-select animatedX moved fullPPAonly index">
+											<select id="fields_init_ipaddr" class="form-element-field -hasvalue" disabled>
+												<option disabled="" value="" class="form-select-placeholder"></option>
+												<option value="192.168.7.1" selected="">192.168.7.1</option>
+											</select>
+											<label class="form-element-label" for="fields_init_ipaddr">IP address <span id="fields_init_ipaddr_mandatory">(fixed)</span></label>
+											<div class="form-element-bar"></div>
+											<small class="form-element-hint">The device local IP Address. Check LAN setting against possible collision.<a href="#" target="_blank" class="readMore">Read more <i class="icon-info"></i></a></small>
+										</div>
+										
+										<div class="form-element form-input animatedX moved">
+											<input id="fields_init_useremail" class="form-element-field" placeholder=" " type="email" maxlength="63" value="">
+											<div class="form-element-bar"></div>
+											<label class="form-element-label" for="fields_init_useremail">Email address <span id="fields_init_useremail_mandatory">(optional)</span></label>
+											<small class="form-element-hint fullEPAonly">Using your email address is mandatory for setting up your EPA.</small>
+											<small class="form-element-hint fullPPAonly">Using your email address is optional but may be useful in some cases like finding PPA or blocking it remotely.</small>
+										</div>
+									
+									</fieldset>
+									
+									<div id="fields_init_customprefix_textarea" class="index">
+									
+										<br>
+										
+										<fieldset class="form-fieldset form-fieldset-nopa animatedX moved c2d">
+										
+											<div class="form-element form-element-nop form-input animatedX moved">
+												<input id="fields_init_customprefix" class="form-element-field" placeholder=" " type="text" maxlength="63" value="" pattern="[a-z0-9][a-z0-9-]{1,61}[a-z0-9]">
+												<div class="form-element-bar"></div>
+												<label class="form-element-label" for="fields_init_customprefix">Custom prefix in *.ence.do domain</label>
+												<small class="form-element-hint" id="customPrefixCheckerHint">Start typing to check if your prefix is free.</small>
+												<small class="form-element-hint">You can register your own subdomain if it is still available. Some words are forbidden and are excluded for usage. Please check FAQ page.</small>
+											</div>
+											
+											<div class="info_about_custom_prefixes">
+												<p>We need your email address to confirm chosen prefix is going to be yours. We need them to be compliant with TLS Certification Authority as well.</p>
+											</div>
+											
+										</fieldset>
+									
+									</div>
+									
+									<br><br>							
+									
+								</div>
+								
+								<div class="fullPPAonly isThereStorage index">
+									
+									<h2 class="animatedX moved toggle" rel="init_advanced_storage" data-class="uptogo"><i class="icon-database iconRotate"></i> Drives options <span>(optional)</span> <i class="icon-angle-down"></i><i class="icon-angle-up"></i></h2>
+									
+									<div id="init_advanced_storage" class="toggled dead">
+									
+										<div class="spaceLine"></div>
+										
+										<fieldset class="form-fieldset form-fieldset-nop animatedX moved">
+										
+											<div class="form-element animatedX moved">
+												<input type="range" id="fields_init_storage_size" name="volume" min="1" max="60" class="form-element-field" value="4">
+												<label class="form-element-label" for="fields_init_storage_size" style="width: 100%;"><span id="storageDetailsAbout"></span> <span style="float: right;"><span id="availableStorageSize"></span> available in total</span></label>
+												<small class="form-element-hint">You can specify the size of primary (unencrypted) drive vs remaining encrypted drive.</small>
+											</div>
+											
+										</fieldset>
+											
+										<fieldset class="form-fieldset form-fieldset-nop animatedX moved c3d">	
+											
+											<div class="form-radio form-radio-full form-radio-inline animatedX moved">
+												<div class="form-radio-legend">Show regular disk on start</div>
+												<label class="form-radio-label">
+													<input name="fields_init_show_disk" class="form-radio-field" type="radio" required value="1" checked data-initier="" />
+													<i class="form-radio-button"></i>
+													<span>Yes, please!</span>
+												</label>
+												<label class="form-radio-label">
+													<input name="fields_init_show_disk" class="form-radio-field" type="radio" required value="2" data-initier="" />
+													<i class="form-radio-button"></i>
+													<span>No</span>
+												</label>
+												<small class="form-element-hint index">Show automatically regular disk after power-up (putting into USB slot).</small>
+											</div>
+											
+											<div class="form-radio form-radio-full form-radio-inline animatedX moved">
+												<div class="form-radio-legend">Regular disk on start</div>
+												<label class="form-radio-label">
+													<input name="fields_init_disk_mode" class="form-radio-field" type="radio" required value="1" checked data-initier="" />
+													<i class="form-radio-button"></i>
+													<span>Read-only</span>
+												</label>
+												<label class="form-radio-label">
+													<input name="fields_init_disk_mode" class="form-radio-field" type="radio" required value="2" data-initier="" />
+													<i class="form-radio-button"></i>
+													<span>Writable</span>
+												</label>
+												<small class="form-element-hint index">Thanks to this functionality you do not have to be worried when your phone get stolen while being unlocked.</small>
+											</div>
+											
+											<div class="form-radio form-radio-full form-radio-inline animatedX moved">
+												<div class="form-radio-legend">Storage encryption mode</div>
+												<label class="form-radio-label">
+													<input name="fields_init_encryption_mode" class="form-radio-field" type="radio" required value="1" checked data-initier="" />
+													<i class="form-radio-button"></i>
+													<span>CTR</span>
+												</label>
+												<label class="form-radio-label">
+													<input name="fields_init_encryption_mode" class="form-radio-field" type="radio" required value="2" data-initier="" />
+													<i class="form-radio-button"></i>
+													<span>XTS</span>
+												</label>
+												<small class="form-element-hint index">Encryption mode of the secure disk.</small>
+											</div>
+										
+										</fieldset>
+										
+										<br><br>
+										
+									</div>
+								
+								</div>
+									
+								<h2 class="animatedX moved toggle" rel="init_other_options" data-class="uptogo"><i class="icon-cogs iconRotate"></i> Other options <span>(optional)</span> <i class="icon-angle-down"></i><i class="icon-angle-up"></i></h2>
+								
+								<div id="init_other_options" class="toggled dead">
+									
+									<div class="spaceLine"></div>
+									
+									<fieldset class="form-fieldset form-fieldset-nop animatedX moved c3d">	
+										
+										<div class="form-radio form-radio-full form-radio-inline animatedX moved">
+											<div class="form-radio-legend">Trust Encedo time source?</div>
+											<label class="form-radio-label">
+												<input name="fields_init_trust_time" class="form-radio-field" type="radio" required value="1" checked data-initier="trusted_ts" />
+												<i class="form-radio-button"></i>
+												<span>Yes, please!</span>
+											</label>
+											<label class="form-radio-label">
+												<input name="fields_init_trust_time" class="form-radio-field" type="radio" required value="2" data-initier="trusted_ts" />
+												<i class="form-radio-button"></i>
+												<span>No</span>
+											</label>
+											<small class="form-element-hint">Use Encedo backend service as a trusted source of current time.</small>
+										</div>
+										
+										<div class="form-radio form-radio-full form-radio-inline animatedX moved">
+											<div class="form-radio-legend">Allow remote managment?</div>
+											<label class="form-radio-label">
+												<input name="fields_init_allow_remote" class="form-radio-field" type="radio" required value="1" checked data-initier="trusted_backend" />
+												<i class="form-radio-button"></i>
+												<span>Yes, please</span>
+											</label>
+											<label class="form-radio-label">
+												<input name="fields_init_allow_remote" class="form-radio-field" type="radio" required value="2" data-initier="trusted_backend" />
+												<i class="form-radio-button"></i>
+												<span>No</span>
+											</label>
+											<small class="form-element-hint">This functionality allows remote management like reporting stolen devices, remote wipes etc. Privacy-friendly.</small>
+										</div>
+										
+										<div class="form-radio form-radio-full form-radio-inline animatedX moved">
+											<div class="form-radio-legend">Allow keysearch by description?</div>
+											<label class="form-radio-label">
+												<input name="fields_init_allow_keysearch" class="form-radio-field" type="radio" required value="1" checked data-initier="allow_keysearch" id="fields_init_allow_keysearch_yes" />
+												<i class="form-radio-button"></i>
+												<span>Yes, please</span>
+											</label>
+											<label class="form-radio-label">
+												<input name="fields_init_allow_keysearch" class="form-radio-field" type="radio" required value="2" data-initier="allow_keysearch" id="fields_init_allow_keysearch_no" />
+												<i class="form-radio-button"></i>
+												<span>No</span>
+											</label>
+											<small class="form-element-hint">Allow search keystore by description without required access token.</small>
+										</div>
+									
+									</fieldset>
+								
+								</div>
+								
+								<br><br>
+								
+								<p class="animatedX moved">
+									<button class="buttonCTA" type="submit" name="submit"> &nbsp; Next step &nbsp; <i class="icon-angle-right"></i> &nbsp;</button>
+								</p>
+								
+							</form>
+							
+							<br>
+						
+						</div>
+						
+					</div>
+					
+					<div class="page" id="initialisationError" data-preinit="true" data-title="Error while device personalization" data-class="basic">
+			
+						<div class="wyswig wyswig15pax">
+						
+							<h1 class="animatedX moved">Error while device personalization</h1>
+
+							<h2 class="animatedX moved">It looks like you need to start <strong>personalization again</strong>.</h2>
+							
+							<br><br>
+							
+							<p class="animatedX moved">
+								<a class="buttonCTA buttonCTAG buttonCTARM changePage" rel="gettingStarted"> &nbsp; <i class="icon-angle-left"></i> &nbsp; Back &nbsp; </a>
+								<a class="buttonCTA makeAction" rel="start_init"> &nbsp; Retry &nbsp; <i class="icon-angle-right"></i> &nbsp;</a>
+							</p>
+							
+						</div>
+						
+					</div>
+					
+					<div class="page" id="initialisationPage" data-preinit="true" data-title="Encedo Manager tutorial" data-class="basic">
+			
+						<div class="wyswig wyswig15pax">
+						
+							<h1 class="animatedX moved">Personalization in progress ...</h1>
+							
+							<h2 class="animatedX moved">Please wait for a moment. The device will be soon ready to go.</h2> 
+							
+							<br>
+							
+							<h3><span class="loader-container"><span></span><span></span><span></span><span></span><span></span></span> &nbsp; <span id="encedo_init_status"></span></h3>
+							
+							
+						</div>
+						
+					</div>
+					
+					<div class="page" id="devicePreparingAfterInit" data-preinit="true" data-title="Encedo Manager tutorial" data-class="basic">
+			
+						<div class="wyswig wyswig15pax">
+						
+							<h1 class="animatedX moved">Device is finishing configuration</h1>
+							
+							<h2 class="animatedX moved">Please wait for a moment. The device will be soon ready to go.</h2> 
+							
+							<br>
+							
+							<h3><span class="loader-container"><span></span><span></span><span></span><span></span><span></span></span> &nbsp; <span id="encedo_after_init_status"></span></h3>
+							
+							
+						</div>
+						
+					</div>
+					
+					<div class="page" id="domainSetupPage" data-preinit="true" data-title="Encedo Manager tutorial" data-class="basic">
+			
+						<div class="wyswig wyswig15pax">
+						
+							<h1 class="animatedX moved">Last checkup before finish</h1>
+							
+							<h2 class="animatedX moved">Please wait for a moment. The device will be soon ready to go.</h2> 
+							
+							<br>
+							
+							<h3><span id="encedo_init_status_domain"></span></h3>
+							
+						</div>
+						
+					</div>
+					
+					<div class="page" id="tutorial" data-preinit="true" data-title="Encedo manager personalization finished!" data-class="basic">
+			
+						<div class="wyswig wyswig15pax">
+						
+							<h1 class="animatedX moved">Congratulations!</h1>
+							
+							<h2 class="animatedX moved">Your device is ready to use but before you go any further please <strong>copy and save important data</strong> that you can see below:</h2> 
+							
+							<p class="animatedX moved"></p>
+							
+							<p class="animatedX moved specialCode fulled"><span class="desc">Hostname:</span> <strong id="init_hostname_result">my.ence.do</strong><span class="copy copyThis makeAction" rel="clipboardCopy/init_hostname_result"><i class="icon-clone"></i> Copy</span></p>
+							
+							<p class="animatedX moved specialCode fulled"><span class="desc">Instance ID:</span> <strong id="init_instanceid_result"></strong><span class="copy copyThis makeAction" rel="clipboardCopy/init_instanceid_result"><i class="icon-clone"></i> Copy</span></p>
+							
+							<p class="animatedX moved specialCode specialCodeNotWrapped fulled"><span class="desc">Safe words:</span> <strong id="init_words_result"></strong><span class="copy copyThis makeAction" rel="clipboardCopy/init_words_result"><i class="icon-clone"></i> Copy</span></p>
+							
+							<br>
+							
+							<h2 class="animatedX moved">Please print a confirmation document with all configuration details. There are data needed during the access reset procedure.</h2> 
+							
+							<iframe class="animatedX moved" id="init_iframe" width="100%" style="width: 100%; height: 1px; border-radius: 12px; visibility: hidden;"></iframe>
+							
+							<div id="contentForPDF" class="index">
+
+								<h2 style="font-size: 220%;">Proof of Personalization</h2>
+								
+								<h3>Disclaimer</h3>
+								<p style="font-size: 80%;">Yours Encedo device has been initialized and you are the only owner of it. Here are the data used during that process. Print this document and keep it safe! Do not save it on the disk or Cloud! Master Passphrase is the last resort way to retrieve access to the Encedo device if the User Password is lost or forgotten and there are no external authentication devices paired with this device. We recommend Encedo Mobile Manager, available at Google Play and Apple App Store.</p>
+								
+								<h3>Setup details</h3>
+								
+								<p style="font-size: 90%;"><strong>Hostname:</strong> <span id="pdf_hostname"></span></p>
+								
+								<p style="font-size: 90%;"><strong>Issued at:</strong> <span id="pdf_issued"></span></p>
+								
+								<p style="font-size: 90%;"><strong>Instance ID:</strong> <span id="pdf_instanceid"></span></p>
+								
+								<p style="font-size: 90%;"><strong>Serial Number:</strong> <span id="pdf_devid"></span></p>
+								
+								<p style="font-size: 90%;"><strong>Instance Key:</strong> <span id="pdf_eid"></span></p>
+								
+								<p style="font-size: 90%;"><strong>Instance Log Key:</strong> <span id="pdf_eid_sign"></span></p>
+								
+								<p style="font-size: 90%;"><strong>User Identity:</strong> <span id="pdf_user"></span></p>
+								
+								<p style="font-size: 90%;"><strong>Settings:</strong> <span id="pdf_settings"></span></p>
+								
+								<p style="font-size: 90%;"><strong>Hardware:</strong> <span id="pdf_hardware"></span></p>
+								
+								<p style="font-size: 90%;"><strong>Firmware Version:</strong> <span id="pdf_firmware"></span></p>
+								
+								<p style="font-size: 90%;"><strong>Master Passphrase:</strong> <span id="pdf_words"></span></p>
+								
+								<br><hr><br><br><hr><br><br><hr><br>
+
+								<p align="right" style="font-size: 95%; text-align: right"><u>This document was generated in the browser only! Keep this document safe! Encedo will not be able to help you to retrieve access to your device, this data are the only way.</u></p>
+								<p align="right" style="font-size: 95%; text-align: right"><strong>- END OF FILE -</strong></p>
+							</div>
+							
+							<p class="animatedX moved specialCode fulled" id="init_jwt_result" style="display: none;"></p>
+							
+							<br>
+							
+							<p class="animatedX moved">
+								<a class="buttonCTA makeAction animatedX moved" id="printingButtonAfterInit" rel="printMePlease"> &nbsp; Print &nbsp; <i class="icon-angle-up"></i> &nbsp;</a>
+								<a class="buttonCTA buttonCTAG buttonCTAC animatedX moved" id="startingButtonAfterInit" rel="refreshAfterInit"> &nbsp; Print first &nbsp; <i class="icon-angle-right"></i> &nbsp;</a>
+							</p>
+							
+						</div>
+						
+					</div>
+					
+			<div class="page" id="authenticate" data-title="Authenticating">
+			
+				<div class="wyswig wyswig15p">
+				
+					<h1 class="animatedX moved"><span>Welcome to</span><br>Encedo Manager</h1>	
+					
+					<h2 class="animatedX moved">Privacy private again!</h2>
+
+					<form class="form-card animatedX moved async" data-action="authenticate">
+		
+						<fieldset class="form-fieldset form-fieldset-nop animatedX moved">
+							
+							<div class="form-element form-input animatedX moved">
+								<input type="password" id="authenticate_password" class="form-element-field" placeholder=" " name="password" />
+								<div class="form-element-bar"></div>
+								<label class="form-element-label" for="authenticate_password">User password</label>
+							</div>
+						
+						</fieldset>
+						
+						<br><br>
+						
+						<fieldset>
+							<div class="animatedX moved">
+								<a class="buttonCTA makeSubmit" id="authenticate_button"> &nbsp; <span id="authenticate_button_label">Authenticate</span> <i class="icon-lock"></i> &nbsp;</a>
+							</div>
+						</fieldset>
+						
+						<p><br><br></p>
+						
+						<h2 class="animatedX moved">Problem with login?</h2>
+						<p class="animatedX moved">If you have any problems with authenticating to your USB Encedo Device <a class="changePage" rel="problems_with_login"><strong>please click here</strong></a> to get help and more about what to do.</p>
+						
+						<input type="submit" name="submit" class="index" value="submit">
+						
+					</form>
+					
+					<br>
+				
+				</div>		
+			
+			</div>
+				
+			<div class="page" id="home" data-init="true" data-class="wider transparent" data-title="Encedo manager home">
+			
+				<div class="superBlocks">
+		
+					<div class="sBlock moved changePage" rel="securestorage" id="storageBlockIndex">
+						<div class="cont">
+							<p class="smaller">private files</p>
+							<p class="named">secure drive</p>
+							<p>Here you can see the status of secure, private drives and manage them in an easy way.</p>
+						</div>
+					</div>
+					
+					<div class="sBlock moved changePage" rel="devices">
+						<div class="cont">
+							<p class="smaller">connection</p>
+							<p class="named">paired devices</p>
+							<p>Pair with Encedo Mobile Authenticator to experience password-free usage.</p>
+						</div>
+					</div>
+					
+					<div class="sBlock moved changePage" rel="keychain">
+						<div class="cont">
+							<p class="smaller">manage keys</p>
+							<p class="named">keychain</p>
+							<p>Keep all your keys in one private place - your keychain! It has never been easier!</p>
+						</div>
+					</div>
+					
+					<div class="sBlock moved changePage" rel="mobileapp">
+						<div class="cont">
+							<p class="smaller">trusted apps</p>
+							<p class="named">apps</p>
+							<p>Encedo Trusted Services marketplace is here.</p>
+						</div>
+					</div>
+					
+					<div class="sBlock moved changePage" rel="hardware">
+						<div class="cont">
+							<p class="smaller">security</p>
+							<p class="named">status</p>
+							<p>Here you can find all the information about the Encedo hardware you are using.</p>
+						</div>
+					</div>
+					
+					<div class="sBlock moved changePage isThereNoStorage" rel="consolelog">
+						<div class="cont">
+							<p class="smaller">operation log</p>
+							<p class="named">logger</p>
+							<p>Here you can see statuses of secure and private storage and manage them in easy way.</p>
+						</div>
+					</div>
+				
+				</div>			
+			
+			</div>
+					
+			<div class="page" id="qrcode" data-class="wider" data-title="QR Codes">
+						
+				<div class="wyswig wyswigWithP">
+				
+					<a class="buttonCTA buttonCTAG buttonCTAL changePage" rel="home"><i class="icon-angle-left"></i> Go back</a>
+					
+				</div>
+					
+				<h1 class="specialH1 animatedX moved">Welcome to<br><strong>QRCodes</strong></h1>
+					
+				<br>
+					
+				<div class="wyswig animatedX moved">
+				
+					<p><a id="getQRcode" class="buttonCTA">QR Code tester | <i class="icon-flash"></i></a></p>
+					
+					<p><strong>All tested QRCodes are stored securely in application storage. You can browse them below.</strong></p>
+					
+					<div id="scannedQRs" class="scannedQRs animatedX moved">
+					
+					</div>
+					
+					<br>
+					
+					<a id="refreshQRCodesList" class="buttonCTA buttonCTAG">Refresh list | <i class="icon-cw"></i></a>
+					
+					<br>
+					
+					<p>Duis blandit vel libero et placerat. Mauris id feugiat lacus. Vestibulum nec ultrices felis. Cras placerat efficitur aliquam. Nunc in tellus dapibus, imperdiet magna sit amet, suscipit magna. Phasellus vel consequat orci.</p>
+				
+				</div>
+			
+			</div>
+					
+			<div class="page" id="favourites" data-class="wider" data-title="User favourites">
+				
+				<div class="wyswig wyswigWithP">
+				
+					<a class="buttonCTA buttonCTAG buttonCTAL changePage" rel="home"><i class="icon-angle-left"></i> Go back</a>
+					
+				</div>
+				
+				<h1 class="specialH1 animatedX moved">Your<br><strong>Favourites</strong></h1>
+					
+				<br>
+					
+				<div class="wyswig wyswig15p">
+					
+					<p class="animatedX moved">Duis blandit vel libero et placerat. Mauris id feugiat lacus. Vestibulum nec ultrices felis. Cras placerat efficitur aliquam. Nunc in tellus dapibus, imperdiet magna sit amet, suscipit magna. Phasellus vel consequat orci.</p>
+				
+				</div>
+			
+				
+			</div>
+					
+			<div class="page" id="consolelog" data-class="wider" data-title="Logger console">
+			
+				<div class="supericon"><i class="icon-book"></i></div>
+				
+				<div class="wyswig wyswig15pa">
+				
+					<h1 class="animatedX moved">Operation Log</h1>
+						
+					<h2 class="animatedX moved">Every move you make will be logged.</h2> 
+					
+					<p class="animatedX moved fullPPAonly index">Encedo PPA trace many security relate operation and log them. Here you can review the operations log.</p>
+					
+					<p class="animatedX moved fullEPAonly index">Encedo EPA trace many security relate operation and log them. Here you can get the access key and retrieve the log from the secure Syslog server.</p>
+					
+					<h3 class="animatedX moved consoleLogProgress"></h3>
+					
+					<div class="animatedX moved" id="consoleApp">
+							
+					</div>
+					
+				</div>
+				
+			</div>
+			
+			<div class="page" id="consolelog_show" data-class="wider" data-title="Details of a  console" data-parent="consolelog">
+				
+				<div class="wyswig wyswig15pa">
+				
+					<h1 class="animatedX moved">Detailed log data</h1>
+						
+					<h2 class="animatedX moved">Below you can find detailed information right from the log file.</h2> 
+					
+					<p class="animatedX moved">Duis blandit vel libero et placerat. Mauris id feugiat lacus. Vestibulum nec ultrices felis. Cras placerat efficitur aliquam. Nunc in tellus dapibus, imperdiet magna sit amet, suscipit magna. Phasellus vel consequat orci.</p>
+					
+					<div class="animatedX moved" id="consoleDetails">
+							
+					</div>
+					
+					<br><br><br>
+					
+					<p class="animatedX moved">						
+						<a class="buttonCTA buttonCTAG buttonCTARM changePage" rel="consolelog"><i class="icon-angle-left"></i> &nbsp; Back &nbsp; </a>
+					</p>
+					
+					<div class="animatedX moved index" id="consoleDetailsRaw">
+							
+					</div>
+					
+					<iframe id="init_iframe_log" style="display: block; width: 1px; height: 1px;"></iframe>
+					
+				</div>
+				
+			</div>
+			
+			<div class="page" id="hardware" data-title="Hardware monitor" data-class="wider">
+			
+				<div class="supericon"><i class="icon-plug"></i></div>
+			
+				<div class="wyswig wyswig15pa">
+				
+					<h1 class="animatedX moved">Hardware monitor</h1>
+					
+					<h2 class="animatedX moved">Here you can find all the information about the hardware, current status and security state.</h2> 
+					
+					<br>
+
+					<div id="hardwareStatusMainContainer" class="hardwareStatusMainContainer animatedX moved c3d"></div>
+					
+					<div class="index">
+					
+						<div id="hardwareTemperatureChart" class="hardwareTemperatureChart animatedX moved"></div>
+						<p class="animatedX moved smaller">Chart shows device temperature and connection in the long run. Maximum time span is aprox. 30 minutes.</p>
+					
+					</div>
+					
+					<br><br><br>
+					
+					<h2 class="animatedX moved"><i class="icon-heart"></i> Device Health Check</h2>
+					
+					<p class="animatedX moved">The best tool to assure that everything is safe and sound! After the operation is done some results will be displayed. </p>
+
+					<p class="animatedX moved"><a class="buttonCTA buttonCTAS buttonCTANM makeAction bounce" rel="healthCheck">Perform Health Check &nbsp; <i class="icon-heart"></i></a></p>
+					
+					<br><br>
+					
+					<div class="animatedX moved index" id="healthCheckStatus"></div>
+					
+					<br><br><br>
+					
+					<h2 class="animatedX moved"><i class="icon-key"></i> Token used in this session</h2>
+					
+					<div id="tokensStatusContainer" class="statusTable animatedX moved">
+					
+					</div>
+					
+					<br>
+					
+					<p class="animatedX moved"><a class="buttonCTA buttonCTAS buttonCTANM makeAction" rel="refreshScopesInfo">Refresh token list&nbsp; <i class="icon-spin6"></i></a></p>
+					
+					
+					<br><br><br>
+					
+					<h2 class="animatedX moved"><i class="icon-plug"></i> Device version</h2>
+					
+					<div id="hardwareStatusContainer" class="statusTable animatedX moved">
+						<p>Loading data ... </p>
+					</div>
+					
+					<br><br><br>
+					
+					<h2 class="animatedX moved"><i class="icon-plug"></i> Device Reboot</h2>
+					
+					<p class="animatedX moved">Restart the device if needed. All issued access tokens will be invalidated!</p>
+
+					<p class="animatedX moved"><a class="buttonCTA buttonCTAS buttonCTANM makeAction bounce" rel="encedoReboot">Reboot now &nbsp; <i class="icon-spin6"></i></a></p>
+					
+					<br><br><br>
+					
+					<div class="index">
+						<div id="blinderTester">
+						tesetfgdsgfd
+						</div>
+						
+						<p class="animatedX moved"><a class="buttonCTA buttonCTANM makeAction bounce" rel="blinds1">Blinds 1 &nbsp; <i class="icon-heart"></i></a></p>	
+						
+						<p class="animatedX moved"><a class="buttonCTA buttonCTANM makeAction bounce" rel="blinds2">Blinds 2 &nbsp; <i class="icon-heart"></i></a></p>	
+
+						<br><br>	
+					</div> 
+					
+				</div>
+			</div>
+			
+			<div class="page" id="securestorage" data-init="true" data-title="Secure drive" data-class="wider">
+			
+				<div class="supericon"><i class="icon-database"></i></div>
+			
+				<div class="wyswig wyswig15pa">
+				
+					<h1 class="animatedX moved">Secure drive</h1>
+					
+					<h2 class="animatedX moved">Lock and unlock both - primary and encrypted drives with a simple click. </h2> 
+					
+					<br><br>			
+					
+					<style>
+					.c2x { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 50px; }
+					.c2x .updtItem {  }
+					.c2x .updtItem h3 { border-bottom: 2px solid #333; padding-bottom: 18px; color: #AD348B; }
+					.c2x .updtItem h3 i { display: inline-block; width: 36px; }
+					.c2x .updtItem .minh240 { min-height: 240px; }
+					.c2x .updtItem .status { display: inline-block; line-height: 1.6; font-size: 110%; }
+					.c2x .updtItem .redAlert { display: block; }
+					.c2x .updtItem .redAlert .name { display: inline-block; cursor: pointer; margin: 20px 0px 0px 0px; background: linear-gradient(#2A225E, #6E358C); color: #fff; font-weight: bold; text-transform: uppercase; font-size: 13px; letter-spacing: +1px; padding: 12px 22px; border-radius: 12px; }
+					</style>
+					
+					<div class="c2x">
+					
+						<div class="updtItem item animatedX moved">
+							<h3><i class="icon-database"></i> Primary storage</h3>
+							<span id="storage0_status" class="status"></span><br>
+						</div>
+						
+						<div class="updtItem item animatedX moved">
+							<h3><i class="icon-database"></i> Encrypted storage</h3>
+							<span id="storage1_status" class="status minh240"></span><br>
+							
+						</div>
+						
+					</div>
+
+					
+				</div>
+				
+			</div>
+			
+			<div class="page" id="devices" data-init="true" data-class="wider" data-title="Devices">
+			
+				<div class="supericon"><i class="icon-link-1"></i></div>
+			
+				<div class="wyswig wyswig15pa">
+				
+					<p class="buttonCTAR index" id="whenThereIsNoDevicesButton"><a class="animatedX moved buttonCTA buttonCTAG buttonCTAGNO toggle" rel="whenThereIsNoDevices">Get the app &nbsp; <i class="icon-android"></i> <i class="icon-apple"></i></a></p>
+				
+					<h1 class="animatedX moved">Paired devices</h1>
+					
+					<h2 class="animatedX moved">Pair with Encedo Mobile Authenticator to experience password-free usage.</h2> 
+					
+					<br>
+					
+					<p class="animatedX moved index" id="mobileAuthByDefault">
+						<a class="buttonCTA moved animatedX makeAction" rel="stopMobileAuth">Stop mobile authentication by default &nbsp; <i class="icon-mobile"></i></a>
+						<br><br>
+					</p>
+					
+					<style>
+					#devicesContainer.c3x { padding-bottom: 50px; }
+					</style>
+					
+					<div id="devicesContainer" class="animatedX moved">
+					
+						<h2 class="animatedX moved">There are no devices to show yet!</h2>
+									
+					</div>
+										
+					<p class="animatedX moved">
+						<a class="buttonCTA moved animatedX makeAction" rel="pairdeviceNow">Click here to pair &nbsp; <i class="icon-plug"></i></a>
+					</p>
+					
+					<p class="animatedX moved">						
+						<a class="buttonCTA buttonCTAG moved animatedX makeAction" rel="devices_sync">Check the paired list &nbsp; <i class="icon-link-1"></i></a>
+					</p>
+					
+					<div class="index">
+					
+						<br><br><br>
+						
+						<h2 class="animatedX moved">Devices' list <strong>synchronizing</strong></h2> 
+					
+						<p class="animatedX moved">Please remember about removing paired devices that has been compromised or are out of date.</p>
+						<br>
+						<p class="animatedX moved">
+							
+						</p>
+						
+						<div id="qrcode_handler" data-onclose="cleanQR">
+		
+							<h2 id="qrcode_information"></h2>
+						
+							<div id="qrcode_placer"></div>
+						
+						</div>
+						
+					</div>
+
+					<div class="animatedX moved" id="whenThereIsNoDevices">
+						
+						<h2 class="animatedX moved">How to get the app?</h2>
+						
+						<p class="animatedX moved">The first step is to install a mobile app from Google Play or App Store. Scan the QR code below to find the apps in your store. </p>
+						
+						<p class="animatedX moved" id="qrcode_about">
+							
+						</p>
+						
+						<br>
+						
+						<p class="animatedX moved">
+						
+							<a href="https://play.google.com/store/apps/details?id=com.encedo.mobile.auth.android" target=
+							"_blank"><img data-src="assets/get-it-on-google-play.png" alt="Get it on Google Play"></a> &nbsp;
+							<a href="https://apps.apple.com/us/app/encedo-mobile-authenticator/id1596507368" target=
+							"_blank"><img data-src="assets/get-it-on-app-store.png" alt="Get it on App Store" style="height: 45px; margin-top: 1px; display: inline-block;"></a>
+							
+						</p>
+						
+						<br><br>
+						
+					</div>
+				
+				</div>
+				
+			</div>
+			
+			<div class="page" id="device_details" data-init="true" data-title="Details of paired device" data-class="wider" data-parent="devices">
+			
+				<div class="wyswig wyswig15pa">
+				
+					<h1 class="animatedX moved fillByKey" rel="label"></h1>
+					
+					<h2 class="animatedX moved fillByKey" rel="descr"></h2> 
+					
+					<p class="animatedX moved">Key ID: <span class="fillByKey" rel="kid"></span></p>
+					
+					<br><br> 
+					
+					<div class="c3d">
+							
+						<div class="updtItem item animatedX moved">
+							<h3>Type</h3>
+							<p class="fillByKey" rel="type"></p>
+						</div>
+						
+						<div class="updtItem item animatedX moved">
+							<h3>Created</h3>
+							<p class="fillByKey" rel="createdX"></p>
+						</div>
+						
+						<div class="updtItem item animatedX moved">
+							<h3>Updated</h3>
+							<p class="fillByKey" rel="updatedX"></p>
+						</div>
+						
+					</div>
+					
+					<br><br><br> 
+					
+					<p class="animatedX moved">
+						<a class="buttonCTA buttonCTAG changePage" rel="device_edit">Edit &nbsp; <i class="icon-wrench"></i></a>
+						<a class="buttonCTA buttonCTAG makeAction" rel="removeDevice">Unpair and remove device &nbsp; <i class="icon-cancel"></i></a>
+					</p>
+					
+					<br> 
+					
+					<p class="animatedX moved"><a class="buttonCTAGX changePage" rel="devices"><i class="icon-angle-left"></i> &nbsp; Back to devices</a></p>
+					
+				</div>
+			</div>
+			
+			<div class="page" id="device_edit" data-init="true" data-title=" Edit form of paired device" data-class="wider" data-parent="devices">
+			
+				<div class="wyswig wyswig15pa">
+				
+					<h1 class="animatedX moved">Device edit form</h1>
+					
+					<h2 class="animatedX moved">For every paired device you can change labels and description. </h2> 
+					
+					<form class="form-card animatedX moved" style="margin: 0;">
+				
+						<fieldset class="form-fieldset form-fieldset-nop animatedX moved">
+							
+							<div class="form-element form-input animatedX moved">
+								<input id="device_label_new" class="form-element-field" placeholder=" " type="text">
+								<div class="form-element-bar"></div>
+								<label class="form-element-label" for="device_label_new">Label for this key</label>
+							</div>
+						
+						</fieldset>
+						
+					</form>
+					
+					<p class="animatedX moved">
+						<a class="buttonCTA makeAction" rel="device_save_changes" id="device_label_submit"> Save changes &nbsp; <i class="icon-ok"></i> </a>
+					</p>
+					
+					<br><br>
+					
+					<p class="animatedX moved"><a class="buttonCTAGX changePage" rel="devices"><i class="icon-angle-left"></i> &nbsp; Back to devices</a></p>
+					
+				</div>
+			</div>
+			
+			<div class="page" id="thirdparties" data-init="true" data-class="wider" data-title="Trusted Apps management">
+			
+				<div class="supericon"><i class="icon-lock"></i></div>
+				
+				<div class="wyswig wyswig15pa">
+				
+					<h1 class="animatedX moved">Trusted Apps</h1>
+					
+					<h2 class="animatedX moved">Stay tuned! More here to come soon.</h2> 
+				
+					<p class="animatedX moved">&nbsp;</p>
+					
+					<br><br>
+					
+					<div class="c3d">
+							
+						<div class="updtItem item animatedX moved">
+							<h3 class="animatedX moved">File transfer</h3>
+							<p class="animatedX moved">Secure p2p file transfer.</p>
+							<p><a href="https://encedo.com/services/transfer/" class="animatedX moved buttonCTA" target="_blank">Transfer &nbsp; <i class="icon-download"></i></a></p>
+						</div>
+						
+						<div class="updtItem item animatedX moved">
+							<h3 class="animatedX moved">Onchato</h3>
+							<p class="animatedX moved">Online, ephemeral chat.</p>
+						</div>
+						
+						<div class="updtItem item animatedX moved">
+							<h3 class="animatedX moved">Video call</h3>
+							<p class="animatedX moved">End-to-end encrypted video calls.</p>
+						</div>
+						
+					</div>
+					
+					<br><br><br>
+				
+				</div>
+				
+			</div>
+			
+			<div class="page" id="app_filetransfer" data-class="wider" data-title="File transfer">
+				
+				<div class="wyswig wyswig15pa">
+				
+					<p class="buttonCTAR"><a class="animatedX moved buttonCTA buttonCTAG changePage" rel="app_filetransfer">About app &nbsp; <i class="icon-info"></i></a></p>
+				
+					<h1 class="animatedX moved">File transfer</h1>
+					
+					<h2 class="animatedX moved">Security-first sharing redefined!</h2> 
+				
+					<p class="animatedX moved">All the keys created or handled (with import) by Encedo Device can be found here. Keep in mind that there is no physical way to retrieve private key for any on them. Any encryption operation is done inside the device and only the result can be obtained.
+					</p>
+					
+					<br>
+					
+					<p class="animatedX moved bounce"><a class="buttonCTA changePage" rel="app_filetransfer_create">Click to start &nbsp; <i class="icon-share"></i></a></p>
+					
+				</div>
+				
+			</div>
+			
+			<div class="page" id="app_filetransfer_ready" data-class="wider" data-title="File transfer">
+				
+				<div class="wyswig wyswig15pa">
+				
+					<p class="buttonCTAR"><a class="animatedX moved buttonCTA buttonCTAG changePage" rel="app_filetransfer">About app &nbsp; <i class="icon-info"></i></a></p>
+				
+					<h1 class="animatedX moved">File transfer</h1>
+					
+					<h2 class="animatedX moved">Security-first sharing redefined!</h2> 
+				
+					<p class="animatedX moved">All the keys created or handled (with import) by Encedo Device can be found here. Keep in mind that there is no physical way to retrieve private key for any on them. Any encryption operation is done inside the device and only the result can be obtained.
+					</p>
+					
+					<br>
+					
+					<div class="animatedX moved c3x c2xd">
+						<div class="element updtItem animatedX moved changePage" rel="app_filetransfer_identity">
+							<h3 class="name">John Charlie Doe</h3>
+							<p class="status">
+								<span class="type">Created: 2022-01-18 14:25:48</span>
+							</p>
+							<span class="icons">
+								<i class="icon-mail animatedX"></i> 
+								<i class="icon-cog animatedX"></i>
+							</span>
+						</div>
+						<div class="element updtItem animatedX moved changePage" rel="app_filetransfer_create">
+							<h3 class="name">Create new identity <i class="icon-plus"></i></h3>
+							<p class="status">
+								<span class="type">It is a good practice to use many keys.</span>
+							</p>
+						</div>
+					</div>
+					
+					<br><br>
+					
+					<p class="animatedX moved">
+						<a class="buttonCTA changePage" rel="app_filetransfer_send">Send file &nbsp; <i class="icon-docs"></i></a>
+						<a class="buttonCTA changePage" rel="app_filetransfer_receive">Receive file &nbsp; <i class="icon-share"></i></a>
+					</p>
+					
+					<br><br>
+					
+					<p class="animatedX moved">
+						<a class="buttonCTA buttonCTAG changePage" rel="app_filetransfer_useinvitation">Got an invitation &nbsp; <i class="icon-user"></i></a>
+					</p>
+					
+					
+				</div>
+				
+			</div>
+			
+			<div class="page" id="app_filetransfer_identity" data-class="wider" data-title="File transfer">
+				
+				<div class="wyswig wyswig15pa">
+				
+					<p class="buttonCTAR">
+						<a class="buttonCTA buttonCTAG makeAction" rel="app_filetransfer_invite_submit">Invite &nbsp; <i class="icon-mail"></i></a>
+					</p>
+				
+					<h1 class="animatedX moved">John Doe</h1>
+					
+					<h2 class="animatedX moved">What do you need my friend?</h2> 
+					
+					<p class="animatedX moved">All the keys created or handled (with import) by Encedo Device can be found here. Keep in mind that there is no physical way to retrieve private key for any on them. Any encryption operation is done inside the device and only the result can be obtained.
+					</p>
+					
+					<br>
+					
+					<p class="animatedX moved specialCode fulled"><span class="desc">Share code:</span> <strong id="app_filetransfer_created_sharecode">n43902yun239084udmn9238-d4u23780432yfen3278dynme20378yunme2380fcryunm23780fyrn23807yfn2378fy23m78032d4yn023d4n0238fun423089f4unm20398f4un23908f4un2390f4un203f4u02389fu402389u4fn90238u4fn0239u</strong><span class="copy copyThis makeAction" rel="clipboardCopy/app_filetransfer_created_sharecode"><i class="icon-clone"></i> Copy</span></p>
+					
+					<br>
+					
+					<p class="animatedX moved">
+						<a class="buttonCTA buttonCTAG buttonCTARM changePage" rel="app_filetransfer_ready"><i class="icon-angle-left"></i> &nbsp; Back </a>
+						<a class="buttonCTA changePage" rel="app_filetransfer_send">Send file &nbsp; <i class="icon-docs"></i></a>
+						<a class="buttonCTA changePage" rel="app_filetransfer_receive">Receive file &nbsp; <i class="icon-share"></i></a>
+						
+					</p>
+					
+				</div>
+				
+			</div>
+			
+			<div class="page" id="app_filetransfer_send" data-class="wider" data-title="File transfer">
+				
+				<div class="wyswig wyswig15pa">
+				
+					<p class="buttonCTAR"><a class="animatedX moved buttonCTA buttonCTAG changePage" rel="app_filetransfer">About app &nbsp; <i class="icon-info"></i></a></p>
+				
+					<h1 class="animatedX moved">Send file</h1>
+					
+					<h2 class="animatedX moved">Fast and private sharing!</h2> 
+				
+					<p class="animatedX moved">All the keys created or handled (with import) by Encedo Device can be found here. Keep in mind that there is no physical way to retrieve private key for any on them. Any encryption operation is done inside the device and only the result can be obtained.
+					</p>
+					
+					<form class="form-card animatedX moved" style="margin: 0;" id="app_filetransfer_send_form">
+				
+						<fieldset class="form-fieldset form-fieldset-nop animatedX moved c2d" style="margin: 0;">
+							
+							<div class="form-element form-select animatedX moved">
+								<select id="app_filetransfer_send_identity" class="form-element-field -hasvalue" name="identity">
+									<option disabled="" selected="" value="" class="form-select-placeholder"></option>
+									<option value="John Doe" selected>John Doe (secret@emaio.com)</option>
+								</select>
+								<div class="form-element-bar"></div>
+								<label class="form-element-label" for="app_filetransfer_send_identity">Identity</label>
+							</div>
+							
+							<div class="form-element form-select animatedX moved">
+								<select id="app_filetransfer_send_recipent" class="form-element-field -hasvalue" name="mode">
+									<option disabled="" selected="" value="" class="form-select-placeholder"></option>
+									<option value="ECDH" selected>Julian Assange (julian@assange.com)</option>
+									<option value="ECDH">Let me select many people</option>
+								</select>
+								<div class="form-element-bar"></div>
+								<label class="form-element-label" for="app_filetransfer_send_recipent">Who gets it?</label>
+							</div>
+						
+						</fieldset>
+						
+						<fieldset>
+							
+						</fieldset>
+						
+						<fieldset id="filetransferHere" class="filetransferHere animatedX moved">
+							<div>
+								<input type="file" id="fileElem" multiple accept="image/*" onchange="handleFiles(this.files)" style="display: none">
+								<p class="heremon"><strong>Drop files here <i class="icon-docs"></i></strong></p>
+								<p class="dropit"><strong>Yeeeah! Drop it like it's hot! <i class="icon-docs"></i></strong></p>
+							</div>
+							<div id="filetransferGalleryHere" class="filetransferGalleryHere"></div>
+						</fieldset>
+						
+						<progress id="progress-bar" max=100 value=0 style="display: none;"></progress>
+						
+						<br><br><br>
+
+						<p class="animatedX moved">
+							<a class="buttonCTA buttonCTAG buttonCTARM changePage" rel="app_filetransfer_ready"><i class="icon-angle-left"></i> &nbsp; Back </a>
+							<a class="buttonCTA makeAction" rel="app_filetransfer_send_form_submit" id="">Send files &nbsp; <i class="icon-mail"></i></a>
+						</p>
+						
+					</form>
+					
+				</div>
+				
+			</div>
+			
+			<div class="page" id="app_filetransfer_send_already" data-class="wider" data-title="File transfer">
+				
+				<div class="wyswig wyswig15pa">
+				
+					<p class="buttonCTAR"><a class="animatedX moved buttonCTA buttonCTAG changePage" rel="app_filetransfer">About app &nbsp; <i class="icon-info"></i></a></p>
+				
+					<h1 class="animatedX moved">Files sent!</h1>
+					
+					<h2 class="animatedX moved">All good to go!</h2> 
+					
+					<p class="animatedX moved">All the keys created or handled (with import) by Encedo Device can be found here. Keep in mind that there is no physical way to retrieve private key for any on them. Any encryption operation is done inside the device and only the result can be obtained.
+					</p>
+					
+					<br>
+					
+					<p class="animatedX moved specialCode fulled"><span class="desc">Share code:</span> <strong id="app_filetransfer_created_sharecode">n43902yun239084udmn9238-d4u23780432yfen3278dynme20378yunme2380fcryunm23780fyrn23807yfn2378fy23m78032d4yn023d4n0238fun423089f4unm20398f4un23908f4un2390f4un203f4u02389fu402389u4fn90238u4fn0239u</strong><span class="copy copyThis makeAction" rel="clipboardCopy/app_filetransfer_created_sharecode"><i class="icon-clone"></i> Copy</span></p>
+					
+					<br>
+					
+					<p class="animatedX moved">
+						<a class="buttonCTA buttonCTAG buttonCTARM changePage" rel="app_filetransfer_ready"><i class="icon-angle-left"></i> &nbsp; Back </a>
+						<a class="buttonCTA buttonCTAG changePage" rel="app_filetransfer_send">Send another file &nbsp; <i class="icon-docs"></i></a>
+						<a class="buttonCTA changePage" rel="app_filetransfer_ready">Done &nbsp; <i class="icon-ok"></i></a>
+					</p>
+					
+				</div>
+				
+			</div>
+			
+			<div class="page" id="app_filetransfer_create" data-class="wider" data-title="File transfer">
+				
+				<div class="wyswig wyswig15pa">
+				
+					<p class="buttonCTAR"><a class="animatedX moved buttonCTA buttonCTAG changePage" rel="app_filetransfer">About app &nbsp; <i class="icon-info"></i></a></p>
+				
+					<h1 class="animatedX moved">Create new identity</h1>
+					
+					<h2 class="animatedX moved">You can hide behind a curtain!</h2> 
+				
+					<p class="animatedX moved">All the keys created or handled (with import) by Encedo Device can be found here. Keep in mind that there is no physical way to retrieve private key for any on them. Any encryption operation is done inside the device and only the result can be obtained.
+					</p>
+					
+					<br>
+					
+					<form class="form-card animatedX moved" style="margin: 0;" id="app_filetransfer_create_form">
+				
+						<fieldset class="form-fieldset form-fieldset-nop animatedX moved c2d" style="margin: 0;">
+							
+							<div class="form-element form-input animatedX moved">
+								<input id="app_filetransfer_create_form_name" class="form-element-field" placeholder=" " type="text" required pattern="[ \w\[\]`!@#$%\^&*()={}:;<>+'-]{1,36}" maxlength="32" name="name">
+								<div class="form-element-bar"></div>
+								<label class="form-element-label" for="app_filetransfer_create_form_name">Name or description</label>
+							</div>
+							
+							<div class="form-element form-input animatedX moved">
+								<input id="app_filetransfer_create_form_email" class="form-element-field" placeholder=" " type="email" maxlength="64" name="email">
+								<div class="form-element-bar"></div>
+								<label class="form-element-label" for="app_filetransfer_create_form_email">Email address</label>
+							</div>
+						
+						</fieldset>
+						
+						<br><br>
+
+						<p class="animatedX moved">
+							<a class="buttonCTA buttonCTAG buttonCTARM changePage" rel="app_filetransfer_ready"><i class="icon-angle-left"></i> &nbsp; Back </a>
+							<a class="buttonCTA makeAction" rel="app_filetransfer_generate" id="app_filetransfer_create_form_submit">Create identity &nbsp; <i class="icon-user"></i></a>
+						</p>
+						
+					</form>
+					
+				</div>
+				
+			</div>
+			
+			<div class="page" id="app_filetransfer_useinvitation" data-class="wider" data-title="File transfer">
+				
+				<div class="wyswig wyswig15pa">
+				
+					<p class="buttonCTAR"><a class="animatedX moved buttonCTA buttonCTAG changePage" rel="app_filetransfer">About app &nbsp; <i class="icon-info"></i></a></p>
+				
+					<h1 class="animatedX moved">Use invitation</h1>
+					
+					<h2 class="animatedX moved">You can hide behind a curtain!</h2> 
+				
+					<p class="animatedX moved">All the keys created or handled (with import) by Encedo Device can be found here. Keep in mind that there is no physical way to retrieve private key for any on them. Any encryption operation is done inside the device and only the result can be obtained.
+					</p>
+					
+					<br>
+					
+					<form class="form-card animatedX moved" style="margin: 0;" id="app_filetransfer_invitation_form">
+				
+						<fieldset class="form-fieldset form-fieldset-nop animatedX moved">
+						
+							<div class="form-element form-input animatedX moved">
+								<textarea id="app_filetransfer_invitation_form_code" class="form-element-field" placeholder=" " required pattern="(.){2,252}" maxlength="250" rows="3"></textarea>
+								<div class="form-element-bar"></div>
+								<label class="form-element-label" for="app_filetransfer_invitation_form_code">Invitation share-code</label>
+							</div>
+						
+						</fieldset>
+						
+						<br><br>
+
+						<p class="animatedX moved">
+							<a class="buttonCTA buttonCTAG buttonCTARM changePage" rel="app_filetransfer_ready"><i class="icon-angle-left"></i> &nbsp; Back </a>
+							<a class="buttonCTA makeAction" rel="app_filetransfer_invitation_form_submit" id="app_filetransfer_invitation_form_submit">Add contact &nbsp; <i class="icon-user"></i></a>
+						</p>
+						
+					</form>
+					
+				</div>
+				
+			</div>
+			
+			<div class="page" id="app_filetransfer_receive" data-class="wider" data-title="File transfer">
+				
+				<div class="wyswig wyswig15pa">
+				
+					<p class="buttonCTAR"><a class="animatedX moved buttonCTA buttonCTAG changePage" rel="app_filetransfer">About app &nbsp; <i class="icon-info"></i></a></p>
+				
+					<h1 class="animatedX moved">Receive a file</h1>
+					
+					<h2 class="animatedX moved">You can hide behind a curtain!</h2> 
+				
+					<p class="animatedX moved">All the keys created or handled (with import) by Encedo Device can be found here. Keep in mind that there is no physical way to retrieve private key for any on them. Any encryption operation is done inside the device and only the result can be obtained.
+					</p>
+					
+					<br>
+					
+					<form class="form-card animatedX moved" style="margin: 0;" id="app_filetransfer_receive_form">
+				
+						<fieldset class="form-fieldset form-fieldset-nop animatedX moved">
+						
+							<div class="form-element form-input animatedX moved">
+								<textarea id="app_filetransfer_receive_form_code" class="form-element-field" placeholder=" " required pattern="(.){2,252}" maxlength="250" rows="3"></textarea>
+								<div class="form-element-bar"></div>
+								<label class="form-element-label" for="app_filetransfer_receive_form_code">Paste here files share-code</label>
+							</div>
+						
+						</fieldset>
+						
+						<br><br>
+
+						<p class="animatedX moved">
+							<a class="buttonCTA buttonCTAG buttonCTARM changePage" rel="app_filetransfer_ready"><i class="icon-angle-left"></i> &nbsp; Back </a>
+							<a class="buttonCTA makeAction" rel="app_filetransfer_receive_form_submit" id="app_filetransfer_receive_form_submit">Use sharecode &nbsp; <i class="icon-share"></i></a>
+						</p>
+						
+					</form>
+					
+				</div>
+				
+			</div>
+			
+			<div class="page" id="app_filetransfer_receive_decoded" data-class="wider" data-title="File transfer">
+				
+				<div class="wyswig wyswig15pa">
+				
+					<p class="buttonCTAR"><a class="animatedX moved buttonCTA buttonCTAG changePage" rel="app_filetransfer">About app &nbsp; <i class="icon-info"></i></a></p>
+				
+					<h1 class="animatedX moved">Files details</h1>
+					
+					<h2 class="animatedX moved">All you need to know about the files.</h2> 
+				
+					<p class="animatedX moved">All the keys created or handled (with import) by Encedo Device can be found here. Keep in mind that there is no physical way to retrieve private key for any on them. Any encryption operation is done inside the device and only the result can be obtained.
+					</p>
+					
+					<br>
+					
+					<div class="c3d c2d">
+							
+						<div class="updtItem item animatedX moved">
+							<h3>Sender</h3>
+							<p class="fillByKey" rel="type">Julian Assange (julian@secret.com)</p>
+						</div>
+						
+						<div class="updtItem item animatedX moved">
+							<h3>Recipent</h3>
+							<p class="fillByKey" rel="_created">John Doe</p>
+						</div>
+						
+					</div>
+					
+					<br>
+					
+					<div class="infoAboutTheFiles animatedX moved">
+						<p class="heremon"><strong>Information about the files <i class="icon-docs"></i></strong></p>
+					</div>
+					
+					<br>
+					
+					<br>
+					
+					<p class="animatedX moved">
+						<a class="buttonCTA buttonCTAG buttonCTARM changePage" rel="app_filetransfer_ready"><i class="icon-angle-left"></i> &nbsp; Back </a>
+						<a class="buttonCTA makeAction" rel="app_filetransfer_receive_download" id="app_filetransfer_receive_download">Download files &nbsp; <i class="icon-download"></i></a>
+					</p>
+					
+				</div>
+				
+			</div>
+			
+			
+			
+			<div class="page" id="app_filetransfer_created" data-class="wider" data-title="File transfer">
+				
+				<div class="wyswig wyswig15pa">
+				
+					<p class="buttonCTAR"><a class="animatedX moved buttonCTA buttonCTAG changePage" rel="app_filetransfer">About app &nbsp; <i class="icon-info"></i></a></p>
+				
+					<h1 class="animatedX moved">Identity created!</h1>
+					
+					<h2 class="animatedX moved">You can hide behind a curtain!</h2> 
+				
+					<p class="animatedX moved">All the keys created or handled (with import) by Encedo Device can be found here. Keep in mind that there is no physical way to retrieve private key for any on them. Any encryption operation is done inside the device and only the result can be obtained.
+					</p>
+					
+					<br>
+					
+					<br>
+					
+					<p class="animatedX moved specialCode fulled"><span class="desc">Share code:</span> <strong id="app_filetransfer_created_sharecode">n43902yun239084udmn9238-d4u23780432yfen3278dynme20378yunme2380fcryunm23780fyrn23807yfn2378fy23m78032d4yn023d4n0238fun423089f4unm20398f4un23908f4un2390f4un203f4u02389fu402389u4fn90238u4fn0239u</strong><span class="copy copyThis makeAction" rel="clipboardCopy/app_filetransfer_created_sharecode"><i class="icon-clone"></i> Copy</span></p>
+					
+					<br>
+					
+					<p class="animatedX moved">
+						<a class="buttonCTA changePage" rel="app_filetransfer_ready">Done &nbsp; <i class="icon-ok"></i> </a>
+						<a class="buttonCTA buttonCTAG makeAction" rel="app_filetransfer_sendcode" id="app_filetransfer_sendcode_button">Email the share code &nbsp; <i class="icon-mail"></i> &nbsp;</a>
+					</p>
+					
+				</div>
+				
+			</div>
+			
+			<style>
+			.onchatoAPP { display: grid; grid-gap: 10px; grid-template-columns: 30% 70%; width: 100%; }
+			.onchatoAPP .leftNav { position: relative; z-index: 10; background: rgba(1,1,1,0.02); border-radius: 36px 0px 0px 36px; height: calc(100vh - 180px); margin-top: 30px; }
+			
+			.onchatoAPP .leftNav .people { height: calc(100vh - 580px); overflow: auto; margin-right: 5px; }
+			.onchatoAPP .leftNav .people li { padding: 25px 35px; border-top: 1px solid rgba(1,1,1,0.1); transition-duration: 0.5s; cursor: pointer; }
+			.onchatoAPP .leftNav .people li.active { background: linear-gradient(-45deg, #6E358C, #2A225E, #6E358C); background-position: 0% 0%; background-size: 400% 400%; animation: gradient 3s ease infinite !important; color: #fff; }
+			.onchatoAPP .leftNav .people li:hover { padding: 25px 35px; border-top: 1px solid rgba(1,1,1,1.1); background: rgba(255,255,255,0.7); color: #000; }
+			.onchatoAPP .leftNav .people li.active:hover { background: linear-gradient(-45deg, #6E358C, #2A225E, #6E358C); background-position: 0% 0%; background-size: 400% 400%; animation: gradient 3s ease infinite !important; color: #fff; }
+			.onchatoAPP .leftNav .people li .name { display: block; font-weight: bold; font-size: 110%; margin-bottom: 5px; }
+			.onchatoAPP .leftNav .people li .desc { display: block; font-size: 90%; }
+			
+			.onchatoAPP .leftNav .profile { text-align: center; padding: 50px 20px; }
+			.onchatoAPP .leftNav .profile .circle { display: inline-block; width: 120px; height: 120px; border-radius: 50%; background: linear-gradient(-45deg, #6E358C, #2A225E, #6E358C); background-position: 0% 0%; background-size: 400% 400%; animation: gradient 3s ease infinite !important; color: #fff; font-size: 50px; font-weight: bold; margin: 30px auto; padding-top: 34px; text-align: center; }
+			.onchatoAPP .leftNav .profile .namer { font-size: 220%; font-weight: bold; margin-bottom: 10px; }
+			.onchatoAPP .leftNav .profile .emailad { font-size: 90%; }
+
+			.onchatoAPP .rightNav { position: relative; z-index: 20; background: rgba(1,1,1,0.04); border-radius: 36px 0px 0px 36px; height: calc(100vh - 120px); box-shadow: -10px -1px 2px 2px rgba(0,0,0,0.04); -webkit-box-shadow: -10px -1px 2px 2px rgba(0,0,0,0.04); -moz-box-shadow: -10px -1px 2px 2px rgba(0,0,0,0.04); padding-right: 20px; }
+			
+			.onchatoAPP .rightNav .messageHeader { height: 80px; overflow: hidden; margin: 20px 20px 0px 20px; background: rgba(255,255,255,0.7); border-radius: 36px 0px 0px 0px; padding: 30px; border-bottom: 1px solid rgba(1,1,1,0.1); }
+			.onchatoAPP .rightNav .messageHeader .person { float: left; font-weight: bold; font-size: 150%; }
+			.onchatoAPP .rightNav .messageHeader .icons { float: right; }
+			.onchatoAPP .rightNav .messageHeader .icons span { display: inline-block; cursor: pointer; font-size: 150%; border-radius: 50%; background: rgba(1,1,1,0.04); margin-left: 10px; padding: 10px 6px; text-align: center; margin-top: -10px; transition-duration: 0.5s; }
+			.onchatoAPP .rightNav .messageHeader .icons span:hover { background: #6E358C; color: #fff; }
+			
+			.black .onchatoAPP .rightNav .messageHeader { background: rgba(1,1,1,0.7); border-bottom: 1px solid rgba(255,255,255,0.5); }
+			.black .onchatoAPP .rightNav .messageHeader .icons span { background: #6E358C; color: #fff; }
+			
+			.onchatoAPP .rightNav .messageLog { height: calc(100vh - 350px); overflow: auto; margin: 0px 20px 20px 20px; background: rgba(255,255,255,0.7); border-radius: 0px 0px 0px 36px; padding: 30px; }
+			.onchatoAPP .rightNav .messageLog .message { display: block; width: fit-content; padding: 20px 25px; margin: 5px 5px 20px 5px; max-width: 70%; border: 1px solid #eee; line-height: 1.6; border-radius: 26px 26px 26px 0px; background: rgba(1,1,1,0.02); box-shadow: 0 0 2rem rgb(0 0 0 / 8%), 0rem 1rem 1rem -1rem rgb(0 0 0 / 10%); }
+			.onchatoAPP .rightNav .messageLog .message:after { content: "."; display: block; height: 0; clear: both; visibility: hidden; }
+			* html .onchatoAPP .rightNav .messageLog .message { display: inline-block; }*:first-child+html .clearfix { display: inline-block; }
+			.onchatoAPP .rightNav .messageLog .message .dater { display: inline-block; font-size: 85%; float: right; padding-top: 15px; }
+			.onchatoAPP .rightNav .messageLog .messageOwn { display: block; margin: 5px 5px 15px auto; background: linear-gradient(-45deg, #6E358C, #2A225E, #6E358C); background-position: 0% 0%; background-size: 400% 400%; animation: gradient 3s ease infinite !important; color: #fff; border-radius: 26px 26px 0px 26px; }
+			
+			.black .onchatoAPP .rightNav .messageLog { background: rgba(1,1,1,0.02); }
+			.black .onchatoAPP .rightNav .messageLog .message { background: rgba(1,1,1,0.02); border: 1px solid #444; }
+			.black .onchatoAPP .rightNav .messageLog .messageOwn { background: linear-gradient(-45deg, #6E358C, #2A225E, #6E358C); background-position: 0% 0%; background-size: 400% 400%; animation: gradient 3s ease infinite !important; color: #fff; }
+			
+			.onchatoAPP .rightNav .messageLog .ellipsis { width: 10px; height: 10px; display: inline-block; background: #444; border-radius: 50%; animation: bouncer 1.3s linear infinite; margin: 10px 5px; }
+			.black .onchatoAPP .rightNav .messageLog .ellipsis { background: #ccc; }
+			
+			@keyframes bouncer {
+			  30% { transform: translateY(-2px); }
+			  60% { transform: translateY(0px); }
+			  80% { transform: translateY(2px); }
+			  100% { transform: translateY(0px); opacity: 0.5;  }
+			}
+			
+			.onchatoAPP .rightNav .messageLog .ellipsis.one { animation-delay: 0.6s; }
+			.onchatoAPP .rightNav .messageLog .ellipsis.two { animation-delay: 0.9s; }
+			.onchatoAPP .rightNav .messageLog .ellipsis.three { animation-delay: 1.2s; }
+
+			</style>
+			
+			<div class="page" id="app_onchato" data-class="wider transparent" data-title="File transfer">
+				
+				<div class="onchatoAPP">
+				
+					<div class="leftNav">
+					
+						<div class="profile animatedX moved">
+							<div class="circle">
+								MA
+							</div>
+							<div class="namer animatedX moved">
+								Maciej
+							</div>
+							<div class="emailad animatedX moved">
+								maciej@encedo.com
+							</div>
+						</div>
+					
+						<ul class="people animatedX moved">
+							<li>
+								<strong class="name">John Doe</strong>
+								<span class="desc">johhnie@down.com</span>
+							</li>
+							<li>
+								<strong class="name">Christina C</strong>
+								<span class="desc">chrissy@gmail.com</span>
+							</li>
+							<li>
+								<strong class="name">Customer Support</strong>
+								<span class="desc">support@encedo.com</span>
+							</li>
+							<li class="active">
+								<strong class="name">Mariusz S</strong>
+								<span class="desc">mario25cm@buziaczek.pl</span>
+							</li>
+							<li>
+								<strong class="name">Barbara S</strong>
+								<span class="desc">streisand@people.com</span>
+							</li>
+							<li>
+								<strong class="name">Magnus C</strong>
+								<span class="desc">carlsen@chess.com</span>
+							</li>
+							<li>
+								<strong class="name">Fight Club</strong>
+								<span class="desc">donottalk@aboutfightclub.com</span>
+							</li>
+							<li>
+								<strong class="name">John Doe</strong>
+								<span class="desc">johhnie@down.com</span>
+							</li>
+							<li>
+								<strong class="name">Christina C</strong>
+								<span class="desc">chrissy@gmail.com</span>
+							</li>
+							<li>
+								<strong class="name">Customer Support</strong>
+								<span class="desc">support@encedo.com</span>
+							</li>
+							<li>
+								<strong class="name">Mariusz S</strong>
+								<span class="desc">mario25cm@buziaczek.pl</span>
+							</li>
+							<li>
+								<strong class="name">Barbara S</strong>
+								<span class="desc">streisand@people.com</span>
+							</li>
+							<li>
+								<strong class="name">Magnus C</strong>
+								<span class="desc">carlsen@chess.com</span>
+							</li>
+							<li>
+								<strong class="name">Fight Club</strong>
+								<span class="desc">donottalk@aboutfightclub.com</span>
+							</li>
+						</ul>
+					
+					</div>
+					
+					<div class="rightNav">
+						<div class="messageHeader">
+							<div class="icons">
+								<span class="icon-bell"></span>
+								<span class="icon-camera"></span>
+								<span class="icon-cog"></span>
+							</div>
+							<div class="person">Mariusz S</div>
+						</div>
+						
+						<div class="messageLog">
+							<div class="message animatedX moved">Suspendisse potenti. Aliquam id libero et lacus vestibulum gravida eu in massa. Donec venenatis consectetur nisi et ullamcorper. Donec porttitor, mauris et malesuada mollis, diam nunc tristique nisl, sit amet egestas ex leo sodales elit. Vestibulum mauris augue, maximus et venenatis finibus, suscipit facilisis massa. Integer rutrum bibendum ligula at tincidunt. <span class="dater">11:32</span></div>
+							
+							<div class="message messageOwn animatedX moved">Vivamus faucibus volutpat commodo. Nullam id tincidunt arcu. Nam vehicula a nisl sit amet viverra. Duis eget sagittis nisi, et elementum diam. Integer sed sagittis lacus. Mauris eu euismod diam. Suspendisse potenti. Curabitur pulvinar magna nunc.<span class="dater">11:52</span></div>
+
+							<div class="message messageOwn animatedX moved">Maecenas gravida mollis neque, id auctor eros vehicula non. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Cras tincidunt sit amet est at ultrices. <span class="dater">12:12</span></div>
+
+							<div class="message animatedX moved">Phasellus dapibus, ex sed elementum congue, felis augue maximus sapien, et pellentesque nibh nunc sodales ex. Cras feugiat non velit vitae tristique. Maecenas enim eros, faucibus non mi at, posuere iaculis metus. Donec risus arcu, faucibus non feugiat quis, tristique vitae magna. Nulla vehicula ante urna, ut maximus ex eleifend vitae. <span class="dater">12:26</span></div>
+
+							<div class="message animatedX moved">In sagittis, lorem ac elementum rhoncus, erat est hendrerit neque, et blandit metus neque et lectus. Phasellus ut leo nunc. Sed erat nibh, tincidunt sed molestie quis, ultrices ac felis. <span class="dater">12:32</span></div>
+
+							<div class="message animatedX moved">Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Cras et orci ullamcorper, fermentum ex id, tincidunt erat. Curabitur consectetur sem mi, a accumsan lectus tristique ac. <span class="dater">12:45</span></div>
+
+							<div class="message messageOwn animatedX moved">Ut ut lectus id augue placerat convallis. Nulla a cursus orci. Aenean nec laoreet lorem. Nam malesuada in sem quis mattis. Nulla nisi dui, facilisis eu metus nec, ultricies imperdiet justo. Suspendisse potenti.<span class="dater">12:50</span></div>
+							
+							<div class="message animatedX moved">Phasellus dapibus, ex sed elementum congue, felis augue maximus sapien, et pellentesque nibh nunc sodales ex. Cras feugiat non velit vitae tristique. Maecenas enim eros, faucibus non mi at, posuere iaculis metus. Donec risus arcu, faucibus non feugiat quis, tristique vitae magna. Nulla vehicula ante urna, ut maximus ex eleifend vitae. <span class="dater">12:52</span></div>
+
+							<div class="message messageOwn animatedX moved">In sagittis, lorem ac elementum rhoncus, erat est hendrerit neque, et blandit metus neque et lectus. Phasellus ut leo nunc. Sed erat nibh, tincidunt sed molestie quis, ultrices ac felis. <span class="dater">12:58</span></div>
+
+							<div class="message messageOwn animatedX moved">Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Cras et orci ullamcorper, fermentum ex id, tincidunt erat. Curabitur consectetur sem mi, a accumsan lectus tristique ac. <span class="dater">12:59</span></div>
+
+							<div class="message animatedX moved">Ut ut lectus id augue placerat convallis. Nulla a cursus orci. Aenean nec laoreet lorem. Nam malesuada in sem quis mattis. Nulla nisi dui, facilisis eu metus nec, ultricies imperdiet justo. Suspendisse potenti. <span class="dater">13:52</span></div>
+							
+							<div class="message animatedX moved">Suspendisse potenti. Aliquam id libero et lacus vestibulum gravida eu in massa. Donec venenatis consectetur nisi et ullamcorper. Donec porttitor, mauris et malesuada mollis, diam nunc tristique nisl, sit amet egestas ex leo sodales elit. Vestibulum mauris augue, maximus et venenatis finibus, suscipit facilisis massa. Integer rutrum bibendum ligula at tincidunt. <span class="dater">15:12</span></div>
+							
+							<div class="message messageOwn animatedX moved">In sagittis, lorem ac elementum rhoncus, erat est hendrerit neque, et blandit metus neque et lectus. Phasellus ut leo nunc. Sed erat nibh, tincidunt sed molestie quis, ultrices ac felis. <span class="dater">16:48</span></div>
+							
+							<div class="typing animatedX moved">
+							  <div class="bubble message">
+								<div class="ellipsis one"></div>
+								<div class="ellipsis two"></div>
+								<div class="ellipsis three"></div>
+							  </div>
+							</div>
+						</div>
+						<div class="messagePrompt">
+							<div class="c-interaction">
+							  <button aria-label="Toggle more options." class="c-interaction__toggle c-interaction__button"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-plus"><path d="M12 5v14M5 12h14"></path></svg></button>
+							  <label class="vh" for="message"></label>
+							<input class="c-interaction__input" type="text" id="messsage" placeholder="Message">
+							  
+							  <div class="c-interaction__menu">
+								<ul>
+								  <li><button aria-label="Record a Video." class="c-interaction__button"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-video"><path d="M23 7l-7 5 7 5V7z"></path><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg></button></li>
+								  <li><button aria-label="Take a Picture." class="c-interaction__button"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-camera"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg></button></li>
+								  <li><button aria-label="Upload an Image." class="c-interaction__button"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-image"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="M21 15l-5-5L5 21"></path></svg></button></li>
+								</ul>
+							  </div>
+							</div>
+						</div>
+					</div>
+				
+				</div>
+				
+			</div>
+			
+			<div class="page" id="app_videocall" data-class="wider" data-title="File transfer">
+				
+				<div class="wyswig wyswig15pa">
+				
+					<p class="buttonCTAR"><a class="animatedX moved buttonCTA changePage" rel="app_videocall">About app &nbsp; <i class="icon-info"></i></a></p>
+				
+					<h1 class="animatedX moved">Video call</h1>
+					
+					<h2 class="animatedX moved">Security-first video calls redefined!</h2> 
+				
+					<p class="animatedX moved">All the keys created or handled (with import) by Encedo Device can be found here. Keep in mind that there is no physical way to retrieve private key for any on them. Any encryption operation is done inside the device and only the result can be obtained.
+					</p>
+					
+				</div>
+				
+			</div>
+			
+			<div class="page" id="keychain" data-init="true" data-class="wider" data-title="Keychain">
+			
+				<div class="supericon"><i class="icon-key"></i></div>
+				
+				<div class="wyswig wyswig15pa">
+				
+					<p class="buttonCTAR"><a class="animatedX moved buttonCTA changePage" rel="key_new">Create new key &nbsp; <i class="icon-plus"></i></a></p>
+				
+					<h1 class="animatedX moved">Keychain</h1>
+					
+					<h2 class="animatedX moved">Your privacy is right here!</h2> 
+				
+					<p class="animatedX moved">All the keys created or imported can be found here. Keep in mind that there is no physical way to retrieve the private keys so there is no backup option.</p>
+					
+					<br>
+					
+					<p class="navi__buttons navi__buttons__right">
+					
+						<strong class="makeAction" rel="changeKeychainView/tiles"><i class="icon-th-1"></i></strong>
+						<strong class="makeAction" rel="changeKeychainView/list"><i class="icon-menu"></i></strong>
+						
+					</p>
+					
+					<ul class="tabber">
+						<li class="animatedX moved" data-action="get_keys/user"><span>User <i class="icon-angle-down"></i></span></li>
+						<li class="animatedX moved" data-action="get_keys/imported"><span>Imported <i class="icon-angle-down"></i></span></li>
+						<li class="animatedX moved" data-action="get_keys/apps"><span>Apps <i class="icon-angle-down"></i></span></li>
+						<li class="animatedX moved" data-action="get_keys/others"><span>Others <i class="icon-angle-down"></i></span></li>
+						<li class="animatedX moved" data-action="get_keys/all"><span>All <i class="icon-angle-down"></i></span></li>
+					</ul>
+					
+					<div class="keychainContainer animatedX moved" id="keychainContainer">
+					
+						<h3>There are no keys to show.</h3>
+					
+					</div>
+					
+					<br><br><br><br>
+					
+					<p class="animatedX moved">
+					
+						<a class="buttonCTA changePage" rel="key_new">Create new key &nbsp; <i class="icon-plus"></i></a>
+						
+						<a class="buttonCTA changePage" rel="key_import">Import public key &nbsp; <i class="icon-download"></i></a>
+					
+					</p>
+				
+				</div>
+				
+			</div>
+			
+			<div class="page" id="key_new" data-init="true" data-class="wider" data-title="Create new key" data-parent="keychain">
+				
+				<div class="wyswig wyswig15pa">
+					
+					<p class="buttonCTAR"><a class="animatedX moved buttonCTA buttonCTAG changePage" rel="key_import">Import &nbsp; <i class="icon-download"></i></a></p>
+				
+					<h1 class="animatedX moved">Creating new key</h1>
+					
+					<h2 class="animatedX moved">Just fill up the form below!</h2> 
+				
+					<p class="animatedX moved">Every key got attributes. A few are system-generated but some and user-defined..</p>
+					
+					<br>
+					
+					<form class="form-card animatedX moved async" data-action="key_new_create" id="createNewKeyForm">
+		
+						<fieldset class="form-fieldset form-fieldset-nop animatedX moved c2x">
+							
+							<div class="form-element form-input animatedX moved">
+								<input id="fields_key_label" class="form-element-field" placeholder=" " type="text" pattern="[ \w\[\]`!@#$%\^&*()={}:;<>+'-]{1,35}" maxlength="32" required name="label">
+								<div class="form-element-bar"></div>
+								<label class="form-element-label" for="fields_key_label">Label for this key</label>
+								<small class="form-element-hint">User-friendly label of the key.</small>
+							</div>
+							
+							<div class="form-element form-input animatedX moved">
+								<input id="fields_key_descr" class="form-element-field" placeholder=" " type="text" pattern="[-a-zA-Z0-9_=]{0,65}" maxlength="64" name="descr">
+								<div class="form-element-bar"></div>
+								<label class="form-element-label" for="fields_key_descr">Description</label>
+								<small class="form-element-hint">Optional, base64 encoded binary data.</small>
+							</div>
+							
+							<div class="form-element form-select animatedX moved">
+								<select id="fields_key_type" class="form-element-field -hasvalue" required name="type">
+									<option disabled="" selected="" value="" class="form-select-placeholder"></option>
+									<option value="SECP256R1" data-type="ECDH;ExDSA;ECDH,ExDSA">SECP256R1</option>
+									<option value="SECP384R1" data-type="ECDH;ExDSA;ECDH,ExDSA">SECP384R1</option>
+									<option value="SECP521R1" data-type="ECDH;ExDSA;ECDH,ExDSA">SECP521R1</option>
+									<option value="SECP256K1" data-type="ECDH;ExDSA;ECDH,ExDSA">SECP256K1</option>
+									<option value="CURVE25519" data-type="ECDH" selected>CURVE25519</option>
+									<option value="CURVE448" data-type="ECDH">CURVE448</option>
+									<option value="ED25519" data-type="ExDSA">ED25519</option>
+									<option value="ED448" data-type="ExDSA">ED448</option>
+									<option value="MLDSA44" data-type="none">MLDSA44</option>
+									<option value="MLDSA65" data-type="none">MLDSA65</option>
+									<option value="MLDSA87" data-type="none">MLDSA87</option>
+									<option value="MLKEM512" data-type="none">MLKEM512</option>
+									<option value="MLKEM768" data-type="none">MLKEM768</option>
+									<option value="MLKEM1024" data-type="none">MLKEM1024</option>
+									<option value="SHA2-256" data-type="none">SHA2-256</option>
+									<option value="SHA2-384" data-type="none">SHA2-384</option>
+									<option value="SHA2-512" data-type="none">SHA2-512</option>
+									<option value="SHA3-256" data-type="none">SHA3-256</option>
+									<option value="SHA3-384" data-type="none">SHA3-384</option>
+									<option value="SHA3-512" data-type="none">SHA3-512</option>
+									<option value="AES128" data-type="none">AES128</option>
+									<option value="AES192" data-type="none">AES192</option>
+									<option value="AES256" data-type="none">AES256</option>
+								</select>
+
+								<div class="form-element-bar"></div>
+								<label class="form-element-label" for="fields_key_type">Type of new key</label>
+								<small class="form-element-hint">&nbsp;</small>
+							</div>
+							
+							<div class="form-element form-select animatedX moved">
+								<select id="fields_key_mode" class="form-element-field -hasvalue" name="mode">
+									<option disabled="" selected="" value="" class="form-select-placeholder"></option>
+									<option value="ECDH" selected>ECDH</option>
+								</select>
+								<div class="form-element-bar"></div>
+								<label class="form-element-label" for="fields_key_mode">Mode</label>
+								<small class="form-element-hint">&nbsp;</small>
+							</div>
+						
+						</fieldset>
+						
+						<br><br> 
+						
+						<p class="animatedX moved">
+						
+							<a class="buttonCTA buttonCTAG buttonCTARM angle-left changePage" rel="keychain"><i class="icon-angle-left"></i> &nbsp; Back &nbsp; </a>
+
+							<button class="buttonCTA" type="submit" name="submit"> &nbsp; Create &nbsp; &nbsp; <i class="icon-plus"></i></button>
+						
+						</p>	
+						
+					</form>
+				
+				</div>
+				
+			</div>
+			
+			<div class="page" id="key_import" data-init="true" data-class="wider" data-title="Import new public key" data-parent="keychain">
+				
+				<div class="wyswig wyswig15pa">
+					
+					<p class="buttonCTAR"><a class="animatedX moved buttonCTA buttonCTAG changePage" rel="key_new">Create new key &nbsp; <i class="icon-plus"></i></a></p>
+				
+					<h1 class="animatedX moved">Import public key</h1>
+					
+					<h2 class="animatedX moved">Just fill up the form below!</h2> 
+				
+					<p class="animatedX moved">If you want to import a new key to the keychain <strong>based on existing public key</strong>, please use the fields below.</p>
+					
+					<br>
+					
+					<form class="form-card animatedX moved async" data-action="key_new_import" id="importNewKeyForm">
+		
+						<fieldset class="form-fieldset form-fieldset-nop animatedX moved c2x">
+							
+							<div class="form-element form-input animatedX moved">
+								<input id="fields_key_import_label" class="form-element-field" placeholder=" " type="text" pattern="[ \w\[\]`!@#$%\^&*()={}:;<>+'-]{1,36}" maxlength="32" required name="label">
+								<div class="form-element-bar"></div>
+								<label class="form-element-label" for="fields_key_import_label">Label for this key</label>
+								<small class="form-element-hint">User-friendly label of the key.</small>
+							</div>
+							
+							<div class="form-element form-input animatedX moved">
+								<input id="fields_key_import_descr" class="form-element-field" placeholder=" " type="text" pattern="[-a-zA-Z0-9_=]{0,65}" maxlength="64" name="descr">
+								<div class="form-element-bar"></div>
+								<label class="form-element-label" for="fields_key_import_descr">Description</label>
+								<small class="form-element-hint">Optional, base64 encoded binary data.</small>
+							</div>
+							
+						</fieldset>
+						
+						<fieldset class="form-fieldset form-fieldset-nop animatedX moved c2x">	
+							
+							<div class="form-element form-select animatedX moved">
+								<select id="fields_key_import_type" class="form-element-field -hasvalue" required name="type">
+									<option disabled="" value="" class="form-select-placeholder"></option>
+									<option value="" selected>Choose a type</option>
+									<option value="SECP256R1" data-type="ECDH;ExDSA;ECDH,ExDSA">SECP256R1</option>
+									<option value="SECP384R1" data-type="ECDH;ExDSA;ECDH,ExDSA">SECP384R1</option>
+									<option value="SECP521R1" data-type="ECDH;ExDSA;ECDH,ExDSA">SECP521R1</option>
+									<option value="SECP256K1" data-type="ECDH;ExDSA;ECDH,ExDSA">SECP256K1</option>
+									<option value="CURVE25519" data-type="ECDH">CURVE25519</option>
+									<option value="CURVE448" data-type="ECDH">CURVE448</option>
+									<option value="ED25519" data-type="ExDSA">ED25519</option>
+									<option value="ED448" data-type="ExDSA">ED448</option>
+									<option value="MLDSA44" data-type="none">MLDSA44</option>
+									<option value="MLDSA65" data-type="none">MLDSA65</option>
+									<option value="MLDSA87" data-type="none">MLDSA87</option>
+									<option value="MLKEM512" data-type="none">MLKEM512</option>
+									<option value="MLKEM768" data-type="none">MLKEM768</option>
+									<option value="MLKEM1024" data-type="none">MLKEM1024</option>
+								</select>
+								<div class="form-element-bar"></div>
+								<label class="form-element-label" for="fields_key_import_type">Type of new key</label>
+								<small class="form-element-hint">&nbsp;.</small>
+							</div>
+							
+							<div class="form-element form-select animatedX moved">
+								<select id="fields_key_import_mode" class="form-element-field" name="mode" required>
+									<option disabled="" selected="" value="" class="form-select-placeholder"></option>
+									<option value="">Choose a mode</option>
+									<option value="ECDH">ECDH</option>
+									<option value="ECDH,ExDSA">ECDH,ExDSA</option>
+									<option value="ExDSA">ExDSA</option>
+								</select>
+								<div class="form-element-bar"></div>
+								<label class="form-element-label" for="fields_key_import_mode">Mode</label>
+								<small class="form-element-hint">&nbsp;</small>
+							</div>
+						
+						</fieldset>
+						
+						<fieldset class="form-fieldset form-fieldset-nop animatedX moved">
+							
+							<div class="form-element form-input animatedX moved">
+								<input id="fields_key_import_pubkey" class="form-element-field" placeholder="" type="text" required name="pubkey">
+								<div class="form-element-bar"></div>
+								<label class="form-element-label" for="fields_key_import_pubkey">Public key to import - base64 encoded.</label>
+							</div>
+						
+						</fieldset>
+						
+						<br><br> 
+										
+						<p class="animatedX moved">
+						
+							<a class="buttonCTA buttonCTAG buttonCTARM angle-left changePage" rel="keychain"><i class="icon-angle-left"></i> &nbsp; Back &nbsp; </a>
+							
+							<a class="buttonCTA buttonCTAG makeAction" rel="importNewKeyWithCode"> &nbsp; Use share-code &nbsp; <i class="icon-share"></i></a>
+
+							<button class="buttonCTA" type="submit" name="submit"> &nbsp; Import &nbsp; &nbsp; <i class="icon-download"></i></button>
+						
+						</p>
+
+					</form>
+				
+				</div>
+				
+			</div>
+			
+			<div class="page" id="key_details" data-init="true" data-title="Details of key from a keychain" data-class="wider" data-parent="keychain">
+			
+				<div class="wyswig wyswig15pa">
+					
+					<p class="buttonCTAR animatedX moved"><a class="buttonCTA buttonCTAG makeAction" rel="key_use">Get Access Token &nbsp; <i class="icon-key"></i></a></p>
+					
+					
+				
+					<h1 class="animatedX moved fillByKey" rel="">Key details</h1>
+					
+					<h2 class="animatedX moved fillByKey" rel="label"></h2> 
+					
+					<br><br> 
+					
+					<p class="animatedX moved specialCode fulled"><span class="desc">Key ID:</span> <strong id="key_details_kid" class="fillByKey" rel="kid"></strong><span class="copy copyThis makeAction" rel="clipboardCopy/key_details_kid"><i class="icon-clone"></i> Copy</span></p>
+					
+					<p class="animatedX moved specialCode fulled" id="key_details_pubkeyDOM"><span class="desc">Public key:</span> <strong id="key_details_pubkey" class="fillByKey" rel="pubkey"></strong><span class="copy copyThis makeAction" rel="clipboardCopy/key_details_pubkey"><i class="icon-clone"></i> Copy</span></p>
+					
+					<p class="animatedX moved specialCode fulled" id="key_details_descrDOM"><span class="desc">Description:</span> <strong id="key_details_descr" class="fillByKey" rel="descr"></strong><span class="copy copyThis makeAction" rel="clipboardCopy/key_details_descr"><i class="icon-clone"></i> Copy</span></p>
+					
+					<br><br> 
+					
+					<div class="c3d">
+							
+						<div class="updtItem item animatedX moved">
+							<h3>Type</h3>
+							<p class="fillByKey" rel="type"></p>
+						</div>
+						
+						<div class="updtItem item animatedX moved">
+							<h3>Created</h3>
+							<p class="fillByKey" rel="_created"></p>
+						</div>
+						
+						<div class="updtItem item animatedX moved">
+							<h3>Updated</h3>
+							<p class="fillByKey" rel="_updated"></p>
+						</div>
+						
+					</div>
+					
+					<br><br>
+
+					
+					<p class="animatedX moved">
+						<a class="buttonCTA buttonCTAG changePage" rel="key_edit">Edit &nbsp; <i class="icon-wrench"></i></a>
+						<a class="buttonCTA buttonCTAG changePage index" rel="key_share" id="key_share_button_submit">Share &nbsp; <i class="icon-share"></i></a>
+						<a class="buttonCTA buttonCTAG buttonCTARed2 makeAction" rel="removeKey">Remove &nbsp; <i class="icon-cancel"></i></a>
+					</p>
+					
+					<br> <br> 
+					
+					<p class="animatedX moved"><a class="buttonCTAGX changePage" rel="keychain"><i class="icon-angle-left"></i> &nbsp; Back &nbsp; </a></p>
+					
+				</div>
+			</div>
+			
+			<div class="page" id="key_share" data-init="true" data-title="Share form of key from keychain" data-class="wider" data-parent="keychain">
+			
+				<div class="wyswig wyswig15pa">
+				
+					<h1 class="animatedX moved">Share key</h1>
+					
+					<h2 class="animatedX moved">It is very easy to share public key with another Encedo User.</h2>
+					
+					<form class="form-card animatedX moved" style="margin: 0;" id="shareKeyForm">
+					
+						<fieldset class="form-fieldset form-fieldset-nop animatedX moved">
+						
+							<div class="form-element form-input animatedX moved">
+								<textarea id="key_share_notes" class="form-element-field" placeholder=" " required pattern="(.){2,252}" maxlength="250" rows="3">Hi there, 
+here is my key we can use in further communication or data exchanges.
+Best wishes</textarea>
+								<div class="form-element-bar"></div>
+								<label class="form-element-label" for="key_share_notes">Message to the user</label>
+								<small class="form-element-hint">Maximum length of this message is 250 characters.</small>
+							</div>
+						
+						</fieldset>
+				
+						<fieldset class="form-fieldset form-fieldset-nop animatedX moved c2d" style="margin: 0;">
+							
+							<div class="form-element form-input animatedX moved">
+								<input id="key_share_label" class="form-element-field" placeholder=" " type="text" required pattern="[ \w\[\]`!@#$%\^&*()={}:;<>+'-]{1,36}" maxlength="32">
+								<div class="form-element-bar"></div>
+								<label class="form-element-label" for="key_share_label">Label</label>
+							</div>
+							
+							<div class="form-element form-input animatedX moved">
+								<input id="key_share_descr" class="form-element-field" placeholder=" " type="text" pattern="[-a-zA-Z0-9_=]{0,65}" maxlength="64" name="descr">
+								<div class="form-element-bar"></div>
+								<label class="form-element-label" for="key_share_descr">Description</label>
+							</div>
+						
+						</fieldset>
+						
+						<fieldset class="form-fieldset form-fieldset-nop animatedX moved c21d index">
+						
+							<div class="form-element form-input animatedX moved">
+								<input id="key_share_pubkey" class="form-element-field" placeholder=" " type="text" disabled>
+								<div class="form-element-bar"></div>
+								<label class="form-element-label" for="key_share_pubkey">Public key</label>
+							</div>
+							
+							<div class="form-element form-input animatedX moved">
+								<input id="key_share_type" class="form-element-field" placeholder=" " type="text" disabled>
+								<div class="form-element-bar"></div>
+								<label class="form-element-label" for="key_share_type">Type</label>
+							</div>
+							
+						</fieldset>
+						
+						<span id="key_share_kid" class="index"></span>
+						
+						<br>
+
+						<p class="animatedX moved">
+							<a class="buttonCTA buttonCTAG buttonCTARM changePage" rel="key_details"><i class="icon-angle-left"></i> &nbsp; Back </a>
+							<a class="buttonCTA makeAction" rel="key_share_generate" id="key_share_submit">Generate &nbsp; <i class="icon-ok"></i></a>
+							<a class="buttonCTA buttonCTAG makeAction index" rel="key_share_send" id="key_send_submit">Email the share code &nbsp; <i class="icon-mail"></i> &nbsp;</a>
+						</p>
+						
+					</form>
+					
+				</div>
+			
+			</div>
+			
+			<div class="page" id="key_share_ready" data-init="true" data-title="Share-code for the key from keychain" data-class="wider" data-parent="keychain">
+			
+				<div class="wyswig wyswig15pa">
+				
+					<h1 class="animatedX moved">Share-code is ready!</h1>
+					
+					<h2 class="animatedX moved">You can use it right now.</h2> 
+					
+					<br>
+					
+					<p class="animatedX moved specialCode fulled"><span class="desc">Share code:</span> <strong id="key_details_sharecode"></strong><span class="copy copyThis makeAction" rel="clipboardCopy/key_details_sharecode"><i class="icon-clone"></i> Copy</span></p>
+					
+					<br>
+					
+					<p class="animatedX moved">
+						<a class="buttonCTA buttonCTAG changePage" rel="key_details">Done &nbsp; <i class="icon-ok"></i> </a>
+						<a class="buttonCTA buttonCTAG makeAction" rel="key_share_send" id="key_share_submit">Email the share code &nbsp; <i class="icon-mail"></i> &nbsp;</a>
+					</p>
+				
+				</div>
+				
+			</div>
+			
+			<div class="page" id="init_only" data-title="Please personalize first" data-class="wider" data-parent="gettingStarted">
+			
+				<div class="wyswig wyswig15pa">
+				
+					<h1 class="animatedX moved">Personalize first!</h1>
+					
+					<h2 class="animatedX moved">You can open this page after initialisation proces is over.</h2> 
+					
+					<br>
+					
+					<p class="animatedX moved">
+						<a class="buttonCTA buttonCTAG changePage" rel="gettingStarted">Personalize now &nbsp; <i class="icon-user"></i> </a>
+					</p>
+
+				</div>
+				
+			</div>
+			
+			<div class="page" id="key_edit" data-init="true" data-title="Edit form of key from keychain" data-class="wider" data-parent="keychain">
+			
+				<div class="wyswig wyswig15pa">
+				
+					<h1 class="animatedX moved">Key edit form</h1>
+					
+					<h2 class="animatedX moved">You can change label and description for this key using form below.</h2> 
+					
+					<form class="form-card animatedX moved async" data-action="key_edit_save" style="margin: 0;" id="editKeyForm">
+						
+						<fieldset class="form-fieldset form-fieldset-nop animatedX moved c2d">
+							
+							<div class="form-element form-input animatedX moved">
+								<input id="key_label_edit" class="form-element-field" placeholder=" " type="text" pattern="[ \w\[\]`!@#$%\^&*()={}:;<>+'-]{1,35}" maxlength="32" required name="label">
+								<div class="form-element-bar"></div>
+								<label class="form-element-label" for="key_label_edit">Label</label>
+							</div>
+							
+							<div class="form-element form-input animatedX moved">
+								<input id="key_descr_edit" class="form-element-field" placeholder=" " type="text" pattern="[-a-zA-Z0-9_=]{0,67}" maxlength="64" name="descr">
+								<div class="form-element-bar"></div>
+								<label class="form-element-label" for="key_descr_edit">Description</label>
+							</div>
+						
+						</fieldset>
+						
+						<br>
+						
+						<p class="animatedX moved">
+							<a class="buttonCTA buttonCTAG buttonCTARM changePage" rel="key_details"><i class="icon-angle-left"></i> &nbsp; Back &nbsp; </a>
+							<button class="buttonCTA buttonCTAG" type="submit" name="submit" id="key_edit_submit_button"> &nbsp; Save &nbsp; <i class="icon-ok"></i> &nbsp;</button>
+						</p>
+						
+					</form>
+					
+				</div>
+			</div>
+			
+			<div class="page" id="notifications" data-init="true" data-class="wider" data-title="Notifications">
+			
+				<div class="wyswig wyswig15pa">
+				
+					<h1 class="animatedX moved">Notifications</h1>
+					
+					<h2 class="animatedX moved">Donec suscipit ligula ut tincidunt ornare. In hac habitasse platea dictumst.</h2>
+				
+					<p class="animatedX moved">Curabitur faucibus nulla sapien, non tempor est interdum quis. Nunc ultricies maximus massa sit amet cursus. Nunc at magna et ligula feugiat faucibus sed vel lectus. Proin dignissim purus quis blandit feugiat. Aliquam hendrerit turpis ut mi scelerisque, ut dictum erat varius.</p> 
+					
+					<p class="animatedX moved">Duis rutrum, urna vitae condimentum vulputate, magna tortor tempus tellus, nec commodo magna dui vel risus. Donec a purus dui. Curabitur sed mauris varius, hendrerit leo quis, interdum quam. Curabitur ut mattis dui. Etiam rutrum sapien nec lacus semper, eu aliquet orci interdum.</p>
+				
+				</div>
+				
+			</div>
+			
+			<div class="page" id="settings" data-init="true" data-class="wider" data-title="Settings">
+			
+				<div class="supericon"><i class="icon-cogs"></i></div>
+			
+				<div class="wyswig wyswig15pa">
+				
+					<p class="buttonCTAR"><a class="animatedX moved buttonCTA makeAction" rel="settings_by_passphrase">Use Master Passphrase &nbsp; <i class="icon-key"></i></a></p>
+				
+					<h1 class="animatedX moved">Settings</h1>
+
+					<p class="animatedX moved">&nbsp;</p>
+					
+					<br>
+
+					<h2 class="animatedX moved"><i class="icon-user"></i> General information</h2>
+					
+					<div class="spaceLine animatedX moved"></div>
+					
+					<p class="animatedX moved">Here you can change a few general information about the owner and CORS access list.</p>
+					
+					<form class="form-card async animatedX moved disabledForm" id="changeUserDataForm" data-action="userdata_change">
+					
+						<fieldset class="form-fieldset form-fieldset-nop animatedX moved c3d">
+								
+							<div class="form-element form-input animatedX moved">
+								<input id="edit_fields_init_userid" class="form-element-field" placeholder=" " type="text" minlength="2" maxlength="63" required="required" pattern="[a-zA-Z0-9 ]{2,63}" name="user">
+								<div class="form-element-bar"></div>
+								<label class="form-element-label" for="edit_fields_init_userid">Nickname</label>
+							</div>
+							
+							<div class="form-element form-input animatedX moved">
+								<input id="edit_fields_init_useremail" class="form-element-field" placeholder=" " type="email" maxlength="63" value="" name="email">
+								<div class="form-element-bar"></div>
+								<label class="form-element-label" for="edit_fields_init_useremail">Email address</label>
+							</div>
+							
+							<div class="form-element form-input animatedX moved">
+								<input id="edit_fields_init_origin" class="form-element-field" placeholder=" " type="text" minlength="1" maxlength="63" required="required" name="origin">
+								<div class="form-element-bar"></div>
+								<label class="form-element-label" for="edit_fields_init_origin">Origin</label>
+							</div>
+						
+						</fieldset>
+							
+						<fieldset class="form-fieldset form-fieldset-nop animatedX moved c3d">	
+							
+							<div class="form-radio form-radio-full form-radio-inline animatedX moved">
+								<div class="form-radio-legend">Trust Encedo time source?</div>
+								<label class="form-radio-label">
+									<input name="trusted_ts" class="form-radio-field" type="radio" required value="1" data-initier="trusted_ts" />
+									<i class="form-radio-button"></i>
+									<span>Yes, please!</span>
+								</label>
+								<label class="form-radio-label">
+									<input name="trusted_ts" class="form-radio-field" type="radio" required value="2" data-initier="trusted_ts" />
+									<i class="form-radio-button"></i>
+									<span>No</span>
+								</label>
+								<small class="form-element-hint">Use Encedo backend service as a trusted source of current time.</small>
+							</div>
+							
+							<div class="form-radio form-radio-full form-radio-inline animatedX moved">
+								<div class="form-radio-legend">Allow remote managment?</div>
+								<label class="form-radio-label">
+									<input name="trusted_backend" class="form-radio-field" type="radio" required value="1" data-initier="trusted_backend" />
+									<i class="form-radio-button"></i>
+									<span>Yes, please</span>
+								</label>
+								<label class="form-radio-label">
+									<input name="trusted_backend" class="form-radio-field" type="radio" required value="2" data-initier="trusted_backend" />
+									<i class="form-radio-button"></i>
+									<span>No</span>
+								</label>
+								<small class="form-element-hint">This functionality allows remote management like reporting stolen devices, remote wipes etc. Privacy-friendly.</small>
+							</div>
+							
+							<div class="form-radio form-radio-full form-radio-inline animatedX moved">
+								<div class="form-radio-legend">Allow keysearch by description?</div>
+								<label class="form-radio-label">
+									<input name="allow_keysearch" class="form-radio-field" type="radio" required value="1" data-initier="allow_keysearch" />
+									<i class="form-radio-button"></i>
+									<span>Yes, please</span>
+								</label>
+								<label class="form-radio-label">
+									<input name="allow_keysearch" class="form-radio-field" type="radio" required value="2" data-initier="allow_keysearch" />
+									<i class="form-radio-button"></i>
+									<span>No</span>
+								</label>
+								<small class="form-element-hint">Allow search keystore by description without required access token.</small>
+							</div>
+						
+						</fieldset>
+						
+						<p class="animatedX moved">
+							<button class="buttonCTA buttonCTAG buttonCTAS" type="submit" name="submit"> &nbsp; Save settings &nbsp; <i class="icon-ok"></i> &nbsp;</button>
+						</p>
+						
+						<div class="coating"></div>
+						
+					</form>
+					
+					<br><br><br><br>
+					
+					<div class="isThereStorage index">
+					
+						<h2 class="animatedX moved"><i class="icon-database"></i> Drives options</h2>
+						
+						<div class="spaceLine animatedX moved"></div>
+						
+						<p class="animatedX moved">WARNING: Changing drives geometry will destroy current data!</p>
+						
+						<form class="form-card async animatedX moved disabledForm" id="changeStorageForm" data-action="storage_change">
+								
+							<fieldset class="form-fieldset form-fieldset-nop animatedX moved c3d">	
+								
+								<div class="form-radio form-radio-full form-radio-inline animatedX moved">
+									<div class="form-radio-legend">Show regular disk on start</div>
+									<label class="form-radio-label">
+										<input name="fields_init_show_disk" class="form-radio-field" type="radio" required value="1" checked data-initier="" data-format="false" />
+										<i class="form-radio-button"></i>
+										<span>Yes, please!</span>
+									</label>
+									<label class="form-radio-label">
+										<input name="fields_init_show_disk" class="form-radio-field" type="radio" required value="2" data-initier="" data-format="false" />
+										<i class="form-radio-button"></i>
+										<span>No</span>
+									</label>
+									<small class="form-element-hint index">Show automatically regular disk after power-up (putting into USB slot).</small>
+								</div>
+								
+								<div class="form-radio form-radio-full form-radio-inline animatedX moved">
+									<div class="form-radio-legend">Regular disk on start</div>
+									<label class="form-radio-label">
+										<input name="fields_init_disk_mode" class="form-radio-field" type="radio" required value="1" checked data-initier="" data-format="false" />
+										<i class="form-radio-button"></i>
+										<span>Read-only</span>
+									</label>
+									<label class="form-radio-label">
+										<input name="fields_init_disk_mode" class="form-radio-field" type="radio" required value="2" data-initier="" data-format="false" />
+										<i class="form-radio-button"></i>
+										<span>Writable</span>
+									</label>
+									<small class="form-element-hint index">Thanks to this functionality you do not have to be worried when your phone get stolen while being unlocked.</small>
+								</div>
+								
+								<div class="form-radio form-radio-full form-radio-inline animatedX moved">
+									<div class="form-radio-legend">Storage encryption mode</div>
+									<label class="form-radio-label">
+										<input name="fields_init_encryption_mode" class="form-radio-field" type="radio" required value="1" checked data-initier="" data-format="true" />
+										<i class="form-radio-button"></i>
+										<span>CTR</span>
+									</label>
+									<label class="form-radio-label">
+										<input name="fields_init_encryption_mode" class="form-radio-field" type="radio" required value="2" data-initier="" data-format="true" />
+										<i class="form-radio-button"></i>
+										<span>XTS</span>
+									</label>
+									<small class="form-element-hint index">Encryption mode of the secure disk.</small>
+								</div>
+							
+							</fieldset>
+							
+							<fieldset class="form-fieldset form-fieldset-nop animatedX moved">
+							
+								<div class="form-element animatedX moved">
+									<input type="range" id="fields_init_storage_size_change" name="volume" min="1" max="60" class="form-element-field" value="4" data-format="true">
+									<label class="form-element-label" for="fields_init_storage_size_change" style="width: 100%;"><span id="storageDetailsAboutChange">Regular storage size</span> <span style="float: right;"><span id="availableStorageSizeChange"></span> available in total</span></label>
+								</div>
+								
+							</fieldset>
+							
+							<p class="animatedX moved">
+								<button class="buttonCTA buttonCTAG buttonCTAS" type="submit" name="submit"> &nbsp; Save &nbsp; <i class="icon-ok"></i> &nbsp;</button>
+							</p>
+							
+							<div class="coating"></div>
+							
+						</form>
+						
+						<br><br><br><br>
+						
+					</div>
+							
+					<h2 class="animatedX moved"><i class="icon-lock"></i> Password change</h2>
+					
+					<div class="spaceLine animatedX moved"></div>
+					
+					<p class="animatedX moved">Change the password here. Rescue Master Passphrase will not be changed.</p>
+					
+					<form class="form-card async animatedX moved disabledForm" id="changePasswordForm" data-action="password_change">
+		
+						<fieldset class="form-fieldset form-fieldset-nop animatedX moved c2 c2d">
+							
+							<div class="form-element form-input animatedX moved">
+								<input id="edit_fields_init_pass" class="form-element-field" placeholder=" " type="password" minlength="10" maxlength="63" required="required">
+								<div class="form-element-bar"></div>
+								<label class="form-element-label" for="edit_fields_init_pass">New password</label>
+								<p class="passwordInfo" id="edit_password_checker"></p>
+							</div>
+							
+							<div class="form-element form-input animatedX moved">
+								<input id="edit_fields_init_passr" class="form-element-field" placeholder=" " type="password" minlength="10" maxlength="63" required="required">
+								<div class="form-element-bar"></div>
+								<label class="form-element-label" for="edit_fields_init_passr">Re-type new password</label>
+								<p class="passwordInfo" id="edit_password_repeated"></p>
+							</div>
+						
+						</fieldset>
+						
+						<p class="animatedX moved">
+							<button class="buttonCTA buttonCTAG buttonCTAS" type="submit" name="submit"> &nbsp; Set new password &nbsp; <i class="icon-lock"></i> &nbsp;</button>
+						</p>
+						
+						<div class="coating"></div>
+						
+					</form>
+					
+					<br><br><br><br>
+					
+					<h2 class="animatedX moved"><i class="icon-cog"></i> Manual firmware update</h2>
+					
+					<div class="spaceLine animatedX moved"></div>
+					
+					<div id="changeFirmwareManualy" class="disabledForm">
+					
+						<p class="animatedX moved">Using mechanism below you can install any firmware version you want.</p>
+						
+						<p class="animatedX moved">
+							<button class="buttonCTA buttonCTAS buttonCTARed makeAction" rel="manual_update" type="submit" name="submit"> &nbsp; Upload file &nbsp; <i class="icon-download"></i> &nbsp;</button>
+							<input type="file" name="manual_update_file" id="manual_update_file" style="visibility: hidden;" onchange="handleFiles(this.files)">
+						</p>
+						
+						<div class="coating"></div>
+					
+					</div>
+					
+					<br><br><br><br>
+					
+					<h2 class="animatedX moved"><i class="icon-flash"></i> Device wipeout</h2>
+					
+					<div class="spaceLine animatedX moved"></div>
+					
+					<div id="deviceWipeoutManualy" class="disabledForm">
+					
+						<p class="animatedX moved">Not needing that device anymore? Click Wipeout to reset to factory-default state.</p>
+						
+						<p class="animatedX moved">
+							<button class="buttonCTA buttonCTAS buttonCTARed makeAction" rel="wipeout" type="submit" name="submit"> &nbsp; Wipeout &nbsp; <i class="icon-flash"></i> &nbsp;</button>
+						</p>
+						
+						<div class="coating"></div>
+						
+					</div>
+
+					
+				</div>
+				
+				
+			</div>
+			
+			<div class="page" id="about" data-class="wider" data-title="About Encedo">
+			
+				<div class="wyswig wyswig15pa">
+				
+					<h1 class="animatedX moved">About Encedo</h1>
+				
+					<p class="animatedX moved">Our vision is to give users a solution for data protection with no compromises, with no false claims or promises; but with full respect to the fact that only the owner should be able to control their data. Our mission is to design, build and give access to the technology that will make that true. We are Encedo!</p>
+					
+					<h3 class="animatedX moved">We are ENCEDO. Trust Us, bet Us!</h3>
+					
+					<p class="animatedX moved">We are a startup that helps companies protect data with hassle-free key management. Our passion is your privacy, trusted communication and easy of use encryption with a hardware key. Zero compromised, personal, federated and proven security with Common Criteria EAL4+ certification. Because we believe that everyone deserves a secure enclave.</p>
+
+					<p class="animatedX moved">Encedo offers post-quantum cryptography.</p>
+
+					<ul class="animatedX moved">
+						<li>Limitation of the impact of cybersecurity incidents</li>
+						<li>Enhanced protection using hardware security chip</li>
+						<li>Open platform and enterprise ready with RESTful API</li>
+					</ul>
+					
+					<h3 class="animatedX moved">Trusted communication</h3>
+
+					<p class="animatedX moved">Encedo power-up security for your every-day communication with trustfull persons: friends, business partners, clients or suppliers.</p> 
+					
+					<h3 class="animatedX moved">Privacy as a service</h3>
+					
+					<p class="animatedX moved">No matter if you use our solutions for private or business purposes, your privacy is the most important for us. That's why we provide our best with no expensive investment, no big barriers, just easy flat subscription. Beacuse it should be popular and federated.</p>
+					
+					<h3 class="animatedX moved">Key to your digital life</h3>
+					
+					<p class="animatedX moved">Encryption is easy, key management is difficult. That's why we provide hardware security module as your private key, supersafe key you can use for authentication and live encryption but physically controlled only by you.</p>
+					
+					<br>
+				
+				</div>
+				
+			</div>
+				
+				</div>
+				
+			</div>
+		
+		</div>
+		
+		<style>
+			.TLnotifications { position: fixed; top: 58px; right: 50px; z-index: 50; }
+			.TLnotifications-content {  }
+			.TLnotifications-content .notification { display: block; padding: 30px; background: rgba(240,240,240,0.9); color: #222; border-radius: 26px 0px 26px 0px; margin-bottom: 20px; transition-duration: 0.7s; }
+			.TLnotifications-content .notification p { line-height: 1.6; }
+			.TLnotifications-content .notification p.icon {  }
+			.TLnotifications-content .notification p.header { font-weight: bold; margin-bottom: 10px; }
+			.TLnotifications-content .notification p.header::after { display: block; content: ""; width: 100%; height: 2px; background: rgba(0, 0, 0, 0.051); margin-top: 10px; }
+			.TLnotifications-content .notification p.content { font-size: 85%; }
+			.TLnotifications-content .notification .close { display: block; font-size: 120%; float: right; padding-top: 14px; border-radius: 50%; background: rgba(40,40,40,0.051); margin-top: -30px; margin-right: -30px; height: 48px; width: 48px; text-align: center; cursor: pointer; opacity: 0.1; transition-duration: 0.7s; transform: rotate(360deg); }
+			.TLnotifications-content .notification:hover .close { opacity: 1; transform: rotate(0deg); border-radius: 0%; }
+			.TLnotifications-content .notification .close:hover { background: rgba(40,40,40,0.751); color: #fff; }
+			
+			.TLnotifications-content .notification--good { background: linear-gradient(-245deg, #448C19, #84D952); color: #fff; }
+			.TLnotifications-content .notification--good p {  }
+			
+			.TLnotifications-content .notification--bad { background: linear-gradient(-145deg, #9E5D47, #D95D61); color: #fff; }
+			.TLnotifications-content .notification--bad p {  }
+			
+			.TLnotifications-content .notification--dead { overflow: hidden; height: 0px; padding-top: 0px; padding-bottom: 0px; }
+			
+			@media (min-width: 900px) {
+				.TLnotifications { max-width: 50%; }
+			}
+			
+			@media (min-width: 1200px) {
+				.TLnotifications { max-width: 25%; }
+			}
+		</style>
+		
+		<div class="TLnotifications" id="TLnotifications">
+			<div class="TLnotifications-content" id="TLnotifications-content">
+				
+			</div>
+		</div>
+		
+		<div class="TLloading">
+			<div class="TLloading-wrapper">
+				<img src="assets/img/encedo-big-logo.png" class="blink bounce" alt="" width="154">
+				<p class=""><span class="loader-container"><span></span><span></span><span></span><span></span><span></span></span></p>
+			</div>
+		</div>
+		
+		<div id="blinds" class="blinds">
+			<div id="blindsContainer" class="blindsContainer">
+				<span id="blindsClose" class="close">&times;</span>
+				<div id="blindsWrapper" class="blindsWrapper">
+					
+				</div>
+			</div>
+		</div>
+		
+		<div id="curtain" class="curtain">
+		
+		</div>
+		
+		<div id="blindsStorage" class="blindsStorage"></div>
+		
+		<script>
+		var _DVERSION = 'v1.2.1';
+		var _args = window.location.href.split('?');
+		var _baseURL = window.location.href;
+		var _redirected = false;
+		var _redirectedAddressRaw = false;
+		var _startingURL = window.location.protocol + '//' + window.location.hostname;
+		var loadClever = false;
+		
+		let startPage = 'home';
+		var hashAddress = document.location.hash;
+	
+		if(hashAddress.length > 1) {
+		
+			var tmpadr = hashAddress.split(':');
+			
+			if(tmpadr.length > 1) {
+				_redirected = true;
+				_redirectedAddressRaw = tmpadr[1];
+				_startingURL = window.location.protocol + '//' + tmpadr[1];
+			};
+			
+			if(tmpadr[0].length > 1) {
+				startPage = tmpadr[0].replace('#', '').split('?')[0];
+			};
+			
+		};
+		
+		if(_args && _args.length > 1) {
+			var tmp = _args[1].split(':')[0];
+			_args = {  };
+			tmp = tmp.split('&');	
+			for(var i = 0, j = tmp.length; i < j; i++) {
+				var now = tmp[i].split('=');
+				_args[""+now[0]+""] = decodeURIComponent(now[1]);
+			};
+		};
+		
+		var _path = window.location.pathname;
+		var _pageNow = _path.split("/").pop();
+		
+		var _assetsHere = (document.location.href.split('#')[0]).replace(_pageNow, '') + 'assets/';
+	
+		var actions = [];
+		var changePage = false;
+		var makeAction = false;
+		var register = function(name, func) {
+			actions[name] = func;
+		};
+		
+		var alreadyLoaded = [];
+
+		document.body.classList.remove('offline');
+		/* 
+		Loading scripts in some special way.
+		The whole process is based on checking we are online or offline.
+		Depends on the result the way we behave is slightly different.
+		The whole idea is about the performance and keeping stuff up to date.
+		*/
+		let _online = window.navigator.onLine;
+		let _assets = [
+			{ type: 'css', name: 'build.css', required: true, firstPaint: false, loaded: false },
+			{ type: 'js', name: 'build.js', required: true, firstPaint: false, loaded: false },
+			{ type: 'js', name: 'nacl-fast.min_v1_0_3.js', required: true, firstPaint: false, loaded: false, external: true, integrity: 'sha384-05+sicyRJQ56XpL4U9HJ8YbtSzFDvAg7apPKOGV6A0JsAJKFM68jp5oLnUjG5mEp' }, 
+			{ type: 'js', name: 'sweetalert2.all.min_v11_3_3.js', required: true, firstPaint: false, loaded: false, external: true, integrity: 'sha384-cVdE0l22UzTvqn9WW3GoZYiCK3egybWz4pePZGOSqrPcBxUaBw/QjyoScSU1JTUc' }
+		];
+		
+		function checkClever(url){
+			var http = new XMLHttpRequest();
+			http.open('HEAD', url, false);
+			http.send();
+			return http.status != 404;
+		};
+		
+		loadClever = function(element, success, failure, forceLocal) {
+		
+			if(alreadyLoaded.includes(element.name)) return false;
+		
+			let _url = '';
+			
+			if(_online && !forceLocal && element.external) {
+				_url = 'https://encedo.com/a/';
+			} else {
+				if(_redirected) {
+					_url = _assetsHere;
+				} else {
+					_url = _startingURL + '/assets/';
+				};
+			};
+			
+			if(element.type == 'css') {
+				var bsa = document.createElement('link');
+				bsa.rel = 'stylesheet';
+				bsa.media = 'screen';
+			} else if(element.type == 'js') {
+				var bsa = document.createElement('script');
+				bsa.type = 'text/javascript';
+				if(element.integrity) {
+					bsa.crossOrigin = "anonymous";
+					bsa.integrity = element.integrity;
+				};
+				if(!element.firstPaint) {
+					bsa.defer = true;
+					bsa.async = true;
+				};
+			};
+			
+			bsa.id = 'artificial-' + element.name;
+			
+			if(document.getElementById('artificial-' + element.name)) {
+				document.getElementById('artificial-' + element.name).remove();
+			};
+			
+			if(failure) {
+				bsa.onerror = function(){
+					failure(bsa, _url);
+					if(!forceLocal) {
+						loadClever(element, success, failure, true);
+					};
+				};
+			};
+			
+			if(success) {
+				bsa.onload = function(res){					
+					success(bsa, _url);
+					alreadyLoaded.push(element.name);
+				};
+			};
+			
+			if(element.firstPaint) {
+				/* It used to be document.head.appendChild(bsa); */
+				document.head.appendChild(bsa);
+			} else {
+				document.body.appendChild(bsa);
+			};
+			
+			if(element.type == 'css') {
+				bsa.href = _url + element.name + '?id=' + Math.floor(Math.random()*643023);
+			} else if(element.type == 'js') {
+				if(element.integrity) {
+					bsa.src = _url + element.name;
+				} else {
+					bsa.src = _url + element.name + '?id=' + Math.floor(Math.random()*964373);
+				};
+			};
+			
+		};
+		
+		function checkLoaded() {
+			var isLoaded = true;
+			_assets.forEach(function(el, it) {
+				if(!el.loaded) isLoaded = false;
+			});
+			return isLoaded;
+		};
+		
+		_assets.forEach(function(el, it) {
+			loadClever(el, function(resource, link){
+				_assets[it].loaded = true;
+				//console.log('Loaded: ' + el.name + ' from ' + link);
+				if(checkLoaded()) {
+					console.log('Fully loaded!');	
+					document.getElementById('manager_version').innerHTML = 'Manager <span>' + _DVERSION + '</span>';
+				};
+			}, function(resource, link){
+				console.log('Problem while loading: ' + el.name + ' from ' + link);
+			}, false);
+		});
+		</script>
+
+	</body>
+	
+</html>

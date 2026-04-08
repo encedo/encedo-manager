@@ -1,0 +1,562 @@
+<!DOCTYPE html> 
+<html lang="en">
+	<head>
+	
+		<meta charset="utf-8">
+		
+		<title>Encedo Dashboard</title>
+		<meta name="description" content="Encedo is a secure enclave and trusted execution environment, the source of root-of-trust in the cloud.">
+		<meta name="keywords" content="security, cybersecurity">
+		<meta name="copyright" content="All Rights Reserved">
+		<meta name="author" content="Encedo">
+		
+		<meta name="distribution" content="Global">
+		<meta name="robots" content="none">
+		<meta name="googlebot" content="none">
+		<meta name="revisit-after" content="420 days">
+
+		<meta name="HandheldFriendly" content="true">
+		<meta name="viewport" content="width=device-width, maximum-scale=5.0, user-scalable=yes">
+		
+		<base href=".">
+		
+		<meta name="mobile-web-app-capable" content="yes"> 
+		<meta name="apple-mobile-web-app-status-bar-style" content="black"> 
+		<meta name="theme-color" content="#ffffff">
+		<link rel="manifest" href="manifest.webmanifest">
+		
+		<link rel="shortcut icon" href="favicon.ico"> 
+		
+		<link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32x32.png">
+		<link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16x16.png">
+		<link rel="icon" type="image/png" sizes="512x512" href="assets/img/android-chrome-512x512.png">
+		<link rel="icon" type="image/png" sizes="192x192" href="assets/img/android-chrome-192x192.png">
+		<link rel="apple-touch-icon" href="assets/img/android-chrome-192x192.png">
+
+	</head>
+	
+	<body itemscope="" itemtype="http://schema.org/WebPage" class="offline">
+	
+		<link href="assets/base.css" rel="stylesheet">
+		<link href="assets/theme.css" rel="stylesheet">
+		<link href="assets/forms.css" rel="stylesheet">
+	
+		<style>
+		/* latin */
+		@font-face {
+		  font-family: 'Inter';
+		  font-style: normal;
+		  font-weight: 300;
+		  font-display: swap;
+		  src: url(assets/font/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7.woff2) format('woff2');
+		  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+		}
+		/* latin */
+		@font-face {
+		  font-family: 'Inter';
+		  font-style: normal;
+		  font-weight: 700;
+		  font-display: swap;
+		  src: url(assets/font/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7.woff2) format('woff2');
+		  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+		}
+		</style>
+
+		<script>
+		let runtime = [];
+		const __time = parseInt(Date.now());
+		</script>
+		
+		<style>
+		html,body,div,span,applet,object,iframe,h1,h2,h3, h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big, cite,code,del,dfn,em,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td,article,aside,canvas,details,embed,figure,figcaption,footer,header,hgroup,menu,nav,output,ruby,section,summary,time,mark,audio,video{margin:0;padding:0;border:0;font-size:100%;vertical-align:top;outline:0}
+		article,aside,details,figcaption,figure,footer,header,hgroup,menu,nav,section{display:block}
+		body{line-height:1}ol,ul{list-style:none}
+		blockquote,q{quotes:none}
+		blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}
+		table{border-collapse:collapse;border-spacing:0}
+		.clearfix:after { content: "."; display: block; height: 0; clear: both; visibility: hidden; }
+		* html .clearfix { display: inline-block; }*:first-child+html .clearfix { display: inline-block; }
+		*, *:after, *:before { -webkit-box-sizing: border-box; box-sizing: border-box; -moz-box-sizing: border-box; }
+		::-webkit-scrollbar { width: 5px; background: rgba(1,1,1,0.1); margin: 0px 0px 0px -6px; padding: 0px 2px; }
+		::-webkit-scrollbar-track { padding: 4px; }
+		::-webkit-scrollbar-thumb { background: #6E358C; }
+		::-webkit-scrollbar-thumb:window-inactive { background: rgba(1,1,1,0.1); }
+
+		html, body { height: 100vh; width: 100vw; overflow: hidden; scroll-behavior: smooth; background: linear-gradient(#f7f7f7, #fff); font-family: Inter, Arial, sans-serif; font-size: 16px; color: #333; }
+		.index { position: absolute; top: -200053px; }
+		body.loaded { overflow-x: hidden; }
+		.changePage { cursor: pointer; }
+		
+		.TLloading { opacity: 1; transform: translate(0px, 0px); -webkit-transform: translate(0px, 0px);-moz-transform: translate(0px, 0px);-o-transform: translate(0px, 0px);-ms-transform: translate(0px, 0px); transition-duration: .5s; position: absolute; top: 0px; left: 0px; right: 0px; bottom: 0px; display: flex; justify-content: center; align-items: center; z-index: 1; background: linear-gradient(#f3f3f3, #fff); }
+		.offline .TLloading { opacity: 0; transform: translate(0px, 80px); -webkit-transform: translate(0px, 80px);-moz-transform: translate(0px, 80px);-o-transform: translate(0px, 80px);-ms-transform: translate(0px, 80px); }
+		.TLloading .TLloading-wrapper { text-align: center; font-weight: bold; }
+		.TLloading .TLloading-wrapper p { font-size: 140%; padding: 20px; }
+		.TLloading .TLloading-wrapper img { opacity: 0; }
+		.visible .TLloading { opacity: 0; }
+		
+		body.loaded .TLloading { opacity: 0 !important; }
+		
+		.TPLapp { opacity: 0; transition-duration: .5s; position: relative; z-index: 2; }
+		.loaded .TPLapp { opacity: 1; }
+		.TPLapp.blurred { filter: blur(0.3rem); }
+	
+
+		.TPLapp.regular { display: grid; height: 100vh; width: 97vw; grid-template-areas: "TPLmenu TPLbreadcrumbs TPLstatusbar" "TPLmenu TPLcontainer TPLcontainer" "TPLmenu TPLfooter TPLfooter"; grid-template-columns: 350px auto auto; grid-template-rows: 60px auto 60px; }
+		.TPLapp .TPLmenu { grid-area: TPLmenu; overflow: auto; }
+		
+		.TPLapp .TPLbreadcrumbs { grid-area: TPLbreadcrumbs; padding-top: 22px; padding-left: 40px; font-size: 90%; }
+		.TPLapp .TPLbreadcrumbs .crumb { display: inline-block; cursor: pointer; }
+		.TPLapp .TPLbreadcrumbs .crumb:hover { border-bottom: 1px solid #ccc; }
+		
+		.TPLapp .TPLpageContainer .superBlocks { display: grid; height: calc(100vh - 120px); grid-gap: 40px; grid-template-columns: repeat(6, 1fr); grid-template-rows: 1fr 1fr; }
+		.TPLapp .TPLpageContainer .superBlocks .sBlock { display: flex; background: #222; grid-column: span 3; color: #fff; padding: 20px; font-size: 100%; align-items: flex-end; justify-content: flex-end; background: linear-gradient(#322668, #89348A) no-repeat center center; background-size: cover; border-radius: 30px 0px 30px 0px; box-shadow: 0px 0px 7px 4px rgba(1,1,1,0.01); position: relative; cursor: pointer; }
+		.TPLapp .TPLpageContainer .superBlocks .sBlock:nth-child(n + 3) { grid-column: span 2; }
+
+		.TPLapp .TPLpageContainer .superBlocks .sBlock .cont { text-align: right; padding: 10px; z-index: 2; }
+		.TPLapp .TPLpageContainer .superBlocks .sBlock .cont p { margin-bottom: 0px; line-height: 1.6; max-width: 500px; font-size: 110%; transition-duration: 0.3s; }
+		.TPLapp .TPLpageContainer .superBlocks .sBlock .cont p.smaller { text-transform: uppercase; letter-spacing: +3px; font-size: 80%; }
+		.TPLapp .TPLpageContainer .superBlocks .sBlock .cont p.named { font-size: 300%; font-weight: bold; line-height: 1; margin-bottom: 20px; }
+		.TPLapp .TPLpageContainer .superBlocks .sBlock .bgr { position: absolute; top: 0px; left: 0px; right: 0px; bottom: 0px; z-index: 1; background: rgba(1,1,1,0.5); background: linear-gradient(343deg, rgba(0,0,0,0.7) 30%, rgba(255,255,255,0) 100%); border-radius: 30px 0px 30px 0px; }
+		.TPLapp .TPLpageContainer .superBlocks .sBlock:hover p { margin-bottom: 20px; }
+		
+		
+		.TPLapp .TPLstatusbar { grid-area: TPLstatusbar; text-align: right; padding-top: 14px; }
+		.TPLapp .TPLstatusbar .sepo { display: inline-block; margin: 0px 5px; border-right: 1px solid #ddd; height: 12px; vertical-align: middle; }
+		.TPLapp .TPLstatusbar .name { display: inline-block; margin: 0px 0px 0px 5px; vertical-align: middle; }
+		.TPLapp .TPLstatusbar .butto { display: inline-block; margin: 0px 5px; vertical-align: middle; padding: 7px 5px;  border-radius: 50%; color: #404B7C; box-shadow: 0px 0px 7px 4px rgba(1,1,1,0.01); cursor: pointer; transition-duration: 0.8s; }
+		.TPLapp .TPLstatusbar .butto:hover { background: #404B7C; color: #fff; }
+		.TPLapp .TPLcontainer { grid-area: TPLcontainer; padding-left: 20px; }
+		.TPLapp .TPLfooter { grid-area: TPLfooter; padding-top: 20px; padding-left: 20px; }
+		
+		.TPLapp .TPLpageContainer { background:rgba(255,255,255,1); border-radius: 20px 0px 20px 0px; height: calc(100vh - 120px); box-shadow: 0px 0px 7px 4px rgba(1,1,1,0.01); overflow: auto; position: relative; transition-duration: 1s; }
+		.TPLapp .TPLpageContainer.transparent { background: rgba(255,255,255,0); box-shadow: 0px 0px 7px 4px rgba(1,1,1,0.00); }
+		#appContainer.transparent .TPLpageContainer { background: rgba(255,255,255,0); box-shadow: 0px 0px 7px 4px rgba(1,1,1,0.00); }
+		
+		.TPLapp .TPLpageContainer .page { position: absolute; transition: all .8s ease-in-out; top: 0px; left: 0px; right: 0px; min-height: 100%; z-index: 10; transform: translateX(-100%);  -webkit-transform: translateX(-100%); opacity: 0; -webkit-opacity: 0; transition-delay: 0.1s; max-width: 100%; max-height: 100vh; overflow-x: hidden; display: flex; align-items: center; }
+		.TPLapp .TPLpageContainer .pageActive { transform: translateX(0%); -webkit-transform: translateX(0%); z-index: 100; opacity: 1; -webkit-opacity: 1; transition-delay: 0.01s; max-height: 50000vh;  overflow: hidden; }
+		.TPLapp .moved { opacity: 0; transition-duration: 1s; transform: translate(0px, 40px); -webkit-transform: translate(0px, 40px);-moz-transform: translate(0px, 40px);-o-transform: translate(0px, 40px);-ms-transform: translate(0px, 40px); }
+		.TPLapp .moved2 { opacity: 0; transition-duration: 1s; transform: translate(0px, -40px); -webkit-transform: translate(0px, -40px);-moz-transform: translate(0px, -40px);-o-transform: translate(0px, -40px);-ms-transform: translate(0px, -40px); }
+		.TPLapp .moved3 { opacity: 0; transition-duration: 1s; transform: translate(-50px, 0px); -webkit-transform: translate(-50px, 0px);-moz-transform: translate(-50px, 0px);-o-transform: translate(-50px, 0px);-ms-transform: translate(-50px, 0px); }
+		.TPLapp .pageActive .moved { opacity: 1; transform: translate(0px, 0px); -webkit-transform: translate(0px, 0px);-moz-transform: translate(0px, 0px);-o-transform: translate(0px, 0px);-ms-transform: translate(0px, 0px); }
+
+		.moved:nth-child(1) { transition-delay: 0.6s; }
+		.moved:nth-child(2) { transition-delay: 0.9s; }
+		.moved:nth-child(3) { transition-delay: 1.2s; }
+		.moved:nth-child(4) { transition-delay: 1.5s; }
+		.moved:nth-child(5) { transition-delay: 1.8s; }
+		.moved:nth-child(6) { transition-delay: 2.1s; }
+		.moved:nth-child(7) { transition-delay: 2.4s; }
+		.moved:nth-child(8) { transition-delay: 2.7s; }
+		.moved:nth-child(9) { transition-delay: 3.0s; }
+		.moved:nth-child(10) { transition-delay: 3.3s; }
+		.moved:nth-child(11) { transition-delay: 3.6s; }
+		.moved:nth-child(12) { transition-delay: 3.9s; }
+		.moved:nth-child(13) { transition-delay: 4.2s; }
+		.moved:nth-child(14) { transition-delay: 4.5s; }
+		
+		.TPLapp.special { margin: 290px 190px 0px 190px; }
+		.TPLapp.special { display: block; transition-duration: 0.5s; }
+		.loaded .TPLapp.special { margin: 70px; }
+		.TPLapp.special.wider { margin: 0px; display: grid; height: 100vh; width: 97vw; grid-template-areas: "TPLmenu TPLbreadcrumbs TPLstatusbar" "TPLmenu TPLcontainer TPLcontainer" "TPLmenu TPLfooter TPLfooter"; grid-template-columns: 350px auto auto; grid-template-rows: 60px auto 60px; background: transparent; }
+		
+		.TPLapp .TPLsplash {  }
+		.TPLapp .TPLcontainerSpecial { grid-area: TPLcontainer; border-left: 0px solid #fff; box-shadow: -10px -1px 82px 43px rgba(0,0,0,0.11); -webkit-box-shadow: -10px -1px 82px 43px rgba(0,0,0,0.11); -moz-box-shadow: -10px -1px 82px 43px rgba(0,0,0,0.11); width: 80%; margin-left: 10%; transition-duration: 0.5s; border-radius: 30px; padding: 0px; }
+
+		.TPLapp.special .TPLpageContainer { height: calc(100vh - 160px); border-radius: 30px; }
+
+		.TPLapp.special.wider .TPLcontainerSpecial { width: 100%; margin-left: 0%; height: calc(100vh - 120px); border-radius: 20px 0px 20px 0px; box-shadow: 0px 0px 7px 4px rgb(1 1 1 / 1%); }
+		.TPLapp.special.wider .TPLcontainerSpecial .TPLpageContainer { height: calc(100vh - 120px); }
+		
+		.specialCode { background: #fff; font-weight: bold; color: #444; padding: 30px; word-wrap: break-word; border-radius: 12px; box-shadow: -10px -1px 82px 43px rgba(0,0,0,0.11); -webkit-box-shadow: -10px -1px 82px 43px rgba(0,0,0,0.11); -moz-box-shadow: -10px -1px 82px 43px rgba(0,0,0,0.11); }
+		
+		@media (max-width: 600px) {
+			.loaded .TPLapp.special { margin: 70px 0px; }
+			.TPLapp .wyswig h1 { font-size: 300%; }
+			.TPLapp .wyswig h1 span { display: block; font-size: 30%; text-transform: uppercase; margin-bottom: -50px; }
+			.TPLapp .wyswig h2 { font-size: 120%; }
+			.TPLapp .wyswig40 { padding: 20px; }
+			.TPLapp .wyswig10p { padding: 10px; }
+			.TPLapp .wyswig15p { padding: 30px; }
+			.TPLapp .wyswig20p { padding: 45px; }
+			.TPLapp .TPLpageContainer .superBlocks .sBlock .cont p.named { font-size: 200%; }
+		}
+		
+		.TPLapp .TPLmenu { display: block; grid-area: TPLmenu; position: absolute; visibility: hidden; }
+		.TPLapp .TPLbreadcrumbs { display: block; grid-area: TPLbreadcrumbs; position: absolute; visibility: hidden; }
+		.TPLapp .TPLstatusbar { display: block; grid-area: TPLstatusbar; position: absolute; visibility: hidden; }
+		.TPLapp .TPLfooter { display: block; grid-area: TPLfooter; position: absolute; visibility: hidden; }
+		
+		.TPLapp.wider .TPLmenu { display: block; position: static; visibility: visible; }
+		.TPLapp.wider .TPLbreadcrumbs { display: block; position: static; visibility: visible; }
+		.TPLapp.wider .TPLstatusbar { display: block; position: static; visibility: visible; }
+		.TPLapp.wider .TPLfooter { display: block; position: static; visibility: visible; }
+		
+		@media (min-width: 900px) {
+			.c2d { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 50px; }
+		}
+		.c2d .updtItem { word-wrap: wrap; }
+		.c2d .updtItem h3 { border-bottom: 3px solid #111; padding-bottom: 12px; }
+		.c2d .updtItem h3 i { display: inline-block; width: 36px; }
+		.c2d .updtItem p.status { display: inline-block; margin-left: 40px; line-height: 1.6; font-size: 110%; }
+		.c2d .updtItem span { font-size: 110%; }
+		.c2d .updtItem .redAlert { display: block; }
+		.c2d .updtItem .redAlert .name { display: inline-block; cursor: pointer; margin: 20px 0px 0px 0px; background: linear-gradient(#2A225E, #6E358C); color: #fff; font-weight: bold; text-transform: uppercase; font-size: 13px; letter-spacing: +1px; padding: 12px 22px; border-radius: 12px; }
+		
+		@media (min-width: 900px) {
+			.c3x { display: grid; grid-template-columns: 1fr 1fr 1fr; grid-gap: 30px; }
+		}
+		.c3x .updtItem { background: #f4f4f4; padding: 30px 35px 30px 35px; border-radius: 18px; cursor: pointer; transition-duration: .5s; box-shadow: -10px -1px 22px 23px rgba(0,0,0,0.02); -webkit-box-shadow: -10px -1px 22px 23px rgba(0,0,0,0.02); -moz-box-shadow: -10px -1px 22px 23px rgba(0,0,0,0.02); position: relative; overflow: hidden; }
+		.c3x .updtItem:hover { background: #fff; transition-delay: 0s !important; box-shadow: -10px -1px 82px 43px rgba(0,0,0,0.12); -webkit-box-shadow: -10px -1px 82px 43px rgba(0,0,0,0.12); -moz-box-shadow: -10px -1px 82px 43px rgba(0,0,0,0.12); overflow: visible; }
+		.c3x .updtItem h3 { display: flex; border-bottom: 3px solid #fff; padding-bottom: 12px; transition-duration: .7s; color: #AD348B !important; }
+		.c3x .updtItem:hover h3 { border-bottom: 3px solid #333; padding-bottom: 12px; }
+		.c3x .updtItem p.status { font-size: 100%; margin-bottom: 0px; }
+		.c3x .updtItem .icons { position: absolute; top: -20px; right: -20px; transform: rotate(10deg); transition-duration: 1s; }
+		.c3x .updtItem .icons i { display: inline-block; width: 40px; height: 40px; margin-left: -12px; padding-top: 10px; border-radius: 50%; background: #333; color: #fff; font-weight: bold; text-align: center; font-size: 130%; transform: translate(0px, -40px); -webkit-transform: translate(0px, -40px);-moz-transform: translate(0px, -40px);-o-transform: translate(0px, -40px);-ms-transform: translate(0px, -40px); transition-duration: 1s; opacity: 0; }
+		.c3x .updtItem .icons i:hover { background: #6E358C; }
+		
+		.c3x .updtItem:hover .icons { transform: rotate(0deg); }
+		.c3x .updtItem:hover .icons i { margin-left: 5px; transform: translate(0px, 0px); -webkit-transform: translate(0px, 0px);-moz-transform: translate(0px, 0px);-o-transform: translate(0px, 0px);-ms-transform: translate(0px, 0px); opacity: 1; transform: rotate(0deg); }
+		
+		.c3x .updtItem:hover .icons i:nth-child(1) { transition-delay: 0.1s; }
+		.c3x .updtItem:hover .icons i:nth-child(2) { transition-delay: 0.2s; }
+		.c3x .updtItem:hover .icons i:nth-child(3) { transition-delay: 0.3s; }
+		.c3x .updtItem:hover .icons i:nth-child(4) { transition-delay: 0.4s; }
+		
+		.c3x .updtItem .redAlert { display: block; }
+		.c3x .updtItem .redAlert .name { display: inline-block; cursor: pointer; margin: 20px 0px 0px 0px; background: linear-gradient(#2A225E, #6E358C); color: #fff; font-weight: bold; text-transform: uppercase; font-size: 13px; letter-spacing: +1px; padding: 12px 22px; border-radius: 12px; }
+		
+		.black .TPLapp .c3x .updtItem { background: #222; color: #eee; box-shadow: -10px -1px 22px 23px rgba(255,255,255,0.02); -webkit-box-shadow: -10px -1px 22px 23px rgba(255,255,255,0.02); -moz-box-shadow: -10px -1px 22px 23px rgba(255,255,255,0.02); }
+		.black .TPLapp .c3x .updtItem:hover { background: #000000; box-shadow: -10px -1px 82px 43px rgba(255,255,255,0.18); -webkit-box-shadow: -10px -1px 82px 43px rgba(255,255,255,0.18); -moz-box-shadow: -10px -1px 82px 43px rgba(255,255,255,0.18); }
+		.black .TPLapp .c3x .updtItem h3 { border-bottom: 3px solid #333; color: #fff !important; }
+		.black .TPLapp .c3x .updtItem:hover h3 { border-bottom: 3px solid #fff; }
+							
+		.steps { text-align: center; display: flex; justify-content: space-between; margin-bottom: 50px; }
+		.steps .step { display: inline-block; width: 160px; height: 160px; border-radius: 50%; text-align: center; border: 5px solid #f4f4f4; padding-top: 26px; color: #ccc; font-weight: bold; position: relative; }
+		.steps .step .name { display: block; font-size: 120%; }
+		.steps .step .icon { display: block; }
+		.steps .step .count { display: block; font-size: 300%; }
+		.steps .stepDone { border-color: #6E358C; font-weight: bold; color: #6E358C; }
+		.steps .stepActive { border-color: #6E358C; font-weight: bold; background: #6E358C; color: #fff; }
+		
+		.steps .step1:after { position: absolute; top: 50%; right: -100%; display: block; content: ""; height: 5px; background-color: #f4f4f4; width: 100%; overflow: visible; }
+		.steps .step2:after { position: absolute; top: 50%; right: -100%; display: block; content: ""; height: 5px; background-color: #f4f4f4; width: 100%; overflow: visible; }
+		.steps .step2:before { position: absolute; top: 50%; left: -100%; display: block; content: ""; height: 5px; background-color: #f4f4f4; width: 100%; overflow: visible; }
+		.steps .step3:before { position: absolute; top: 50%; left: -100%; display: block; content: ""; height: 5px; background-color: #f4f4f4; width: 100%; overflow: visible; }
+		
+		.steps .stepDone:after { background: #6E358C; }
+		.steps .stepDone:before { background: #6E358C; }
+		.steps .stepActive:after { background: #6E358C; }
+		.steps .stepActive:before { background: #6E358C; }
+		
+		.closedText { max-height: 22vh; overflow: auto; padding: 40px 40px 20px 40px; font-size: 85%; background: rgba(1,1,1,0.03); border-radius: 16px; }		
+		</style>
+	
+		<div class="TPLapp special transparent" id="appContainer">
+		
+			<div class="TPLsplash"></div>			
+			
+			<div class="TPLcontainerSpecial">
+			
+				<div class="TPLpageContainer" id="pageContainer">
+				
+					<div class="page" id="start">
+					
+						<div class="wyswig wyswig15pax">
+						
+							<h1 class="animatedX moved">Welcome to<br>Encedo Rescue</h1> 
+							
+							<h2 class="animatedX moved">Please plug Encedo device into the computer right now!</h2>
+							
+							<div id="introductionDOM">
+								
+								<form class="form-card animatedX moved" style="margin: 0;">
+				
+									<fieldset class="form-fieldset form-fieldset-nop animatedX moved">
+										
+										<div class="form-element form-input animatedX moved">
+											<input id="authenticate_search" class="form-element-field" placeholder=" " type="text" value="my.ence.do">
+											<div class="form-element-bar"></div>
+											<label class="form-element-label" for="authenticate_search">Device hostname (if changed)</label>
+										</div>
+									
+									</fieldset>
+									
+								</form>
+								
+								<br>
+								
+								<br>
+								
+								<p class="animatedX moved bounce">
+									<a class="buttonCTA changePage" rel="rescue"> &nbsp; I already plugged Encedo &nbsp; <i class="icon-plug"></i> &nbsp;</a>
+								</p>
+							
+							</div>
+						
+						</div>
+						
+					</div>
+					
+					<div class="page" id="rescue">
+					
+						<div class="wyswig wyswig15pax">
+						
+							<h1 class="animatedX moved">Connection test</h1>
+							
+							<h2 class="animatedX moved" id="status_encedoDevice">This process will take less than a minute.</h2>
+							
+							<div class="animatedX moved" id="status_encedoSoftware">
+							
+								<p class="animatedX moved">We are going to check connection with device using standard methods.</p>
+								
+								<br>
+								
+								<h2 class="animatedX moved" id="status_encedoDevice"><span class="loader-container"><span></span><span></span><span></span><span></span><span></span></span>  &nbsp; Waiting ... <span id="timerHere"></span></h2>
+
+							</div>
+							
+							<br>
+							
+							<br>
+							
+							<p class="animatedX moved">
+								<a class="buttonCTA buttonCTAG changePage" rel="start"> <i class="icon-angle-left"></i> &nbsp; Back &nbsp;</a> 
+								<a href="http://my.ence.do/rescue.html" class="buttonCTA index" rel="finish" id="finishButton"> &nbsp; Perform repair now &nbsp; <i class="icon-plug"></i> &nbsp;</a>
+							</p>
+						
+						</div>
+						
+					</div>
+					
+					<div class="page" id="help">
+					
+						<div class="wyswig wyswig15pax">
+						
+							<h1 class="animatedX moved">Need some help?</h1>
+							
+							<h2 class="animatedX moved">It looks like you encounter some problems. Do not worry! We are here to help you and safely take this process with you.</h2>
+							
+							<br>
+							
+							<p>If you already installed software driver, please plug encedo out, wait 5 seconds then plug it in again. We will try to connect with device using more advanced methods.</p>
+							
+							<p class="animatedX moved"> 
+								<a class="buttonCTA makeAction" rel="gotodashboard"> &nbsp; Try to connect to Encedo &nbsp; <i class="icon-angle-right"></i> &nbsp;</a>
+							</p>
+						
+						</div>
+						
+					</div>
+					
+					<div class="page" id="finish">
+					
+						<div class="wyswig wyswig15pax">
+						
+							<h1 class="animatedX moved">Finished and ready!</h1>
+							
+							<h2 class="animatedX moved">It looks like you can connect to Encedo Device now.</h2>
+							
+							<br>
+							
+							<p class="animatedX moved"> 
+								<a class="buttonCTA makeAction" rel="gotodashboard"> &nbsp; Go to dashboard &nbsp; <i class="icon-angle-right"></i> &nbsp;</a>
+							</p>
+						
+						</div>
+						
+					</div>
+					
+					<div class="page" id="update" data-title="Update console" data-class="basic">
+					
+						<div class="wyswig wyswig15pax">
+						
+							<h1 class="animatedX moved">Software update</h1>
+							
+							<h2 class="animatedX moved">It looks like there is a newer version of Encedo software. For security and privacy, it is crucial to keep your software up to date.</h2> 
+							
+							<h2 class="animatedX moved">Before you go any further, please <strong>update your software</strong> first.</h2>
+							
+							<br><br>										
+							
+							<div class="c2d">
+							
+								<div class="updtItem item animatedX moved">
+									<h3 class="animatedX moved">Firmware</h3>
+									<p class="animatedX moved" id="version_firmware"></p>
+									<p id="update_status_info">
+										<span class="animatedX moved moved2 bounce" id="version_firmware_available"></span>
+									</p>
+								</div>
+								
+								<div class="updtItem item animatedX moved">
+									<h3 class="animatedX moved">Dashboard</h3>
+									<p class="animatedX moved" id="version_dashboard"></p>
+									<p id="update_status_info2">
+										<span class="animatedX moved moved2 bounce" id="version_dashboard_available"></span>
+									</p>
+								</div>
+								
+							</div>
+							
+							<br>
+							
+							<br>
+							
+							<p class="animatedX moved">
+								<a class="buttonCTA buttonCTAG changePage" rel="step3"> <i class="icon-angle-left"></i> &nbsp; Back &nbsp;</a> 
+							</p>
+							
+						</div>
+						
+					</div>
+					
+					<div class="page" id="privacy-policy">
+					
+						<div class="wyswig wyswig15pax">
+						
+							<h1 class="animatedX moved">Privacy policy</h1>
+							
+							<h2 class="animatedX moved">Bunch of informations about how we hadle your privacy and data.</h2>
+							
+							<p class="animatedX moved">For this service visitors, we do not use cookies and we do not collect any personal data.</p>
+
+								<p class="animatedX moved">At Encedo, we are committed to complying with GDPR, CCPA, PECR and other privacy regulations on our website and on our web analytics product too. The privacy of your data — and it is your data, not ours! — is a big deal to us.</p>
+
+								<p class="animatedX moved">In this policy, we lay out what data we collect and why, how your data is handled and your rights to your data. You can trust us, we never sell your data: never have, never will.</p>
+
+								<p class="animatedX moved">As a visitor to this website</p>
+
+								<p class="animatedX moved">The privacy of our website visitors is important to us so we do not track any individual people. As a visitor to this website:</p>
+
+								<ul>
+									<li>No personal information is collected</li>
+									<li>No information such as cookies is stored in the browser</li>
+									<li>No information is shared with, sent to or sold to third-parties</li>
+									<li>No information is shared with advertising companies</li>
+									<li>No information is mined and harvested for personal and behavioural trends</li>
+									<li>No information is monetized</li>
+								</ul>
+
+								<p class="animatedX moved">We run the Plausible script to collect some anonymous usage data for statistical purposes. The goal is to track overall trends in our website traffic, it is not to track individual visitors. All the data is in aggregate only. No personal data is collected. Data collected includes referral sources, top pages, visit duration, information from the devices (device type, operating system, country and browser) used during the visit and more. You can see full details in their data policy.</p>
+
+
+								<p class="animatedX moved">As a customer and subscriber of Encedo</p>
+
+								<p class="animatedX moved">Our guiding principle is to collect only what we need and that we will solely process this information to provide you with the service you signed up for.</p>
+
+								<p class="animatedX moved">We use a select number of trusted external service providers for certain service offerings. These service providers are carefully selected and meet high data protection, data privacy and security standards.</p>
+
+								<p class="animatedX moved">We only share information with them that is required for the services offered and we contractually bind them to keep any information we share with them confidential and to process personal data only according to our instructions.</p>
+
+								<p class="animatedX moved">Here’s what that means in practice:</p>
+
+								<p class="animatedX moved">What we collect and what we use it for</p>
+
+								<p class="animatedX moved">All emails are sent using a third-party email provider. Transactional emails and email reports (should you choose to subscribe to them) are sent using the mail server hosted by our team. We have disabled both open tracking and link tracking on all emails sent.</p>
+
+								<p class="animatedX moved">We will retain your information as long as your account is active, as necessary to provide you with the services or as otherwise set forth in this policy.</p>
+
+								<p class="animatedX moved">We will also retain and use this information as necessary for the purposes set out in this policy and to the extent necessary to comply with our legal obligations, resolve disputes, enforce our agreements and protect Encedo’s legal rights.</p>
+
+
+								<p class="animatedX moved">Changes and questions</p>
+
+								<p class="animatedX moved">We may update this policy as needed to comply with relevant regulations and reflect any new practices. Whenever we make a significant change to our policies, we will also announce them on our company blog or social media profiles.</p>
+
+								<p class="animatedX moved">Contact us if you have any questions, comments, or concerns about this privacy policy, your data, or your rights with respect to your information.</p>
+
+								<p class="animatedX moved">Last updated: September 20th, 2021</p>
+							
+							<br>
+							
+							<p class="animatedX moved">
+								<a class="buttonCTA buttonCTAG changePage" rel="start"> <i class="icon-angle-left"></i> &nbsp; Back &nbsp; </a> 
+							</p>
+						
+						</div>
+						
+					</div>
+
+					<div class="page" id="terms-conditions">
+					
+						<div class="wyswig wyswig15pax">
+						
+							<h1 class="animatedX moved">Terms &amp; Conditions</h1>
+							
+							<h2 class="animatedX moved">Bunch of informations about how to use encedo and what are fundamentals of use.</h2>
+							
+							<p class="animatedX moved">Proin et posuere augue. Donec scelerisque consectetur massa, ut pulvinar augue venenatis pulvinar. Vivamus varius sem at dolor luctus rhoncus. Sed at sem eleifend odio laoreet pharetra. Maecenas nec scelerisque arcu. Phasellus velit nibh, ultricies ac vestibulum in, dignissim quis felis. Etiam lobortis, turpis at placerat volutpat, purus elit varius lorem, sed ornare lectus leo ut erat.</p> 
+							
+							<p class="animatedX moved">Integer non commodo lacus, nec euismod diam. Mauris velit nulla, aliquam at convallis id, auctor in leo. Nam eu scelerisque massa. In tincidunt varius velit, vitae porta enim faucibus at. Aenean bibendum scelerisque augue, ultrices faucibus tortor consequat vel. Pellentesque hendrerit maximus varius. Curabitur non ornare massa, sed imperdiet nisi.</p>
+
+							<p class="animatedX moved">Phasellus lacinia ante massa, sed tincidunt diam lacinia ac. Nulla porttitor congue urna non gravida. Morbi consequat accumsan nunc id faucibus. In tincidunt ut libero non scelerisque. Duis sed fringilla felis, vel malesuada augue. Quisque vel maximus nisi.</p> 
+							
+							<p class="animatedX moved">Vivamus vulputate fringilla sapien, ut facilisis velit sodales eu. Nullam vitae ipsum a neque sollicitudin porttitor non a ipsum. Mauris id risus feugiat, finibus dui ac, iaculis mi. Nullam tincidunt sem pretium odio elementum, eget dapibus nibh dictum. Sed commodo nunc quis gravida dapibus. Sed blandit sapien mi, nec malesuada elit blandit vel.</p>
+
+							<p class="animatedX moved">Phasellus a vulputate justo, in imperdiet risus. Curabitur quis lectus sed sapien pellentesque lobortis. Sed quis tristique velit. Duis tempus placerat placerat. Pellentesque eleifend elit in arcu scelerisque congue. Phasellus laoreet placerat nisl in pretium. Proin tincidunt dolor augue, id auctor lorem malesuada sit amet. Vivamus hendrerit aliquet malesuada. Vestibulum placerat placerat vulputate. Duis purus sem, placerat sed augue eget, laoreet tempus velit. </p>
+							
+							<p class="animatedX moved">Aliquam aliquam velit quis varius porttitor. Integer nisl dui, euismod at augue nec, ullamcorper laoreet dui. Aliquam erat volutpat. Etiam eu malesuada enim. Mauris lobortis, ligula a fermentum tempor, ex magna finibus risus, ut posuere risus tellus id neque. Vivamus varius nulla non augue maximus, eget imperdiet lorem ornare.</p>
+							
+							<br>
+							
+							<p class="animatedX moved">
+								<a class="buttonCTA buttonCTAG changePage" rel="start"> <i class="icon-angle-left"></i> &nbsp; Back &nbsp; </a> 
+							</p>
+						
+						</div>
+						
+					</div>
+					
+				</div>
+				
+			</div>
+		
+		</div>
+		
+		<div class="TLloading">
+			<div class="TLloading-wrapper">
+				<img src="assets/img/encedo-big-logo.png" class="blink bounce" alt="" width="294">
+				<p style="display: none;" class="blink">Encedo is loading...</p>
+			</div>
+
+		</div>
+		
+		<svg xmlns="http://www.w3.org/2000/svg" version="1.1">
+		  <defs>
+			<filter id="gooey">
+			  <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+			  <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 21 -7" result="goo" />
+			  <feBlend in="SourceGraphic" in2="goo" />
+			</filter>
+		  </defs>
+		</svg>
+		
+		<script>
+		var TITLE = 'Encedo Rescue Page';
+		var _DVERSION = 'DashB v0.7643.69.420 (#vf832d32)';
+		var _startingURL = window.location.protocol + '//' + window.location.hostname;
+		var actions = [];
+		var changePage = false;
+		var makeAction = false;
+		var register = function(name, func) {
+			actions[name] = func;
+		};
+		const startPage = 'start';
+		document.body.classList.remove('offline');
+		
+		setTimeout(function(){ 
+			document.body.classList.add('loaded');
+		}, 2000);
+		
+		setTimeout(function(){ 
+			document.body.classList.add('loadedF');
+		}, 3000);
+		</script>
+		
+		<script async defer src="assets/scopes.js"></script>
+		<script async defer src="assets/encedo.js"></script>
+		<script async defer src="assets/core-rescue-main.js"></script>
+		<script async defer data-domain="encedo.com" src="https://plausible.io/js/plausible.js"></script>
+	</body>
+	
+</html>
