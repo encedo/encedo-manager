@@ -651,14 +651,9 @@ var _defaults = {
  
  var _endpoints = {
  	'api/system/config': {
- 		'method': 'GET',
+ 		'method': ['GET', 'POST'],
  		'scope': 'system:config',
- 		'description': 'Read HEM config'
- 	},	
- 	'api/system/config': {
- 		'method': 'POST',
- 		'scope': 'system:config',
- 		'description': 'Update HEM config'
+ 		'description': 'Read (GET) or update (POST) HEM config'
  	},
  	'api/system/upgrade/*': {
  		'method': 'GET',
@@ -688,41 +683,20 @@ var _defaults = {
  	},	
  	'api/storage/unlock': {
  		'method': 'GET',
- 		'scope': 'storage:disk0',
- 		'description': 'Unlock primary storage to read (USB only)'
- 	},	
- 	'api/storage/unlock': {
- 		'method': 'GET',
- 		'scope': 'storage:disk0:rw',
- 		'description': 'Unlock primary storage to read and write (USB only)'
- 	},	
- 	'api/storage/unlock': {
- 		'method': 'GET',
- 		'scope': 'storage:disk1',
- 		'description': 'Unlock hidden storage to read (USB only)'
- 	},	
- 	'api/storage/unlock': {
- 		'method': 'GET',
- 		'scope': 'storage:disk1:rw',
- 		'description': 'Unlock hidden storage to read and write (USB only)'
- 	},	
+ 		'scope': ['storage:disk0', 'storage:disk0:rw', 'storage:disk1', 'storage:disk1:rw'],
+ 		'description': 'Unlock primary (disk0) or hidden (disk1) storage, read-only or read-write depending on the scope (USB only)'
+ 	},
  	'api/logger/list': {
  		'method': 'GET',
  		'scope': 'logger:get',
  		'description': 'Download a list of log files'
  	},	
  	'api/logger/*': {
- 		'method': 'GET',
+ 		'method': ['GET', 'DELETE'],
  		'scope': 'logger:get',
- 		'description': 'Download the log file',
+ 		'description': 'Download (GET) or delete (DELETE) the log file',
  		'query': [{'name': 'Log ID name', 'format': '[a-zA-Z0-9]'}]
- 	},	
- 	'api/logger/*': {
- 		'method': 'DELETE',
- 		'scope': 'logger:get',
- 		'description': 'Delete the log file',
- 		'query': [{'name': 'Log ID name', 'format': '[a-zA-Z0-9]'}]
- 	},	
+ 	},
  	'api/keymgmt/delete/*': {
  		'method': 'DELETE',
  		'scope': 'keymgmt:del',
@@ -801,11 +775,6 @@ var _defaults = {
  		'method': 'POST',
  		'scope': 'keymgmt:usage:*',
  	'description': 'Digitally sign the given data (ECDSA, EdDSA)'
- 	},
- 	'api/crypto/exdsa/verify': {
- 		'method': 'POST',
- 		'scope': 'keymgmt:usage:*',
- 		'description': 'Validate signature of the given data (ECDSA, EdDSA)'
  	},
  	'api/crypto/exdsa/verify': {
  		'method': 'POST',

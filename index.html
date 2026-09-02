@@ -2878,12 +2878,12 @@ Best wishes</textarea>
 		<div id="blindsStorage" class="blindsStorage"></div>
 		
 		<script>
-		var _DVERSION = 'v1.2.2';
+		var _DVERSION = 'v1.3.0';
 		var _args = window.location.href.split('?');
 		var _baseURL = window.location.href;
 		var _redirected = false;
 		var _redirectedAddressRaw = false;
-		var _startingURL = window.location.protocol + '//' + window.location.hostname;
+		var _startingURL = window.location.protocol + '//' + window.location.host;
 		var loadClever = false;
 		
 		let startPage = 'home';
@@ -2944,22 +2944,21 @@ Best wishes</textarea>
 			{ type: 'js', name: 'sweetalert2.all.min_v11_3_3.js', required: true, firstPaint: false, loaded: false, external: true, integrity: 'sha384-cVdE0l22UzTvqn9WW3GoZYiCK3egybWz4pePZGOSqrPcBxUaBw/QjyoScSU1JTUc' }
 		];
 		
-		function checkClever(url){
-			var http = new XMLHttpRequest();
-			http.open('HEAD', url, false);
-			http.send();
-			return http.status != 404;
-		};
-		
-		loadClever = function(element, success, failure, forceLocal) {
+		/*
+		Assets are loaded from the PPA itself first, so the Manager works air-gapped.
+		The public CDN (https://encedo.com/a/) is only a failover for external libraries:
+		it is used when the local copy fails to load and the browser reports being online.
+		*/
+		loadClever = function(element, success, failure, useCDN) {
 		
 			if(alreadyLoaded.includes(element.name)) return false;
 		
 			let _url = '';
 			
-			if(_online && !forceLocal && element.external) {
+			if(useCDN && element.external && _online) {
 				_url = 'https://encedo.com/a/';
 			} else {
+				useCDN = false;
 				if(_redirected) {
 					_url = _assetsHere;
 				} else {
@@ -2990,12 +2989,11 @@ Best wishes</textarea>
 				document.getElementById('artificial-' + element.name).remove();
 			};
 			
-			if(failure) {
-				bsa.onerror = function(){
-					failure(bsa, _url);
-					if(!forceLocal) {
-						loadClever(element, success, failure, true);
-					};
+			bsa.onerror = function(){
+				if(failure) failure(bsa, _url);
+				/* Local copy failed: try the CDN once, only for external libraries and only when online */
+				if(!useCDN && element.external && _online) {
+					loadClever(element, success, failure, true);
 				};
 			};
 			
@@ -3007,19 +3005,19 @@ Best wishes</textarea>
 			};
 			
 			if(element.firstPaint) {
-				/* It used to be document.head.appendChild(bsa); */
 				document.head.appendChild(bsa);
 			} else {
 				document.body.appendChild(bsa);
 			};
 			
+			/* Cache-busting follows the Manager version instead of a random number, so assets can be cached between page loads */
 			if(element.type == 'css') {
-				bsa.href = _url + element.name + '?id=' + Math.floor(Math.random()*643023);
+				bsa.href = _url + element.name + '?v=' + _DVERSION;
 			} else if(element.type == 'js') {
 				if(element.integrity) {
 					bsa.src = _url + element.name;
 				} else {
-					bsa.src = _url + element.name + '?id=' + Math.floor(Math.random()*964373);
+					bsa.src = _url + element.name + '?v=' + _DVERSION;
 				};
 			};
 			

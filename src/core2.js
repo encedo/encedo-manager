@@ -44,7 +44,7 @@ function log(t, c, g, s) { console.log('%c' + t, (c && c.length == 6 ? 'color: #
  
  function loadScript(url, func) {
  	var script = document.createElement('script');
- 	if(func) script.onload = func();
+ 	if(func) script.onload = func;
  	document.head.appendChild(script);
  	script.src = url;	
  };

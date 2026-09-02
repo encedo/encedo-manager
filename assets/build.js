@@ -1,3 +1,4 @@
+/* ---- src/encedo.js ---- */
 /*
   * EncedoKey Application v0.68
   *
@@ -97,7 +98,7 @@
       const minVersion = minVersions[browser];
       const isSupported = version >= minVersion;
 
-      console.log(`?? Detected: ${browser} v${version} | Required: ${minVersion} � ${isSupported ? "? OK" : "? Too old"}`);
+      console.log(`Browser detected: ${browser} v${version} | Required: ${minVersion} | ${isSupported ? "OK" : "Too old"}`);
 
       if (!isSupported) {
         alert(`Your browser: ${browser} v${version} is not supported. Upgrade to version ${minVersion} or newer.`);
@@ -2251,7 +2252,10 @@
  		return encodedSource;
  	};*/
  	
- }; function log(t, c, g, s) { console.log('%c' + t, (c && c.length == 6 ? 'color: #' + c + '; ' : '') + (g && g.length == 6 ? 'background-color: #' + g + '; ' : '') + (s ? 'font-weight: bold;' : '')); }
+};
+
+/* ---- src/core2.js ---- */
+function log(t, c, g, s) { console.log('%c' + t, (c && c.length == 6 ? 'color: #' + c + '; ' : '') + (g && g.length == 6 ? 'background-color: #' + g + '; ' : '') + (s ? 'font-weight: bold;' : '')); }
  log('Welcome my friend!', '000000', 'f5f5f5', true); 
  var _api = function(url, func, givenObj, timeout, external) {
  	var xhr = new XMLHttpRequest();
@@ -2297,7 +2301,7 @@
  
  function loadScript(url, func) {
  	var script = document.createElement('script');
- 	if(func) script.onload = func();
+ 	if(func) script.onload = func;
  	document.head.appendChild(script);
  	script.src = url;	
  };
@@ -8461,7 +8465,10 @@
  	  interaction.classList.toggle('c-interaction__options');
  	});
    
- })(); var _defaults = {
+})();
+
+/* ---- src/scopes.js ---- */
+var _defaults = {
  	'homepage': 'homeNew',
  	'fail_header': 'Upsss<br><strong>Something wrong</strong>',
  	'fail_button': 'Go back',
@@ -9114,14 +9121,9 @@
  
  var _endpoints = {
  	'api/system/config': {
- 		'method': 'GET',
+ 		'method': ['GET', 'POST'],
  		'scope': 'system:config',
- 		'description': 'Read HEM config'
- 	},	
- 	'api/system/config': {
- 		'method': 'POST',
- 		'scope': 'system:config',
- 		'description': 'Update HEM config'
+ 		'description': 'Read (GET) or update (POST) HEM config'
  	},
  	'api/system/upgrade/*': {
  		'method': 'GET',
@@ -9151,41 +9153,20 @@
  	},	
  	'api/storage/unlock': {
  		'method': 'GET',
- 		'scope': 'storage:disk0',
- 		'description': 'Unlock primary storage to read (USB only)'
- 	},	
- 	'api/storage/unlock': {
- 		'method': 'GET',
- 		'scope': 'storage:disk0:rw',
- 		'description': 'Unlock primary storage to read and write (USB only)'
- 	},	
- 	'api/storage/unlock': {
- 		'method': 'GET',
- 		'scope': 'storage:disk1',
- 		'description': 'Unlock hidden storage to read (USB only)'
- 	},	
- 	'api/storage/unlock': {
- 		'method': 'GET',
- 		'scope': 'storage:disk1:rw',
- 		'description': 'Unlock hidden storage to read and write (USB only)'
- 	},	
+ 		'scope': ['storage:disk0', 'storage:disk0:rw', 'storage:disk1', 'storage:disk1:rw'],
+ 		'description': 'Unlock primary (disk0) or hidden (disk1) storage, read-only or read-write depending on the scope (USB only)'
+ 	},
  	'api/logger/list': {
  		'method': 'GET',
  		'scope': 'logger:get',
  		'description': 'Download a list of log files'
  	},	
  	'api/logger/*': {
- 		'method': 'GET',
+ 		'method': ['GET', 'DELETE'],
  		'scope': 'logger:get',
- 		'description': 'Download the log file',
+ 		'description': 'Download (GET) or delete (DELETE) the log file',
  		'query': [{'name': 'Log ID name', 'format': '[a-zA-Z0-9]'}]
- 	},	
- 	'api/logger/*': {
- 		'method': 'DELETE',
- 		'scope': 'logger:get',
- 		'description': 'Delete the log file',
- 		'query': [{'name': 'Log ID name', 'format': '[a-zA-Z0-9]'}]
- 	},	
+ 	},
  	'api/keymgmt/delete/*': {
  		'method': 'DELETE',
  		'scope': 'keymgmt:del',
@@ -9270,11 +9251,6 @@
  		'scope': 'keymgmt:usage:*',
  		'description': 'Validate signature of the given data (ECDSA, EdDSA)'
  	},
- 	'api/crypto/exdsa/verify': {
- 		'method': 'POST',
- 		'scope': 'keymgmt:usage:*',
- 		'description': 'Validate signature of the given data (ECDSA, EdDSA)'
- 	},
  	'api/crypto/cipher/encrypt': {
  		'method': 'POST',
  		'scope': 'keymgmt:usage:*',
@@ -9296,3 +9272,4 @@
  		'description': 'Return unwraped secret data (AES)'
  	}
  };
+
