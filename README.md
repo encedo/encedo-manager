@@ -1,0 +1,52 @@
+# Encedo Manager
+
+Web UI built into the Encedo PPA (HEM) and served by the device itself. It is a static, framework-less
+single-page application: `index.html` holds the app shell and all pages, `assets/build.js` holds the logic.
+Version: **v1.3.0** (see `_DVERSION` in `index.html`).
+
+The Manager must work air-gapped. Every library it needs ships in `assets/`; the public CDN
+(`https://encedo.com/a/`) is only a failover used when a local copy fails to load.
+
+## Layout
+
+| Path | Role |
+| --- | --- |
+| `index.html` | App shell: ~50 `div.page` screens, menu, bootstrap loader (`loadClever`) |
+| `src/encedo.js` | `Encedo` class: device API (`api/...`), cloud API (`api.encedo.com`), pairing, mobile auth, key derivation (WebCrypto) |
+| `src/core2.js` | UI logic: page switching, `register()` action handlers, forms, modals, lazy library loading |
+| `src/scopes.js` | `_scopes` (auth scopes with UI texts) and `_endpoints` (HEM endpoint registry) |
+| `assets/build.js` | **Generated** from `src/` by `./build.sh`. Do not edit by hand. |
+| `assets/build.css` | Hand-assembled bundle of the stylesheets in `assets/*.css` (no build step yet) |
+| `assets/*_v*.js` | Third-party libraries pinned by version, loaded locally with SRI hashes (tweetnacl, SweetAlert2, qr-code-styling, jsbip39, sjcl, zxcvbn, jsPDF) |
+| `launch.html` | Minimal "waiting for the device" page shown while the PPA boots |
+| `rescue.html`, `rescueweb.html` | Rescue dashboard, with its own scripts `assets/core-rescue-*.js` |
+| `manifest.webmanifest` | PWA manifest; `manifest` is a SHA-256 list from an older deployment |
+
+## Building
+
+```
+./build.sh
+```
+
+Requires `node` (used only for syntax checks). The script concatenates `src/encedo.js`, `src/core2.js` and
+`src/scopes.js` into `assets/build.js`.
+
+## Legacy files kept for now
+
+- `assets/encedo.js` (Encedo v0.67, 2021) and `assets/scopes.js`: older snapshots still loaded directly by
+  `rescue.html` and `rescueweb.html`. The Manager itself uses the newer sources in `src/`.
+- `assets/core2.js`, `assets/dashboard.js`: not loaded by anything.
+- `index.htm`: copy of the v1.2.1 page.
+
+## Changelog
+
+### v1.3.0
+- Sources of the shipped bundle recovered from `assets/build.js` into `src/` and a reproducible `build.sh` added.
+- Asset loader prefers the PPA's local files; the CDN is only a failover for external libraries.
+- Cache-busting keyed to the Manager version instead of a random number.
+- Local jsPDF renamed to `jspdf.min_v1.js`, the name the app requests, so PDF export works offline.
+- `loadScript` passed the callback's result instead of the callback.
+- Duplicate keys in `_endpoints` merged (`api/system/config`, `api/logger/*`, `api/storage/unlock`,
+  `api/crypto/exdsa/verify`): later entries silently overwrote earlier ones in the object literal.
+- Base URL for local assets keeps the port (`location.host`), so the page also works from a dev server.
+- Mangled characters in the browser-support console message replaced.

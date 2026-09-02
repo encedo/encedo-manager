@@ -97,7 +97,7 @@
       const minVersion = minVersions[browser];
       const isSupported = version >= minVersion;
 
-      console.log(`?? Detected: ${browser} v${version} | Required: ${minVersion} � ${isSupported ? "? OK" : "? Too old"}`);
+      console.log(`Browser detected: ${browser} v${version} | Required: ${minVersion} | ${isSupported ? "OK" : "Too old"}`);
 
       if (!isSupported) {
         alert(`Your browser: ${browser} v${version} is not supported. Upgrade to version ${minVersion} or newer.`);
