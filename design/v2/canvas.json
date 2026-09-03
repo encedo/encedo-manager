@@ -1,0 +1,109 @@
+{
+  "artboards": [
+    {
+      "file": "Login.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Sign in"
+    },
+    {
+      "file": "SignInStates.dc.html",
+      "x": 1520,
+      "y": 0,
+      "w": 560,
+      "h": 780,
+      "title": "Sign-in states"
+    },
+    {
+      "file": "PhoneSignIn.dc.html",
+      "x": 2160,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Sign in, phone"
+    },
+    {
+      "file": "Main.dc.html",
+      "x": 0,
+      "y": 1040,
+      "w": 1440,
+      "h": 900,
+      "title": "Overview"
+    },
+    {
+      "file": "SecureDrive.dc.html",
+      "x": 1520,
+      "y": 1040,
+      "w": 1440,
+      "h": 900,
+      "title": "Secure drive"
+    },
+    {
+      "file": "PairedPhones.dc.html",
+      "x": 3040,
+      "y": 1040,
+      "w": 1440,
+      "h": 900,
+      "title": "Paired phones"
+    },
+    {
+      "file": "Keychain.dc.html",
+      "x": 0,
+      "y": 2080,
+      "w": 1440,
+      "h": 900,
+      "title": "Keychain"
+    },
+    {
+      "file": "OperationLog.dc.html",
+      "x": 1520,
+      "y": 2080,
+      "w": 1440,
+      "h": 900,
+      "title": "Operation log"
+    },
+    {
+      "file": "Software.dc.html",
+      "x": 3040,
+      "y": 2080,
+      "w": 1440,
+      "h": 900,
+      "title": "Software"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "style",
+      "x": 0,
+      "y": -200,
+      "w": 460,
+      "text": "Style: encedo web kit (wg.encedo.com). System fonts, 5 px radii, mono for anything literal.\nThe palette carries one idea: sealed green = inside the module, exposed rust = handed to the host. No other colour means state."
+    },
+    {
+      "id": "sample",
+      "x": 520,
+      "y": -200,
+      "w": 420,
+      "text": "Sample values. Names, versions, counts and log lines are examples for layout; every field maps to a hem-sdk-js call (see docs/SDK-MAPPING.md)."
+    },
+    {
+      "id": "decision",
+      "x": 1000,
+      "y": -200,
+      "w": 440,
+      "text": "Open decision before Settings and Personalisation are drawn: keep the BIP39 master passphrase (Proof of Personalization PDF) or move to the SDK's two-password model."
+    },
+    {
+      "id": "order",
+      "x": 1520,
+      "y": -200,
+      "w": 420,
+      "text": "Row 1 is the first milestone: sign-in against the personalised device. Row 2: overview and the simple operations (drive unlock, phones). Row 3: keychain, log, software."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

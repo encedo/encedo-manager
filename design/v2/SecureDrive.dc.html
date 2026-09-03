@@ -1,0 +1,167 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <title>Secure drive</title>
+  <style>
+    :root {
+      --ground: #F1F4F3; --surface: #FFFFFF; --sunken: #E7EBE9;
+      --ink: #0F1414; --ink-soft: #3A4746; --muted: #6A7773;
+      --rule: #D5DCD9; --rule-firm: #A9B5B1;
+      --sealed: #0F5F4B; --sealed-soft: #E0EFE9; --sealed-line: #96C6B5;
+      --exposed: #94422A; --exposed-soft: #F5E6E0; --exposed-line: #D9AB98;
+      --band-bg: #0E5544; --band-ink: #F2F8F5; --band-soft: #AFD2C5; --band-rule: #2E7A64;
+      --shadow-sm: 0 1px 2px rgba(15, 20, 20, .05);
+      --shadow-lg: 0 2px 4px rgba(15, 20, 20, .04), 0 18px 44px -22px rgba(15, 20, 20, .30);
+      --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+      --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      --serif: Georgia, "Iowan Old Style", "Palatino Linotype", ui-serif, serif;
+    }
+    * { box-sizing: border-box; min-width: 0; }
+    body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+    a { color: var(--sealed); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+    a:hover { color: var(--band-bg); }
+    h1, h2, h3, p, dl, dd, dt, ul { margin: 0; }
+    h1 { font-size: 30px; line-height: 1.14; letter-spacing: -.025em; font-weight: 620; text-wrap: balance; }
+    h2 { font-size: 18px; font-weight: 620; letter-spacing: -.008em; }
+    .eyebrow { font-family: var(--mono); font-size: 11.5px; letter-spacing: .17em; text-transform: uppercase; color: var(--sealed); }
+    .lede { font-family: var(--serif); font-size: 19px; line-height: 1.5; color: var(--ink-soft); }
+    .soft { color: var(--ink-soft); }
+    .muted { color: var(--muted); }
+    .mono { font-family: var(--mono); }
+    .masthead { display: flex; justify-content: space-between; align-items: baseline; gap: 20px; flex-wrap: wrap; font-family: var(--mono); font-size: 12px; letter-spacing: .04em; color: var(--muted); }
+    .masthead b { color: var(--ink); font-weight: 500; letter-spacing: .02em; }
+    .button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 12px 20px; border-radius: 5px; font-family: var(--mono); font-size: 13px; letter-spacing: .02em; text-decoration: none; border: 1px solid var(--sealed-line); color: var(--sealed); background: var(--sealed-soft); cursor: pointer; white-space: nowrap; }
+    .button.plain { background: none; border-color: var(--rule-firm); color: var(--ink-soft); }
+    .button.exposed { background: var(--exposed-soft); border-color: var(--exposed-line); color: var(--exposed); }
+    .button.small { min-height: 36px; padding: 8px 14px; font-size: 12px; }
+    .card { background: var(--surface); border: 1px solid var(--rule); border-radius: 5px; box-shadow: var(--shadow-sm); overflow: hidden; }
+    .card-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 11px 18px; background: var(--sunken); border-bottom: 1px solid var(--rule); font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; color: var(--muted); }
+    .card-head .v { color: var(--ink); }
+    .pill { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--rule); color: var(--muted); background: var(--sunken); white-space: nowrap; }
+    .pill.sealed { color: var(--sealed); background: var(--sealed-soft); border-color: var(--sealed-line); }
+    .pill.exposed { color: var(--exposed); background: var(--exposed-soft); border-color: var(--exposed-line); }
+    .pill i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; display: inline-block; }
+    table { border-collapse: collapse; width: 100%; font-size: 15px; font-variant-numeric: tabular-nums; }
+    th, td { text-align: left; padding: 14px 20px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+    thead th { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 500; background: var(--sunken); white-space: nowrap; }
+    tbody tr:last-child td { border-bottom: 0; }
+    td.risk { color: var(--exposed); }
+    td.safe { color: var(--sealed); }
+    td .mono, th .mono { font-size: 13.5px; }
+    .status-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--rule); }
+    .status-grid div { background: var(--surface); padding: 20px 24px; display: flex; flex-direction: column; gap: 4px; }
+    .status-grid dt { font-family: var(--mono); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+    .status-grid dd { font-size: 15px; color: var(--ink); font-variant-numeric: tabular-nums; }
+    .status-grid dd.pending { color: var(--muted); }
+    .status-grid dd.risk { color: var(--exposed); }
+    .status-note { padding: 18px 24px; border-top: 1px solid var(--rule); color: var(--ink-soft); font-size: 15px; }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label { font-family: var(--mono); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+    .field input { height: 44px; padding: 0 14px; border: 1px solid var(--rule-firm); border-radius: 5px; font: inherit; font-size: 15px; background: var(--surface); color: var(--ink); width: 100%; }
+    .field input::placeholder { color: var(--muted); }
+    .nav { display: flex; flex-direction: column; gap: 4px; }
+    .nav a { display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 14px; border-radius: 5px; color: var(--ink-soft); text-decoration: none; font-size: 15px; border: 1px solid transparent; }
+    .nav a.active { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-sm); border-color: var(--rule); }
+    .nav a:hover { color: var(--ink); }
+    .nav svg, .ico { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+    .cline { font-family: var(--mono); font-size: 13px; line-height: 2; white-space: pre; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; }
+    .cline .k { color: var(--ink); }
+    .cline.in { color: var(--sealed); background: var(--sealed-soft); border-radius: 2px; padding: 0 5px; margin: 0 -5px; }
+    .cline.out { color: var(--exposed); background: var(--exposed-soft); border-radius: 2px; padding: 0 5px; margin: 0 -5px; }
+    .steps { display: flex; flex-direction: column; gap: 18px; }
+    .step { display: grid; grid-template-columns: 22px 1fr; gap: 14px; align-items: baseline; }
+    .step-n { font-family: var(--mono); font-size: 12px; color: var(--sealed); letter-spacing: .04em; }
+    .step p { font-size: 15.5px; color: var(--ink-soft); }
+    .step b { color: var(--ink); font-weight: 600; }
+    .step.done .step-n { color: var(--muted); }
+    .item { display: grid; grid-template-columns: 200px 1fr; gap: 28px; padding: 18px 0; border-top: 1px solid var(--rule); }
+    .item:first-child { border-top: 0; padding-top: 0; }
+    .item dt { font-family: var(--mono); font-size: 13.5px; color: var(--ink); line-height: 1.5; }
+    .item dd { color: var(--ink-soft); font-size: 15px; }
+    .bar { height: 8px; border-radius: 999px; background: var(--sunken); overflow: hidden; }
+    .bar span { display: block; height: 100%; background: var(--sealed); border-radius: 999px; }
+  </style>
+</helmet>
+<div style="width: 1440px; min-height: 900px; background: #F1F4F3; display: flex; flex-direction: column;">
+  <div style="display: flex; flex: 1; min-height: 0;">
+    <aside style="width: 248px; flex: none; border-right: 1px solid #D5DCD9; padding: 28px 16px 24px; display: flex; flex-direction: column; gap: 28px;">
+      <div style="display: flex; align-items: center; gap: 12px; padding: 0 6px;">
+        <svg viewBox="0 0 64 64" width="36" height="36" role="img" aria-label="Encedo HEM"><rect width="64" height="64" rx="13" fill="#0F5F4B"></rect><rect x="16" y="16" width="32" height="32" rx="7" fill="none" stroke="#AFD2C5" stroke-width="4"></rect><circle cx="32" cy="32" r="6" fill="#F2F8F5"></circle></svg>
+        <div style="display: flex; flex-direction: column; line-height: 1.2;">
+          <span style="font-weight: 620; font-size: 15px; letter-spacing: -.01em;">Encedo HEM</span>
+          <span class="mono" style="font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #6A7773;">Manager</span>
+        </div>
+      </div>
+      <nav class="nav">
+      <a href="#"><svg viewBox="0 0 20 20"><rect x="3" y="3" width="14" height="14" rx="2.5"></rect><circle cx="10" cy="10" r="2.2"></circle></svg><span>Overview</span></a>
+      <a href="#"><svg viewBox="0 0 20 20"><circle cx="7" cy="12" r="3.5"></circle><path d="M9.8 9.8 17 2.6M14 5.6l2 2M11.6 8l1.6 1.6"></path></svg><span>Keychain</span></a>
+      <a href="#" class="active"><svg viewBox="0 0 20 20"><rect x="3" y="6" width="14" height="9" rx="1.5"></rect><path d="M6 10.5h5"></path><circle cx="14" cy="10.5" r=".9"></circle></svg><span>Secure drive</span></a>
+      <a href="#"><svg viewBox="0 0 20 20"><rect x="6" y="2" width="8" height="16" rx="1.6"></rect><path d="M9 15.2h2"></path></svg><span>Paired phones</span></a>
+      <a href="#"><svg viewBox="0 0 20 20"><path d="M4 5h12M4 10h12M4 15h7"></path></svg><span>Operation log</span></a>
+      <a href="#"><svg viewBox="0 0 20 20"><rect x="6" y="6" width="8" height="8" rx="1"></rect><path d="M8 3v3M12 3v3M8 14v3M12 14v3M3 8h3M3 12h3M14 8h3M14 12h3"></path></svg><span>Hardware</span></a>
+      <a href="#"><svg viewBox="0 0 20 20"><path d="M10 3v10M6 9l4 4 4-4M4 17h12"></path></svg><span>Software</span></a>
+      <a href="#"><svg viewBox="0 0 20 20"><path d="M3 6h14M3 14h14"></path><circle cx="8" cy="6" r="2" fill="#F1F4F3"></circle><circle cx="13" cy="14" r="2" fill="#F1F4F3"></circle></svg><span>Settings</span></a>
+      </nav>
+      <div style="margin-top: auto; display: flex; flex-direction: column; gap: 6px; padding: 14px; border-top: 1px solid #D5DCD9; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; line-height: 1.6; color: #6A7773;">
+        <span style="color: #0F1414;">my.ence.do</span>
+        <span>192.168.7.1 &middot; LAN</span>
+        <span>signed in as Ann &middot; <a href="#">Sign out</a></span>
+      </div>
+    </aside>
+    <main style="flex: 1; display: flex; flex-direction: column; gap: 32px; padding: 26px 48px 56px;">
+      <div class="masthead">
+        <span><b>Encedo HEM Manager</b> &nbsp;2.0.0-dev</span>
+        <span>firmware 2.4.1 &middot; PPA &middot; broker reachable</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <p class="eyebrow">Secure drive</p>
+        <h1>One drive is on the host.</h1>
+        <p class="soft" style="max-width: 66ch; font-size: 16px;">Unlocking hands a drive to the computer the module is plugged into, over USB. Read-only keeps the contents; read-write trusts that computer.</p>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px;">
+        <div class="card">
+          <div class="card-head"><span>disk0</span><span class="v">on the host</span></div>
+          <div style="display: flex; flex-direction: column; gap: 18px; padding: 22px 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;">
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <h2>Primary drive</h2>
+                <span class="mono muted" style="font-size: 13px;">58.2 GB of 64 GB used &middot; exFAT</span>
+              </div>
+              <span class="pill exposed"><i></i>Unlocked &middot; read-write</span>
+            </div>
+            <p class="soft">The host can read and write this drive over USB. Anything running there can change it.</p>
+            <div style="display: flex; flex-wrap: wrap; gap: 12px;"><a class="button exposed" href="#">Lock</a></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><span>disk1</span><span class="v">sealed</span></div>
+          <div style="display: flex; flex-direction: column; gap: 18px; padding: 22px 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;">
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <h2>Hidden drive</h2>
+                <span class="mono muted" style="font-size: 13px;">8 GB &middot; not mounted since personalisation</span>
+              </div>
+              <span class="pill sealed"><i></i>Locked</span>
+            </div>
+            <p class="soft">Sealed inside the module. The host sees no drive until you unlock it.</p>
+            <div style="display: flex; flex-wrap: wrap; gap: 12px;"><a class="button" href="#">Unlock read-only</a><a class="button plain" href="#">Unlock read-write</a></div>
+          </div>
+        </div>
+      </div>
+      <dl style="display: flex; flex-direction: column; max-width: 860px;">
+        <div class="item"><dt>What unlocking costs</dt><dd>While a drive is unlocked, its contents are as safe as the host. Lock it before you walk away; the module locks both on reboot.</dd></div>
+        <div class="item"><dt>Who can unlock</dt><dd>A token for <span class="mono">storage:disk0:rw</span> or <span class="mono">storage:disk1:rw</span>. Your password issues one; so does a paired phone.</dd></div>
+      </dl>
+    </main>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>
