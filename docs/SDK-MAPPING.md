@@ -83,7 +83,7 @@ What is left needs a decision, not code: the BIP39 master passphrase.
 |---|---|---|---|---|
 | `getNewFirmware()`, `getNewDashboard()` | broker `download/firmware/{v}`, `download/dashboard/{v}`, then `POST upload_fw` / `upload_ui` via XHR with progress | `broker.download(kind, version)`, `uploadFirmware(token, bytes, name, {onProgress})`, `uploadUi(...)` | covered | |
 | `checkNewFirmware()`, `installNewFirmware()`, `checkNewDashboard()`, `installNewDashboard()` | `check_fw`, `install_fw`, `check_ui`, `install_ui` | `checkFirmware`, `installFirmware`, `checkUi`, `installUi` | covered | |
-| — | `api/system/upgrade/usb` | `usbMode(token)` | n/a | SDK examples call it before upload, v1 never does; confirm with firmware whether it is required |
+| — | `api/system/upgrade/usbmode` | `usbMode(token)` | n/a | Not needed by the Manager (decided 2026-09-03); USB ACM uploads have their own webshell |
 
 ### Helpers
 
@@ -103,9 +103,9 @@ Closed on SDK branch `manager-v2` (`a750037`), each with a test in `sdk/test/sdk
 4. Disk unlock: nothing was missing; v1's `/ro` and `/rw` paths are dropped, the scope selects the mode.
 5. ~~Paired devices~~ `listExtAuth`, `deleteExtAuth`, `hasExtAuth`.
 6. ~~Operation log~~ `verifyLog`, `verifyLogEntry`.
-7. ~~Software updates~~ `broker.download`, `onProgress` on uploads. Open: whether `usbMode` is mandatory before an upload.
+7. ~~Software updates~~ `broker.download`, `onProgress` on uploads. `usbMode` is not needed by the Manager.
 8. ~~Keychain share~~ `broker.shareEmailPubkey`.
-9. Personalisation: ~~`provision`~~, ~~domains~~ done. **Still open: the BIP39 master passphrase.** v1 generates a 24-word mnemonic, prints it on the Proof of Personalization PDF and derives the admin key from it; the SDK's `initialize` derives both keys from typed passwords. Decide before the personalisation page: keep the mnemonic (then the SDK gets an `initialize` variant taking a ready admin key and a master-passphrase `authorize`) or move to two passwords.
+9. Personalisation: ~~`provision`~~, ~~domains~~ done. **Decided: the BIP39 master passphrase stays.** The SDK gets it in two places, at the dashboard-building stage: `initialize` with a mnemonic-derived admin key, and a master-passphrase `authorize` for the settings page. v1 derives the admin key as `nacl.box.keyPair.fromSecretKey(hex(seed).substr(1, 64))`, one character into the BIP39 seed's hex string; devices in the field were personalised that way, so the SDK must reproduce it exactly.
 
 Also fixed on the way: `registerExtAuth` sent `hash: 'not_implemented_yet'` in the QR payload; it now sends `base64(SHA-256(request))` as v1 did.
 
@@ -120,9 +120,9 @@ Also fixed on the way: `registerExtAuth` sent `hash: 'not_implemented_yet'` in t
 | `keychain`, `key_*` | `listKeys`, `searchKeys`, `getPubKey`, `createKeyPair`, `importPublicKey`, `updateKey`, `deleteKey`, `broker.shareEmailPubkey` | — |
 | `hardware` | `getVersion`, `getStatus`, `selftest`, `getAttestation`, `reboot` | — |
 | `consolelog`, `consolelog_show` | `getLoggerKey`, `listLog`, `getLogEntry`, `verifyLogEntry` | — |
-| `update`, `update_*_page` | checkin flags, `broker.download`, `uploadFirmware` / `checkFirmware` / `installFirmware`, `uploadUi` / `checkUi` / `installUi` | 7 (`usbMode`?) |
-| `settings` | `getConfig`, `setConfig` (incl. wipeout), `registerDomain`, master passphrase | 9 (mnemonic) |
-| `gettingStarted`, `initialisationPage`, `domainSetupPage` | `initialize`, `provision`, `registerDomain`; PDF stays on jsPDF in the app | 9 (mnemonic) |
+| `update`, `update_*_page` | checkin flags, `broker.download`, `uploadFirmware` / `checkFirmware` / `installFirmware`, `uploadUi` / `checkUi` / `installUi` | — |
+| `settings` | `getConfig`, `setConfig` (incl. wipeout), `registerDomain`, master passphrase | 9 (BIP39, later) |
+| `gettingStarted`, `initialisationPage`, `domainSetupPage` | `initialize`, `provision`, `registerDomain`; PDF stays on jsPDF in the app | 9 (BIP39, later) |
 
 ## 4. Integration notes
 
