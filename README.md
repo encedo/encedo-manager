@@ -21,7 +21,7 @@ The Manager must work air-gapped. Every library it needs ships in `assets/`; the
 | `launch.html` | Minimal "waiting for the device" page shown while the PPA boots |
 | `rescue.html`, `rescueweb.html` | Rescue dashboard, with its own scripts `assets/core-rescue-*.js` |
 | `manifest.webmanifest` | PWA manifest; `manifest` is a SHA-256 list from an older deployment |
-| `sdk/` | git submodule of [`encedo/hem-sdk-js`](https://github.com/encedo/hem-sdk-js), the JS SDK v2 is built on; see [`docs/SDK-MAPPING.md`](docs/SDK-MAPPING.md) |
+| `sdk/` | git submodule of [`encedo/hem-sdk-js`](https://github.com/encedo/hem-sdk-js) (branch `manager-v2`), the JS SDK v2 is built on; see [`docs/SDK-MAPPING.md`](docs/SDK-MAPPING.md) |
 
 ## Building
 
