@@ -3,12 +3,7 @@
 import { h, pageHead } from '../ui.js';
 
 const PLAN = {
-  keychain: ['Keychain', 'Keys stay inside; the module answers for them.', 'listKeys, searchKeys, getPubKey, createKeyPair, importPublicKey, updateKey, deleteKey, broker.shareEmailPubkey'],
-  phones: ['Paired phones', 'Phones that can answer for you.', 'registerExtAuth with a QR code, listExtAuth, deleteExtAuth'],
-  log: ['Operation log', 'Every log file is verified before you read it.', 'getLoggerKey, listLog, getLogEntry, verifyLogEntry'],
-  hardware: ['Hardware', 'What the module reports about itself.', 'getVersion, getStatus, selftest, getAttestation, reboot'],
   software: ['Software', 'Firmware and Manager updates.', 'hemCheckin flags, broker.download, uploadFirmware / checkFirmware / installFirmware, uploadUi / checkUi / installUi'],
-  settings: ['Settings', 'Owner, hostname, domain and the master passphrase.', 'getConfig, setConfig, registerDomain; master passphrase once the SDK has BIP39'],
 };
 
 export function renderPlaceholder(routeId) {

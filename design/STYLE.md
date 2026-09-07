@@ -93,6 +93,14 @@ offline, on a PPA behind an air gap, on the first paint.
 you could type, copy or compare. It is not decoration, and a screen that sets
 body copy in mono has thrown the signal away.
 
+**A byte field is never decoded for display.** A key's description is 128 bytes
+and only sometimes text; run a UTF-8 decoder over it and a key whose description
+is half text and half key material reads as `WG:pr:���u�l c`, which is not what
+is in the device and not anything a person can act on. Show base64, offer hex on
+hover, and let the bytes go back to the module exactly as they came. Text may be
+*encoded* into such a field when someone types it — that direction loses
+nothing. The same rule covers anything else the hardware calls a blob.
+
 Sizes, from the Manager:
 
 | Role | Size | Notes |
@@ -187,6 +195,12 @@ All of them are in `v2/app/style.css`.
 | `.button` / `.plain` / `.exposed` / `.small` | Sealed-green default, neutral secondary, rust for anything that hands something over |
 | `.field` | Mono uppercase label above a 44px input |
 | `table` + `thead th` | Lists of real records. Mono column heads, tabular numerals |
+| `th.sortable` + `.card-foot` | A table long enough to sort and page: the head cells are buttons with one arrow, the foot says what is shown and how many fit |
+| `tr.detail` + `.detail-body` | One record opened under its own row. Never at the bottom of the page — the eye should not have to travel to find what it just clicked |
+| `.blob` | Bytes shown as bytes: base64 or hex, mono, wrapped, on the sunken ground. Never re-typed by hand, so it carries a copy button |
+| Read-only field + `Edit` | A record's editable parts sit in their fields, locked, until Edit unlocks them and Save or Cancel closes it again. Nothing on a page that reports state is silently typeable |
+| `button.copy` (in `.field-head`) | Anything the reader will want to take elsewhere — a key id, a label, a description — carries a copy control in its label row, mono and quiet, that turns into a tick and "Copied" for two seconds. It reads the value when pressed, so an edited field copies what it now says |
+| `figure.qr` | A QR code. **Always dark on white**, whatever the theme: a scanner needs the contrast, and a code inverted by dark mode does not read |
 
 **Not everything is a card.** Border, fill, radius and shadow each say
 "separate object". The Manager uses one radius (5px), one small shadow for
@@ -248,8 +262,9 @@ Worth stating, because each of these was in v1 and each was removed:
 ## For the HEM Authenticator specifically
 
 The phone app is the other half of every flow the Manager draws: it is what
-answers when the Manager says "Confirm on your phone", and what scans the QR
-code when the Manager says "Pair a phone". Same palette, same voice, same
+answers when the Manager says "Confirm on your phone", what scans the QR code
+when the Manager says "Pair a phone", and what reads the QR of a share code off
+the Manager's keychain page. Same palette, same voice, same
 mono-means-literal rule. What changes:
 
 - **One decision per screen, and it is a security decision.** The approve/deny

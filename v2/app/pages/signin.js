@@ -29,6 +29,23 @@ function waiting(session, view) {
       h('p.note', {}, `${session.urls.hem} · attempt ${state.attempts}${state.lastError ? ' · ' + describeError(state.lastError) : ''}`)));
 }
 
+/**
+ * The phone is offered whenever the backend is reachable, and first when the
+ * broker says one is paired. The broker's word is a hint, not a gate: a phone
+ * paired a moment ago, or one the broker could not be asked about, still gets
+ * to answer — and a request with no phone behind it simply times out.
+ */
+function phoneButtons(session, view) {
+  const { state } = session;
+  const local = view.local;
+  const unlock = h('button.button', { type: 'submit', disabled: local.busy || null }, local.busy ? 'Unlocking…' : 'Unlock');
+  if (!state.online) return h('div.row', {}, unlock);
+  const phone = h(`button.button${state.paired ? '' : '.plain'}`, { type: 'button', disabled: local.busy || null, onclick: () => view.signInWithPhone() }, state.paired ? 'Ask my phone' : 'Ask my phone instead');
+  return state.paired
+    ? h('div.row', {}, phone, h('button.button.plain', { type: 'submit', disabled: local.busy || null }, local.busy ? 'Unlocking…' : 'Unlock with the password'))
+    : h('div.row', {}, unlock, phone);
+}
+
 function form(session, view) {
   const { state } = session;
   const v = state.version ?? {};
@@ -41,13 +58,11 @@ function form(session, view) {
     ? h('div.row', {},
         h('button.button.plain', { type: 'button', onclick: () => view.cancelPhone() }, 'Use password instead'),
         h('span.mono.muted', { style: 'font-size: 12px;' }, 'Confirm on your phone'))
-    : h('div.row', {},
-        h('button.button', { type: 'submit', disabled: local.busy || null }, local.busy ? 'Unlocking…' : 'Unlock'),
-        state.paired ? h('button.button.plain', { type: 'button', disabled: local.busy || null, onclick: () => view.signInWithPhone() }, 'Ask my phone instead') : null);
+    : phoneButtons(session, view);
 
   const lines = [];
   if (state.online === false) lines.push('Encedo backend unreachable · phone sign-in, pairing and downloads are off until it answers');
-  else if (state.online) lines.push(`${state.paired ? 'a phone is paired' : 'no phone paired'} · broker reachable · clock in sync`);
+  else if (state.online) lines.push(`${state.paired ? 'a phone is paired' : state.paired === false ? 'no phone paired, the broker says' : 'the broker did not say whether a phone is paired'} · broker reachable · clock in sync`);
   lines.push('Forgotten the password? The master passphrase from your Proof of Personalization also unlocks the module.');
 
   return h('form.card.lifted', { onsubmit: submit },

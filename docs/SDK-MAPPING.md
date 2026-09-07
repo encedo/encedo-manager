@@ -44,24 +44,24 @@ What is left needs a decision, not code: the BIP39 master passphrase.
 
 | Manager v1 | Endpoints | hem-sdk-js | Status | Note |
 |---|---|---|---|---|
-| `init()`, `initFinal()` | `GET+POST api/auth/init` | `initialize(adminPw, userPw, cfg)` | partial | cfg fields line up (`user, email, hostname, ip, storage_mode, dnsd, trusted_ts, trusted_backend, allow_keysearch, origin, ctx`); v1 derives the master key from a generated BIP39 mnemonic, the SDK from a password |
-| `provisioning()` | broker `/provisioning`, `POST api/system/config/provisioning` | `provision()`, `installProvisioning()`, `broker.provisioning()` | covered | |
-| `updateTLS()`, domain flow (core2) | broker `domain/predefs`, `domain/check/{name}`, `domain/register/{prefix}` | `registerDomain()`, `broker.domainPredefs()`, `broker.domainTaken()` | covered | `domainTaken` reads 200 as taken and 404 as free; confirm with the backend |
+| `init()`, `initFinal()` | `GET+POST api/auth/init` | `initialize({ mnemonic }, userPw, cfg)` | covered | built on v2's personalisation flow (2026-09-07): `generateMnemonic()` makes the 24 words, which ARE the master key; the cfg fields are v1's (`user, email, hostname, ip, storage_mode, storage_disk0size, dnsd, trusted_ts, trusted_backend, allow_keysearch, origin, ctx`, `gen_csr` for a name of the owner's own); then `status.format` is polled, the name registered with the init's `genuine`/`csr` (`broker.domainRegister` + `waitDomain`), and `setConfig({ tls })`; a failure wipes with the init token, as v1's `initRollback` did |
+| `provisioning()` | broker `/provisioning`, `POST api/system/config/provisioning` | `provision()`, `installProvisioning()`, `broker.provisioning()` | covered | not part of the Manager: provisioning happens in production and sets up the secure element independently of the firmware (owner, 2026-09-07); v1 never called it from core2 either |
+| `updateTLS()`, domain flow (core2) | broker `domain/predefs`, `domain/check/{name}`, `domain/register/{prefix}`, `domain/register/{id}` | `registerDomain()`, `broker.domainPredefs()`, `broker.domainTaken()`, `broker.domainStatus()`, `broker.waitDomain()` | covered | `domainTaken` reads 200 as taken and 404 as free; a custom prefix answers 201 + id and is polled until the e-mail click (`pending` → `email_confirmed` → `done`), as v1's `checkDomainAfterInit` did |
 
 ### Paired devices
 
 | Manager v1 | Endpoints | hem-sdk-js | Status | Note |
 |---|---|---|---|---|
-| `pair()` + `pairdeviceNow` (core2) | `api/auth/ext/init`, broker `notify/session`, `notify/register/init|check|finalise`, `api/auth/ext/validate` | `registerExtAuth(token, {onQrCode, pollInterval, pollTimeout, onPending, signal})` | covered | QR rendering stays in the UI (`qr-code-styling`); `onQrCode` hands over the exact JSON |
-| `paired()` | `api/auth/ext/mac` + broker `notify/subscribers/list` | `listExtAuth(token)` | covered | |
-| `unpair(pid)` | `api/auth/ext/mac` + broker `notify/subscribers/delete` | `deleteExtAuth(token, pid)` | covered | the keychain entry `RVhUQUlE` + pid is still deleted with `deleteKey` |
+| `pair()` + `pairdeviceNow` (core2) | `api/auth/ext/init`, broker `notify/session`, `notify/register/init|check|finalise`, `api/auth/ext/validate` | `registerExtAuth(token, {onQrCode, pollInterval, pollTimeout, onPending, signal})` | covered | built on v2's Paired phones page (2026-09-07): `onQrCode` hands over the exact JSON and v2/app/qr.js draws it, no library |
+| `paired()` | `api/auth/ext/mac` + broker `notify/subscribers/list` | `listExtAuth(token)` | covered | v2 lists phones from the keychain (`listKeys`, description `EXTAID` + pid) and uses this to say which the broker still routes to; v1's `keymgmt/search` depended on `allow_keysearch` |
+| `unpair(pid)` | `api/auth/ext/mac` + broker `notify/subscribers/delete` | `deleteExtAuth(token, pid)` | covered | the keychain entry `RVhUQUlE` + pid is still deleted with `deleteKey`; air-gapped, v2 deletes the key alone (that is the half that revokes) and says the broker still lists it |
 | `checkPairing()` | `api/auth/token` + broker `notify/session` | `hasExtAuth()` | covered | no token needed |
 
 ### Keychain
 
 | Manager v1 | Endpoints | hem-sdk-js | Status | Note |
 |---|---|---|---|---|
-| keychain pages (core2), `removeKey()` | `api/keymgmt/list|search|get|create|import|update|delete` | `listKeys`, `searchKeys`, `getPubKey`, `createKeyPair`, `importPublicKey`, `updateKey`, `deleteKey` | covered | SDK already shapes `mode` and the base64 `^` search pattern current firmware expects |
+| keychain pages (core2), `removeKey()` | `api/keymgmt/list|search|get|create|import|update|delete` | `listKeys`, `searchKeys`, `getPubKey`, `createKeyPair`, `importPublicKey`, `updateKey`, `deleteKey` | covered | built on v2's Keychain page (2026-09-04). Two SDK fixes on the way: `listKeys` returns `{ list, total }` with `created`/`updated`, so a page can show dates and know when to ask for the next page; `createKeyPair` / `deriveKey` send `mode` only where the device wants one — the SECP* curves, which the caller now chooses for — instead of `mode: 'AES256'` |
 | share key by e-mail (core2) | broker `share/emailpubkey` | `broker.shareEmailPubkey()` | covered | |
 
 ### Secure drive
@@ -75,7 +75,7 @@ What is left needs a decision, not code: the BIP39 master passphrase.
 | Manager v1 | Endpoints | hem-sdk-js | Status | Note |
 |---|---|---|---|---|
 | consolelog pages (core2) | `api/logger/key`, `api/logger/list`, `api/logger/{id}` | `getLoggerKey`, `listLog`, `getLogEntry` | covered | |
-| `check_log_integrity()` (core2) | client-side: Ed25519 verify of the signed nonce, HMAC-SHA256 per line | `verifyLog()`, `verifyLogEntry(token, id)` | covered | result names the first failing line and why |
+| `check_log_integrity()` (core2) | client-side: Ed25519 verify of the signed nonce, HMAC-SHA256 per line | `verifyLog()`, `verifyLoggerKey()`, `verifyLogEntry(token, id)` | covered | result names the first failing line and why. `verifyLoggerKey` was added on 2026-09-04: `/api/logger/key` answers with a nonce and its signature, and without checking that, a verified file only agrees with itself. Both were run over 137 files off a real PPA — all verified |
 
 ### Software updates
 
@@ -116,13 +116,13 @@ Also fixed on the way: `registerExtAuth` sent `hash: 'not_implemented_yet'` in t
 | `authenticate` | `getVersion` / `getStatus` with `timeoutMs` while waiting for the device, `hemCheckin`, `hasExtAuth`, `authorizePassword` or `authorizeRemote` | — |
 | `home` | `getStatus`, `getConfig`, update flags from checkin | — |
 | `securestorage` | `unlockStorage`, `lockStorage` with `storage:disk<N>[:rw]` | — |
-| `devices`, `device_details` | `registerExtAuth` + QR render, `listExtAuth`, `deleteExtAuth` | — |
-| `keychain`, `key_*` | `listKeys`, `searchKeys`, `getPubKey`, `createKeyPair`, `importPublicKey`, `updateKey`, `deleteKey`, `broker.shareEmailPubkey` | — |
-| `hardware` | `getVersion`, `getStatus`, `selftest`, `getAttestation`, `reboot` | — |
-| `consolelog`, `consolelog_show` | `getLoggerKey`, `listLog`, `getLogEntry`, `verifyLogEntry` | — |
+| `devices`, `device_details` | `registerExtAuth` + QR render, `listExtAuth`, `deleteExtAuth` | — (built in v2) |
+| `keychain`, `key_*` | `listKeys`, `searchKeys`, `getPubKey`, `createKeyPair`, `importPublicKey`, `updateKey`, `deleteKey`, `broker.shareEmailPubkey` | — (built in v2) |
+| `hardware` | `getVersion`, `getStatus`, `selftest`, `reboot`, and the new `hem.tokens` getter | — (built in v2; the attestation is left alone — it can hand back a private key on a device that is not provisioned yet) |
+| `consolelog`, `consolelog_show` | `getLoggerKey`, `verifyLoggerKey`, `listLog`, `getLogEntry`, `verifyLog` | — (built in v2) |
 | `update`, `update_*_page` | checkin flags, `broker.download`, `uploadFirmware` / `checkFirmware` / `installFirmware`, `uploadUi` / `checkUi` / `installUi` | — |
-| `settings` | `getConfig`, `setConfig` (incl. wipeout), `registerDomain`, master passphrase | 9 (BIP39, later) |
-| `gettingStarted`, `initialisationPage`, `domainSetupPage` | `initialize`, `provision`, `registerDomain`; PDF stays on jsPDF in the app | 9 (BIP39, later) |
+| `settings` | `getConfig`, `setConfig` (incl. wipeout), `setUserPassword`, `registerDomain`, `domainTaken`, `authorizeMaster` | — (built in v2; drive geometry is not, because changing it destroys the data on them) |
+| `gettingStarted`, `initialisationPage`, `domainSetupPage`, `tutorial` | `initialize`, `broker.domainRegister` + `waitDomain`, `setConfig({ tls })`; the proof PDF is written by v2/app/pdf.js | — (built in v2) |
 
 ## 4. Integration notes
 

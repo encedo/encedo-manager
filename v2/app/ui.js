@@ -50,6 +50,8 @@ export const ICONS = {
   hardware: '<svg viewBox="0 0 20 20"><rect x="6" y="6" width="8" height="8" rx="1"></rect><path d="M8 3v3M12 3v3M8 14v3M12 14v3M3 8h3M3 12h3M14 8h3M14 12h3"></path></svg>',
   software: '<svg viewBox="0 0 20 20"><path d="M10 3v10M6 9l4 4 4-4M4 17h12"></path></svg>',
   settings: '<svg viewBox="0 0 20 20"><path d="M3 6h14M3 14h14"></path><circle cx="8" cy="6" r="2" fill="var(--ground)"></circle><circle cx="13" cy="14" r="2" fill="var(--ground)"></circle></svg>',
+  copy: '<svg viewBox="0 0 20 20"><rect x="7" y="7" width="10" height="10" rx="2"></rect><path d="M13 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path></svg>',
+  tick: '<svg viewBox="0 0 20 20"><path d="m4 10.5 4 4 8-9"></path></svg>',
 };
 
 export const icon = (name) => svg(ICONS[name]);
@@ -62,10 +64,78 @@ export function pageHead(eyebrow, title, lede) {
   return h('div.page-head', {}, h('p.eyebrow', {}, eyebrow), h('h1', {}, title), lede ? h('p', {}, lede) : null);
 }
 
+let ids = 0;
+
+/**
+ * A labelled control: field('Label', input, 'hint'). Labels the control by id.
+ * `copy` puts a copy control in the label row — for a field whose value is data
+ * someone will want to take somewhere else, rather than something they typed.
+ */
+export function field(label, control, hint = null, { copy = false, counter = null } = {}) {
+  if (!control.id) control.id = `f${++ids}`;
+  const head = copy
+    ? h('div.field-head', {}, h('label', { for: control.id }, label), copyControl(() => control.value))
+    : h('label', { for: control.id }, label);
+
+  // A counter says how much of the field is spent, in the unit the device uses,
+  // and turns rust the moment what is typed no longer fits.
+  let count = null;
+  if (counter) {
+    count = h('span.count');
+    const refresh = () => {
+      const { text, over } = counter(control.value);
+      count.textContent = text;
+      count.classList.toggle('over', Boolean(over));
+    };
+    control.addEventListener('input', refresh);
+    refresh();
+  }
+  const foot = hint || count ? h('div.field-foot', {}, hint ? h('span.hint', {}, hint) : h('span'), count) : null;
+  return h('div.field', {}, head, control, foot);
+}
+
+/**
+ * A control that copies and then says it did. The text is read when the button
+ * is pressed, not when it is built, so an edited field copies what it now says.
+ * A browser that refuses the clipboard says so instead of failing silently.
+ */
+export function copyControl(text, { className = 'copy', label = 'Copy', done = 'Copied' } = {}) {
+  const read = typeof text === 'function' ? text : () => text;
+  const button = h(`button.${className}`, { type: 'button' }, icon('copy'), h('span', {}, label));
+  button.addEventListener('click', async () => {
+    let ok = true;
+    try { await navigator.clipboard.writeText(read()); } catch { ok = false; }
+    render(button, icon(ok ? 'tick' : 'copy'), h('span', {}, ok ? done : 'Select it and copy'));
+    button.classList.toggle('done', ok);
+    setTimeout(() => { render(button, icon('copy'), h('span', {}, label)); button.classList.remove('done'); }, 2000);
+  });
+  return button;
+}
+
+/**
+ * A <select>. `options` is a list of values, [value, label] pairs, or
+ * ['Group name', [...options]] to make an <optgroup>.
+ */
+export function select(options, value = null, attrs = {}) {
+  const el = h('select', attrs);
+  const option = (opt) => {
+    const [v, label] = Array.isArray(opt) ? opt : [opt, opt];
+    return h('option', { value: v, selected: v === value || null }, label);
+  };
+  for (const opt of options) {
+    if (Array.isArray(opt) && Array.isArray(opt[1])) el.append(h('optgroup', { label: opt[0] }, opt[1].map(option)));
+    else el.append(option(opt));
+  }
+  return el;
+}
+
 export function statusGrid(items) {
   return h('dl.status-grid', {}, items.map(([dt, dd, cls]) =>
     h('div', {}, h('dt', {}, dt), h(`dd${cls ? '.' + cls : ''}`, {}, dd))));
 }
+
+/** Column widths for a table.fixed, as percentages or lengths. */
+export const colgroup = (widths) => h('colgroup', {}, widths.map((w) => h('col', { style: `width: ${w};` })));
 
 /** Replace the children of `el`. */
 export function render(el, ...children) {
