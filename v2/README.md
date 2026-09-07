@@ -1,4 +1,4 @@
-# Encedo HEM Manager v2
+# Encedo HEM Manager 2.0
 
 The Manager rebuilt on [hem-sdk-js](../sdk): ES modules, no bundler, served as
 static files by the module itself or by any web server. Screens follow the

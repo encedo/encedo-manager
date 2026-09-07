@@ -1,10 +1,12 @@
 {
-  "name": "encedo-manager-v2",
+  "name": "encedo-manager",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
-  "description": "Encedo HEM Manager v2: static ES modules on hem-sdk-js, no build step",
+  "description": "Encedo HEM Manager: static ES modules on hem-sdk-js, no build step",
   "scripts": {
     "dev": "node dev/serve.mjs",
-    "test": "node --test dev/session.test.mjs"
+    "test": "node --test dev/session.test.mjs dev/qr.test.mjs",
+    "smoke": "node dev/smoke.mjs"
   }
 }

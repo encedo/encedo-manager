@@ -1,6 +1,7 @@
 // Bootstrap: find the module, keep a session, render the shell and the pages.
 
 import { resolveConfig } from './config.js';
+import { VERSION, PRODUCT } from './version.js';
 import { Session, describeError, describeScope, buildShareCode, shareCodeText, storageMode, gbToSectors, sectorsToGb, isPrefix, parseStorage } from './session.js';
 import { ROUTES, currentRoute, href, onRouteChange } from './router.js';
 import { h, mark, icon, render } from './ui.js';
@@ -643,7 +644,7 @@ function shell(route, content) {
         h('span', {}, `${state.config?.user ?? 'signed in'} · `, h('a', { href: '#', onclick: (e) => { e.preventDefault(); session.signOut(); } }, 'Sign out')))),
     h('main.main', {},
       h('div.masthead', {},
-        h('span', {}, h('b', {}, 'Encedo HEM Manager'), '  2.0.0-dev'),
+        h('span', {}, h('b', {}, PRODUCT), `  ${VERSION}`),
         h('span', {}, [`firmware ${v.fwv ?? '?'}`, v.conf ?? v.hwv, state.online ? 'backend reachable' : state.online === false ? 'air-gapped' : null, state.mode === 'phone' ? 'signed in with the phone' : null].filter(Boolean).join(' · '))),
       content),
     state.asking ? askingModal(state.asking) : null);

@@ -3,6 +3,7 @@
 // its drives are laid out, what it takes on faith — then the 24 words on paper.
 
 import { h, mark, render, field, select, copyControl, statusGrid } from '../ui.js';
+import { VERSION, PRODUCT } from '../version.js';
 import { describeError, isPrefix, sectorsToGb, gbToSectors, parseStorage, formatBytes } from '../session.js';
 
 const YES_NO = [['1', 'Yes'], ['0', 'No']];
@@ -35,7 +36,7 @@ export function renderPersonalise(root, session, view) {
   else if (view.step === 'form') card = form(session, view);
   else card = welcome(session, view);
   render(root, h('div.signin.wide', {},
-    h('div.brand', {}, mark(40), h('div.masthead', {}, h('span', {}, h('b', {}, 'Encedo HEM Manager'), '  2.0.0-dev'))),
+    h('div.brand', {}, mark(40), h('div.masthead', {}, h('span', {}, h('b', {}, PRODUCT), `  ${VERSION}`))),
     card));
 }
 

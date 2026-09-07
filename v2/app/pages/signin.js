@@ -1,6 +1,7 @@
 // Sign-in: waiting for the module, the password form, the phone request.
 
 import { h, mark, render } from '../ui.js';
+import { VERSION, PRODUCT } from '../version.js';
 import { describeError } from '../session.js';
 
 export function renderSignIn(root, session, view) {
@@ -8,7 +9,7 @@ export function renderSignIn(root, session, view) {
   root.className = 'app centered';
   const card = state.phase === 'probing' ? waiting(session, view) : form(session, view);
   render(root, h('div.signin', {},
-    h('div.brand', {}, mark(40), h('div.masthead', {}, h('span', {}, h('b', {}, 'Encedo HEM Manager'), '  2.0.0-dev'))),
+    h('div.brand', {}, mark(40), h('div.masthead', {}, h('span', {}, h('b', {}, PRODUCT), `  ${VERSION}`))),
     card));
 }
 
