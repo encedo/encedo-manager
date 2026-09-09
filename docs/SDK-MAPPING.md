@@ -38,7 +38,7 @@ What is left needs a decision, not code: the BIP39 master passphrase.
 | `auth()`, `postAuthToken()`, `scope()`, `scoped()`, `tokens[]` | `GET+POST api/auth/token` | `authorizePassword(pw, scope, exp)` + built-in token cache | covered | PBKDF2 (600k) → X25519 → eJWT and the per-scope cache move into the SDK; asking "password or phone?" stays UI policy |
 | `mobileConnection()`, `mobileAuth()` | `api/auth/ext/request`, broker `notify/session`, `notify/event/new`, `notify/event/check/{id}`, `api/auth/ext/token` | `authorizeRemote(scope, {pollInterval, pollTimeout, onPending, signal})` | covered | v1 polls every 3 s for ~200 s |
 | `mobileAuthCleanup()` | `DELETE` broker `notify/event/{id}` | inside `authorizeRemote` (on abort / timeout), `broker.eventDelete()` | covered | cancelling withdraws the event; `onEvent` exposes the id |
-| "Use Master Passphrase" (settings) | `api/auth/token` with a key derived from the BIP39 mnemonic | — | missing | `authorizePassword` derives from a typed password; v1's admin identity is the 24-word mnemonic on the Proof of Personalization PDF |
+| "Use Master Passphrase" (settings) | `api/auth/token` with a key derived from the BIP39 mnemonic | `authorizeMaster(mnemonic, scope)` | covered | built on v2's Settings page (2026-09-04); the 256-bit entropy of the 24 words IS the X25519 key, `{ legacy: true }` reproduces v1's `seedHex.substr(1, 64)` for modules personalised by v1 |
 
 ### Personalisation
 
