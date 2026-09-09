@@ -519,9 +519,15 @@ test('unpairing removes the key and the subscription, or whichever half exists',
 
   const keyOnly = s.pairedPhones().find((p) => p.pid === PHONE_PIDS.iphone);
   assert.equal(keyOnly.atBroker, false);
-  await assert.rejects(s.unpairPhone(keyOnly), (e) => e.code === 'http_404', 'the broker has nothing to delete');
-  assert.ok(s.state.keys.some((k) => k.kid === keyOnly.kid), 'and the key stays until that is sorted');
-  assert.deepEqual(await s.unpairPhone({ kid: keyOnly.kid, pid: null }), { broker: false, key: true });
+  // The broker has nothing to delete and says so with a 404: that is a question
+  // for the person, not the end — and on "do it anyway" the key goes regardless.
+  const refusal = await s.unpairPhone(keyOnly).catch((e) => e);
+  assert.equal(refusal.code, 'broker_refused');
+  assert.equal(refusal.status, 404);
+  assert.equal(describeError(refusal), 'The Encedo backend refused to unpair it (HTTP 404)');
+  assert.ok(s.state.keys.some((k) => k.kid === keyOnly.kid), 'and the key stays until that is answered');
+  assert.deepEqual(await s.unpairPhone(keyOnly, { skipBroker: true }), { broker: false, key: true });
+  assert.ok(!s.state.keys.some((k) => k.kid === keyOnly.kid), 'anyway: the key is gone');
 
   // What the air-gapped test left behind: a subscription with no key under it.
   const brokerOnly = s.pairedPhones();

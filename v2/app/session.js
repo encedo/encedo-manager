@@ -325,11 +325,21 @@ export class Session extends EventTarget {
    * key still goes — that is the half that revokes — and the broker is told
    * when it next answers; the return value says which halves were done.
    */
-  async unpairPhone({ pid, kid }) {
+  async unpairPhone({ pid, kid }, { skipBroker = false } = {}) {
     const done = { broker: false, key: false };
-    if (pid && this.state.online) {
-      await this.hem.deleteExtAuth(await this.token('system:config'), pid);
-      done.broker = true;
+    if (pid && this.state.online && !skipBroker) {
+      try {
+        await this.hem.deleteExtAuth(await this.token('system:config'), pid);
+        done.broker = true;
+      } catch (e) {
+        // The broker refusing (4xx: unknown pid, a subscription already gone)
+        // is not a reason to keep the key. The caller asks the person and, on
+        // yes, comes back with skipBroker — as if the refusal had not happened.
+        if (e instanceof HemError && e.status >= 400 && e.status < 500) {
+          throw new HemError(`The Encedo backend refused to unpair it (HTTP ${e.status})`, { code: 'broker_refused', status: e.status, data: e.data });
+        }
+        throw e;
+      }
     }
     if (kid) {
       await this.hem.deleteKey(await this.token('keymgmt:del'), kid);
@@ -911,6 +921,7 @@ export function describeError(e) {
     case 'log_in_progress': return 'The module is still writing this file. It can be read once that session ends.';
     case 'auth_password_required': return 'Sign in with the password first.';
     case 'ext_register_error': return 'The module did not start the pairing.';
+    case 'broker_refused': return e.message;
     case 'init_failed': return 'The module did not accept the personalisation.';
     case 'domain_failed': return 'The Encedo backend refused the name.';
     case 'mnemonic_invalid': return 'That is not a valid set of 24 words.';

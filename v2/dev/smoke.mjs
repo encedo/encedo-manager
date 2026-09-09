@@ -306,6 +306,19 @@ await shot('smoke-phones.png');
 await evaluate(`[...document.querySelectorAll('button')].find(b => b.textContent.startsWith('Unpair Ann')).click(); true`);
 if (!(await waitFor(`document.body.textContent.includes('is unpaired: its key is gone')`))) await fail('the phone did not unpair');
 if (!(await waitFor(`document.querySelector('h1')?.textContent === 'Two phones can answer for you.'`))) await fail('the list did not shrink');
+// The phone the broker does not know: the broker answers 404, the page asks, and on yes the key goes anyway.
+await evaluate(`[...document.querySelectorAll('tbody tr:not(.detail)')].find(r => r.textContent.includes('Work iPhone')).querySelector('td.actions button').click(); true`);
+await evaluate(`[...document.querySelectorAll('button')].find(b => b.textContent === 'Unpair Work iPhone').click(); true`);
+if (!(await waitFor(`document.querySelector('.veil h1')?.textContent === 'Do it anyway?'`))) await fail('the broker refusal did not ask');
+if (!(await evaluate(`document.body.textContent.includes('refused to unpair it (HTTP 404)')`))) await fail('the modal does not say what the broker said');
+await shot('smoke-phones-anyway.png');
+await evaluate(`[...document.querySelectorAll('.veil button')].find(b => b.textContent === 'Leave it').click(); true`);
+if (!(await waitFor(`!document.querySelector('.veil') && document.body.textContent.includes('Work iPhone')`))) await fail('leaving it did not keep the phone');
+await evaluate(`[...document.querySelectorAll('button')].find(b => b.textContent === 'Unpair Work iPhone').click(); true`);
+if (!(await waitFor(`document.querySelector('.veil h1')?.textContent === 'Do it anyway?'`))) await fail('the second refusal did not ask');
+await evaluate(`[...document.querySelectorAll('.veil button')].find(b => b.textContent === 'Do it anyway').click(); true`);
+if (!(await waitFor(`document.body.textContent.includes('can no longer answer: its key is gone')`))) await fail('doing it anyway did not remove the key');
+if (!(await waitFor(`document.querySelector('h1')?.textContent === 'One phone can answer for you.'`))) await fail('the list did not shrink after doing it anyway');
 
 // 7. hardware: what the module says about itself, its own health check, the
 //    tokens this browser holds, and the reboot it will not do without asking twice
@@ -475,5 +488,5 @@ if (!(await evaluate(`document.body.textContent.includes('Ann')`))) await fail('
 
 const bad = logs.filter((l) => /EXCEPTION|error/i.test(l));
 if (bad.length) { console.log('console:', bad.join('\n')); await fail('page logged errors'); }
-console.log('OK: sign-in, overview, drive, keychain (paging/sorting/search/detail/share QR/import/create/edit/delete), operation log (index/verify/entries/check all), paired phones (list/pair via QR/unpair), hardware (health check/tokens/reboot guard/temperature), settings (owner/trust/master words/domain/wipe guard/password change), sign-out, phone sign-in with per-scope requests, wipe and personalise from the box');
+console.log('OK: sign-in, overview, drive, keychain (paging/sorting/search/detail/share QR/import/create/edit/delete), operation log (index/verify/entries/check all), paired phones (list/pair via QR/unpair/do it anyway on a broker 4xx), hardware (health check/tokens/reboot guard/temperature), settings (owner/trust/master words/domain/wipe guard/password change), sign-out, phone sign-in with per-scope requests, wipe and personalise from the box');
 await cleanup();

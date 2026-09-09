@@ -398,22 +398,46 @@ const phonesView = {
   askUnpair(pid) { Object.assign(phonesView, { confirmUnpair: pid, error: null, notice: null }); paint(); },
   cancelUnpair() { phonesView.confirmUnpair = null; paint(); },
 
-  async unpair(phone) {
-    Object.assign(phonesView, { busy: 'unpair', error: null, notice: null });
+  anyway: null,             // { phone, error } while the person is asked whether to go on without the broker
+
+  async unpair(phone, { skipBroker = false } = {}) {
+    Object.assign(phonesView, { busy: 'unpair', error: null, notice: null, anyway: null });
     paint();
     try {
-      const done = await session.unpairPhone(phone);
+      const done = await session.unpairPhone(phone, { skipBroker });
       phonesView.notice = done.key && done.broker ? `${phone.label || 'The phone'} is unpaired: its key is gone and the broker no longer routes to it.`
-        : done.key ? `${phone.label || 'The phone'} can no longer answer: its key is gone. The broker still lists it until the backend is reachable.`
+        : done.key ? `${phone.label || 'The phone'} can no longer answer: its key is gone. The broker ${skipBroker ? 'was not asked again' : 'still lists it until the backend is reachable'}.`
         : `The broker no longer routes to ${phone.label || 'that phone'}.`;
       phonesView.confirmUnpair = null;
     } catch (e) {
-      phonesView.error = describeError(e);
+      // The broker said no with a 4xx: ask, and on yes do the rest as if it had not.
+      if (e?.code === 'broker_refused') phonesView.anyway = { phone, error: describeError(e) };
+      else phonesView.error = describeError(e);
     }
     phonesView.busy = null;
     paint();
   },
+  unpairAnyway() { const { phone } = phonesView.anyway; phonesView.anyway = null; return phonesView.unpair(phone, { skipBroker: true }); },
+  keepAfterAll() { Object.assign(phonesView, { anyway: null, error: phonesView.anyway?.error ?? null }); paint(); },
 };
+
+/** The broker refused to unpair a phone; the key can still go. */
+function anywayModal({ phone, error }) {
+  return h('div.veil', {},
+    h('div.card.lifted.asking', { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'anyway-title' },
+      h('div.card-head', {}, h('span', {}, 'The backend said no'), h('span.v', {}, phone.label || phone.pid)),
+      h('div.card-body', {},
+        h('div.stack-s', {},
+          h('p.eyebrow', {}, 'Unpair'),
+          h('h1', { id: 'anyway-title' }, 'Do it anyway?'),
+          h('p.soft', { style: 'font-size: 15.5px;' }, error),
+          h('p.soft', { style: 'font-size: 15.5px;' }, phone.kid
+            ? 'The key is what lets the phone answer for you, and the key is in the module. Going on removes it from the keychain and leaves the broker as it is.'
+            : 'There is no key in the module for this phone, so there is nothing else to remove.')),
+        h('div.row', {},
+          h('button.button.exposed', { type: 'button', disabled: !phone.kid || null, onclick: () => phonesView.unpairAnyway() }, 'Do it anyway'),
+          h('button.button.plain', { type: 'button', autofocus: true, onclick: () => phonesView.keepAfterAll() }, 'Leave it')))));
+}
 
 /** The seconds left on a pairing tick down on screen only while one is up. */
 let pairingTimer = null;
@@ -647,7 +671,7 @@ function shell(route, content) {
         h('span', {}, h('b', {}, PRODUCT), `  ${VERSION}`),
         h('span', {}, [`firmware ${v.fwv ?? '?'}`, v.conf ?? v.hwv, state.online ? 'backend reachable' : state.online === false ? 'air-gapped' : null, state.mode === 'phone' ? 'signed in with the phone' : null].filter(Boolean).join(' · '))),
       content),
-    state.asking ? askingModal(state.asking) : null);
+    state.asking ? askingModal(state.asking) : phonesView.anyway ? anywayModal(phonesView.anyway) : null);
 }
 
 /**
@@ -662,7 +686,7 @@ function forgetPageState() {
   Object.assign(hardwareView, { temps: [], busy: null, confirmReboot: false, error: null, notice: null });
   Object.assign(settingsView, { busy: null, error: null, notice: null, confirmWipe: false, domainCheck: null });
   phonesView.pairing?.cancel();
-  Object.assign(phonesView, { pairing: null, confirmUnpair: null, busy: null, error: null, notice: null });
+  Object.assign(phonesView, { pairing: null, confirmUnpair: null, anyway: null, busy: null, error: null, notice: null });
   driveView.busy = null; driveView.error = null;
 }
 
