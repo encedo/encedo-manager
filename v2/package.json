@@ -7,6 +7,8 @@
   "scripts": {
     "dev": "node dev/serve.mjs",
     "test": "node --test dev/session.test.mjs dev/qr.test.mjs",
-    "smoke": "node dev/smoke.mjs"
+    "smoke": "node dev/smoke.mjs",
+    "build": "node build.mjs",
+    "smoke:dist": "MANAGER_PATH=/v2/dist/ node dev/smoke.mjs"
   }
 }

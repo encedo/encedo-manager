@@ -21,7 +21,8 @@ let id, pending, logs, send;
 const server = await createServer({ approveAfter: 2 });
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
 const base = `http://127.0.0.1:${server.address().port}`;
-const url = `${base}/v2/?hem=${base}/mock&broker=${base}/mockbroker`;
+// MANAGER_PATH=/v2/dist/ runs the same smoke against the built bundle.
+const url = `${base}${process.env.MANAGER_PATH ?? '/v2/'}?hem=${base}/mock&broker=${base}/mockbroker`;
 
 const profile = await fs.mkdtemp(path.join(outDir, '.chrome-'));
 const chrome = spawn(chromium, ['--headless=new', '--disable-gpu', '--no-sandbox', `--user-data-dir=${profile}`, `--remote-debugging-port=${DEBUG_PORT}`, '--window-size=1440,900', '--hide-scrollbars', 'about:blank'], { stdio: 'ignore' });

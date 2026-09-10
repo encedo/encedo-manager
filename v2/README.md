@@ -24,6 +24,20 @@ out of the box, to personalise again):
 http://localhost:8080/v2/?hem=http://localhost:8080/mock&broker=http://localhost:8080/mockbroker
 ```
 
+## Build it for the module
+
+```bash
+node v2/build.mjs            # -> v2/dist/
+```
+
+Four files — `index.html`, `app.js`, `style.css`, `favicon.svg` — and a `.gz`
+twin of each, about 100 KB compressed. Rollup folds `app/main.js` and
+everything it imports, the SDK included, into the one `app.js`; nothing is
+minified, gzip does the work. The module answers `GET /x` with `x.gz` and a
+`Content-Encoding` header when the twin is there, so both are put on it. The
+sources stay loose modules for the dev server and the tests; the same smoke
+runs against the bundle with `MANAGER_PATH=/v2/dist/`.
+
 ## Test it
 
 ```bash
@@ -60,6 +74,7 @@ creates one and deletes it again, and leaves a screenshot of each screen.
 
 | Path | Role |
 | --- | --- |
+| `build.mjs` | Makes `dist/` for the module: one bundled script, the stylesheet, the page, each with a `.gz` twin |
 | `index.html` | Shell; loads `app/main.js` as a module |
 | `app/config.js` | Where the module and the broker are |
 | `app/session.js` | State of one module and every SDK call, DOM-free |
