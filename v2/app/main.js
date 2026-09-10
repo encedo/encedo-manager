@@ -16,7 +16,7 @@ import { renderPhones } from './pages/phones.js';
 import { renderPersonalise } from './pages/personalise.js';
 import { proofOfPersonalisation } from './pdf.js';
 import { parseLogFile } from './logfile.js';
-import { renderPlaceholder } from './pages/placeholder.js';
+import { renderSoftware } from './pages/software.js';
 
 const root = document.getElementById('app');
 const config = resolveConfig();
@@ -84,6 +84,7 @@ const personaliseView = {
     }
   },
   back() { Object.assign(personaliseView, { step: 'welcome', error: null }); paint(); },
+  get software() { return softwareView; },   // a module that shipped with old firmware gets current before its first use
 
   async checkPrefix() {
     const prefix = personaliseView.form.customPrefix;
@@ -187,6 +188,75 @@ const personaliseView = {
     }
   },
 };
+
+// -- software actions ---------------------------------------------------------------------
+
+const softwareView = {
+  busy: null,
+  error: null,
+  notice: null,
+  file: null,               // a File picked for a manual firmware update
+  ctl: null,                // AbortController of the update in flight
+  describe: describeError,
+
+  /** Which step failed, for the step list: the one the update was on. */
+  failedAt(update, order) {
+    const at = order.indexOf(update.failedStep ?? '');
+    return at >= 0 ? at : order.length;
+  },
+
+  async checkIn() {
+    Object.assign(softwareView, { busy: 'checkin', error: null, notice: null });
+    paint();
+    const health = await session.checkIn();
+    softwareView.notice = health ? 'Checked in.' : null;
+    softwareView.error = health ? null : 'The Encedo backend did not answer.';
+    softwareView.busy = null;
+    paint();
+  },
+
+  install(kind, version) { return softwareView.run(kind, { version }); },
+
+  pickFile(file) { Object.assign(softwareView, { file, error: null, notice: null }); paint(); },
+  dropFile() { softwareView.file = null; paint(); },
+  async installFile() {
+    const file = softwareView.file;
+    if (!file) return;
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    softwareView.file = null;
+    return softwareView.run('firmware', { bytes });
+  },
+
+  async run(kind, { version = null, bytes = null }) {
+    const ctl = new AbortController();
+    Object.assign(softwareView, { ctl, error: null, notice: null });
+    paint();
+    try {
+      if (kind === 'firmware') {
+        await session.updateFirmware({ version, bytes, signal: ctl.signal });
+        probeAgain();                       // the module reboots; this page waits for it
+      } else {
+        await session.updateManager({ version, bytes, signal: ctl.signal });
+        setTimeout(() => location.reload(), 2500);
+      }
+    } catch (e) {
+      if (session.state.update) session.state.update.failedStep = failedStepOf(session.state.update);
+      if (e?.code === 'aborted') { session.clearUpdate(); softwareView.notice = 'Cancelled. Nothing was installed.'; }
+    }
+    softwareView.ctl = null;
+    paint();
+  },
+  cancel() { softwareView.ctl?.abort(); },
+  dismiss() { session.clearUpdate(); paint(); },
+};
+
+/** The step an update was on when it failed: the last one it reached. */
+function failedStepOf(update) {
+  if (update.result) return 'install';
+  if (update.loaded && update.loaded >= update.total && update.total) return 'verify';
+  if (update.size) return 'upload';
+  return update.source === 'backend' ? 'download' : 'upload';
+}
 
 // -- drive actions --------------------------------------------------------------------
 
@@ -688,6 +758,8 @@ function forgetPageState() {
   phonesView.pairing?.cancel();
   Object.assign(phonesView, { pairing: null, confirmUnpair: null, anyway: null, busy: null, error: null, notice: null });
   driveView.busy = null; driveView.error = null;
+  softwareView.ctl?.abort();
+  Object.assign(softwareView, { busy: null, error: null, notice: null, file: null, ctl: null });
 }
 
 function paint() {
@@ -713,7 +785,7 @@ function paint() {
   else if (route.id === 'hardware') content = renderHardware(session, hardwareView);
   else if (route.id === 'settings') content = renderSettings(session, settingsView);
   else if (route.id === 'phones') { ensureKeys(); content = renderPhones(session, phonesView); }
-  else content = renderPlaceholder(route.id);
+  else content = renderSoftware(session, softwareView);
   shell(route, content);
 }
 

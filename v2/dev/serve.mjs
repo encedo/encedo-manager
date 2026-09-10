@@ -42,6 +42,9 @@ const newKid = () => [...crypto.getRandomValues(new Uint8Array(16))].map((b) => 
 const hexBytes = (hex) => Uint8Array.from(hex.match(/../g) ?? [], (b) => parseInt(b, 16));
 const b64urlText = (text) => Buffer.from(text, 'utf8').toString('base64url');
 const FIRMWARE = 'Encedo nGINE FW v1.2.2';
+/** What the mock backend announces at check-in, and what the module runs once installed. */
+export const NEW_FIRMWARE = 'v2.5.0+mock';
+export const NEW_MANAGER = 'v2.1.0+mock';
 /** The mock module's master secret. A fixture, so the settings page can be driven. */
 export const MASTER_WORDS = 'chat march maximum extra maple panda chapter mammal slogan fun actual know hungry catalog grape cherry bubble zone august salad dilemma avoid trigger cotton';
 
@@ -170,6 +173,12 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
     personalised,
     formatPolls: 0,
     domainJobs: {},                           // custom-prefix registrations waiting for an e-mail click
+    // Software: what the module runs, and an upload in flight. The check
+    // answers 202 twice before it says yes, the way a real module verifies in
+    // the background; an image whose first byte is 0xff does not verify.
+    fwv: FIRMWARE,
+    managerInstalled: false,
+    upgrade: { fw: null, ui: null },          // { size, checks }
     pendingHostname: null,
     configNonce: b64(crypto.getRandomValues(new Uint8Array(32))),
     // The settings a module keeps, with the names hem-api-tester writes them under.
@@ -239,13 +248,13 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
   const scopeOf = (req) => jwtPayload((req.headers.authorization ?? '').replace(/^Bearer /, ''))?.scope ?? '';
 
   /** Returns [status, body] or null when the path is not a mock path. */
-  return async function mock(method, p, body, req) {
+  return async function mock(method, p, body, req, raw = null) {
     // ---- device -----------------------------------------------------------------------
     // The field set a real PPA answers with — no `conf` on this firmware, and the
     // signing keys and signatures of what it is running. The values are made up.
     if (p === '/mock/api/system/version') return [200, {
       hwv: 'PPA rev 2.2',
-      fwv: 'Encedo nGINE FW v1.2.2',
+      fwv: state.fwv,
       fwk: 'x/aUqQQG0w2APlV4i6QdIMY1mYQbemkNwzfSaXTzobw=',
       fws: 'T8Ihe616IGmxiOHf2Ze8UNaplG3NjZ4RLeOmUv+1D0ENBleDxk37j0DHOq5q8c/z0tJ+rQBrnnMBP3YjNSN7pQ==',
       blv: 'Encedo Secure Bootloader v2.0.1',
@@ -296,7 +305,42 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
       return [200, { rebooting: true }];
     }
     if (p === '/mock/api/system/checkin' && method === 'GET') return [200, { check: 'mock-check' }];
-    if (p === '/mock/api/system/checkin' && method === 'POST') return [200, { status: 'ok', newfws: 'v2.5.0+mock', newuis: null }];
+    if (p === '/mock/api/system/checkin' && method === 'POST') {
+      return [200, { status: 'ok', newfws: state.fwv === NEW_FIRMWARE ? null : NEW_FIRMWARE, newuis: state.managerInstalled ? null : NEW_MANAGER }];
+    }
+    // ---- software: upload, check in the background, install ----
+    if (p.startsWith('/mock/api/system/upgrade/')) {
+      const op = p.split('/').pop();
+      // An unpersonalised module takes an upgrade without a token, as v1 relied on.
+      if (state.personalised && scopeOf(req) !== 'system:upgrade') return [403, { error: 'scope' }];
+      const slot = op.endsWith('_fw') ? 'fw' : op.endsWith('_ui') ? 'ui' : null;
+      if (!slot) return [404, { error: 'no such upgrade call' }];
+      if (op.startsWith('upload_')) {
+        if (!raw?.length) return [400, { error: 'empty upload' }];
+        state.upgrade[slot] = { size: raw.length, bad: raw[0] === 0xff, checks: 0 };
+        return [200, { received: raw.length }];
+      }
+      const up = state.upgrade[slot];
+      if (!up) return [404, { error: 'nothing uploaded' }];
+      if (op.startsWith('check_')) {
+        if (++up.checks < 3) return [202, null];
+        if (up.bad) return [400, { error: 'the image does not verify' }];
+        return [200, { verified: true, size: up.size, version: slot === 'fw' ? NEW_FIRMWARE : NEW_MANAGER }];
+      }
+      if (op.startsWith('install_')) {
+        if (up.checks < 3 || up.bad) return [409, { error: 'not verified' }];
+        state.upgrade[slot] = null;
+        if (slot === 'fw') {
+          // The module reboots into the new firmware: drives lock, uptime restarts.
+          state.fwv = NEW_FIRMWARE;
+          state.storage = state.storage.map((entry) => entry.split(':')[0] + ':-');
+          state.uptime = 0;
+          return [200, { installing: true, reboot: true }];
+        }
+        state.managerInstalled = true;
+        return [200, { installing: true }];
+      }
+    }
     if (p === '/mock/api/system/config' && method === 'GET') {
       if (!scopeOf(req)) return [403, { error: 'scope' }];
       return [200, { eid, spk, nonce: state.configNonce, ...state.config }];
@@ -511,6 +555,14 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
       const prefix = decodeURIComponent(p.split('/').pop());
       return ['my', 'ann', 'demo'].includes(prefix) ? [200, { taken: true }] : [404, { error: 'free' }];
     }
+    if (p.startsWith('/mockbroker/download/')) {
+      // An image: a few KB of bytes with a header, so a page has something to upload.
+      const kind = p.split('/')[3];
+      const size = kind === 'firmware' ? 24 * 1024 : 12 * 1024;
+      const image = Buffer.alloc(size, 0x5a);
+      image.write(`ENCEDO ${kind.toUpperCase()} ${kind === 'firmware' ? NEW_FIRMWARE : NEW_MANAGER}`, 0, 'latin1');
+      return [200, image, 'application/octet-stream'];
+    }
     if (p === '/mockbroker/domain/predefs') return [200, { prefix: NAMES }];
     if (p.startsWith('/mockbroker/domain/register/')) {
       const tail = decodeURIComponent(p.split('/').pop());
@@ -560,11 +612,11 @@ export async function createServer(opts = {}) {
     const raw = Buffer.concat(chunks);
     const body = raw.length && (req.headers['content-type'] ?? '').includes('json') ? JSON.parse(raw.toString()) : null;
     try {
-      const hit = await mock(req.method, url.pathname, body, req);
+      const hit = await mock(req.method, url.pathname, body, req, raw);
       if (hit) {
         const [status, data, type] = hit;      // a log file comes back as text, not JSON
         res.writeHead(status, { ...cors, 'Content-Type': type ?? 'application/json' });
-        return res.end(data === null ? '' : type ? String(data) : JSON.stringify(data));
+        return res.end(data === null ? '' : Buffer.isBuffer(data) ? data : type ? String(data) : JSON.stringify(data));
       }
     } catch (e) {
       res.writeHead(500, { ...cors, 'Content-Type': 'application/json' });

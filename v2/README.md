@@ -65,7 +65,7 @@ creates one and deletes it again, and leaves a screenshot of each screen.
 | `app/session.js` | State of one module and every SDK call, DOM-free |
 | `app/router.js` | Hash routes, menu order |
 | `app/ui.js` | DOM helpers, icons, the mark |
-| `app/pages/*.js` | One module per screen; unbuilt screens say so |
+| `app/pages/*.js` | One module per screen |
 | `app/qr.js` | QR encoder, so a share code can reach a phone with the module air-gapped |
 | `app/pdf.js` | PDF writer, for the Proof of Personalisation — text in the standard fonts, nothing embedded |
 | `app/logfile.js` | Reading an audit-log file: the module's event table, one entry per line |
@@ -78,6 +78,13 @@ creates one and deletes it again, and leaves a screenshot of each screen.
 | `dev/probe.mjs` | What a real module answers with, so a page is built against it |
 
 ## Built so far
+
+- Software: what the module runs and what the backend has newer (check-in),
+  the firmware or the Manager installed the way v1 did it — download, upload
+  with progress, the module's own check of the signature (polled), install —
+  with a firmware file from anywhere for the air-gapped case, on the Software
+  page and before a module is personalised. Firmware reboots the module and
+  the page waits for it; the Manager reloads the page.
 
 - Personalisation: a module out of the box (its status carries `inited`) is
   taken through the steps v1 took it through — who it belongs to and a
@@ -116,4 +123,4 @@ creates one and deletes it again, and leaves a screenshot of each screen.
   a QR code for a phone to scan. Create a key pair, import a public key or read
   one out of a pasted share code.
 
-Software is drawn in the canvas and stubbed in the menu.
+Every screen the menu names is built.

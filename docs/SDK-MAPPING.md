@@ -81,8 +81,8 @@ What is left needs a decision, not code: the BIP39 master passphrase.
 
 | Manager v1 | Endpoints | hem-sdk-js | Status | Note |
 |---|---|---|---|---|
-| `getNewFirmware()`, `getNewDashboard()` | broker `download/firmware/{v}`, `download/dashboard/{v}`, then `POST upload_fw` / `upload_ui` via XHR with progress | `broker.download(kind, version)`, `uploadFirmware(token, bytes, name, {onProgress})`, `uploadUi(...)` | covered | |
-| `checkNewFirmware()`, `installNewFirmware()`, `checkNewDashboard()`, `installNewDashboard()` | `check_fw`, `install_fw`, `check_ui`, `install_ui` | `checkFirmware`, `installFirmware`, `checkUi`, `installUi` | covered | |
+| `getNewFirmware()`, `getNewDashboard()` | broker `download/firmware/{v}`, `download/dashboard/{v}`, then `POST upload_fw` / `upload_ui` via XHR with progress | `broker.download(kind, version)`, `uploadFirmware(token, bytes, name, {onProgress})`, `uploadUi(...)` | covered | built on v2's Software page (2026-09-10); a file from anywhere goes in the same way, and without a token on a module out of the box, as v1's `manual_update_before_init` relied on |
+| `checkNewFirmware()`, `installNewFirmware()`, `checkNewDashboard()`, `installNewDashboard()` | `check_fw`, `install_fw`, `check_ui`, `install_ui` | `checkFirmware` / `waitFirmwareCheck`, `installFirmware`, `checkUi` / `waitUiCheck`, `installUi` | covered | the device answers 201/202 while it is still checking (v1 polled every 4 s); `checkFirmware` now answers null then and `waitFirmwareCheck` polls (2026-09-10) |
 | — | `api/system/upgrade/usbmode` | `usbMode(token)` | n/a | Not needed by the Manager (decided 2026-09-03); USB ACM uploads have their own webshell |
 
 ### Helpers
@@ -120,7 +120,7 @@ Also fixed on the way: `registerExtAuth` sent `hash: 'not_implemented_yet'` in t
 | `keychain`, `key_*` | `listKeys`, `searchKeys`, `getPubKey`, `createKeyPair`, `importPublicKey`, `updateKey`, `deleteKey`, `broker.shareEmailPubkey` | — (built in v2) |
 | `hardware` | `getVersion`, `getStatus`, `selftest`, `reboot`, and the new `hem.tokens` getter | — (built in v2; the attestation is left alone — it can hand back a private key on a device that is not provisioned yet) |
 | `consolelog`, `consolelog_show` | `getLoggerKey`, `verifyLoggerKey`, `listLog`, `getLogEntry`, `verifyLog` | — (built in v2) |
-| `update`, `update_*_page` | checkin flags, `broker.download`, `uploadFirmware` / `checkFirmware` / `installFirmware`, `uploadUi` / `checkUi` / `installUi` | — |
+| `update`, `update_*_page` | checkin flags, `broker.download`, `uploadFirmware` / `waitFirmwareCheck` / `installFirmware`, `uploadUi` / `waitUiCheck` / `installUi` | — (built in v2; `update_bootloader_page` had no code behind it in v1 and stays out) |
 | `settings` | `getConfig`, `setConfig` (incl. wipeout), `setUserPassword`, `registerDomain`, `domainTaken`, `authorizeMaster` | — (built in v2; drive geometry is not, because changing it destroys the data on them) |
 | `gettingStarted`, `initialisationPage`, `domainSetupPage`, `tutorial` | `initialize`, `broker.domainRegister` + `waitDomain`, `setConfig({ tls })`; the proof PDF is written by v2/app/pdf.js | — (built in v2) |
 

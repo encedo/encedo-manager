@@ -1,15 +1,15 @@
 # Manager 2.0 — where it stands
 
-Last updated 2026-09-09, branch `v2`. What the Manager built on hem-sdk-js has,
+Last updated 2026-09-10, branch `v2`. What the Manager built on hem-sdk-js has,
 what Manager v1 had that it does not, and the order the rest is planned in.
 The SDK mapping behind it is in [SDK-MAPPING.md](SDK-MAPPING.md); how to run
 and test it is in [v2/README.md](../v2/README.md).
 
 ## Built and tested
 
-Every screen the menu names but Software. 54 session tests and a browser smoke
-run against the mock; the phone paths are confirmed on a real PPA with the
-Authenticator v2 app.
+Every screen the menu names. 60 session tests and a browser smoke run against
+the mock; the phone paths are confirmed on a real PPA with the Authenticator v2
+app; the software update is not yet tried on a real module.
 
 | Screen | What it does |
 | --- | --- |
@@ -23,6 +23,7 @@ Authenticator v2 app.
 | Settings | Owner, the three things the module takes on faith, a password change that never sends the password, the 24 words as authorisation, a name under ence.do with its certificate, a wipe behind a typed WIPE |
 | Personalisation | A module out of the box (`inited` in its status) goes through v1's steps: owner, password, name (free, or its own confirmed by e-mail), drive layout, trust; 24 words made in the browser as the master key; init, format, certificate; a Proof of Personalisation PDF written in JS. A failure wipes back to the box. Air-gapped it keeps my.ence.do |
 | Phone sessions | Any operation without a cached token asks the phone, one request at a time, behind a modal naming the operation, with cancel |
+| Software | What the module runs and what the backend has newer; firmware or Manager installed as v1 did it (download, upload with progress, the module's own check polled, install); a firmware file from anywhere for the air-gapped case, also before personalisation; firmware reboots the module and the page waits for it, the Manager reloads the page |
 
 Things v1 did not have: log verification in the browser, the keychain/broker
 cross-check for phones, per-scope tokens shown and forgettable, the self-test,
@@ -30,11 +31,10 @@ a password change without the password leaving the browser.
 
 ## Not there yet, against v1
 
-1. **Software** — the one stub left in the menu. Firmware, Manager and
-   bootloader updates: check-in flags, `broker.download`, upload with progress,
-   check, install, reboot. Two v1 behaviours go with it: the forced bootloader
-   update before sign-in (with "skip"), and the manual update from a file before
-   personalisation (`manual_update_before_init`).
+1. **Bootloader update.** v1 had a page for it ("update your bootloader
+   first") but no code behind it and no check-in flag; the Software page shows
+   the bootloader version and nothing more until the firmware and the backend
+   say how a bootloader is updated.
 2. **Renaming a paired phone** (`device_edit`). A phone is a key, so this is a
    rename in the phone's row. Small.
 3. **Drive geometry in Settings.** Left out on purpose: changing it destroys
@@ -65,6 +65,5 @@ a password change without the password leaving the browser.
 
 ## Next
 
-Software (bootloader and pre-personalisation update included), then renaming
-a phone, then serving the Manager from the module and a live run of the whole
-thing. Trusted Apps and the auxiliary pages after a decision on what stays.
+Renaming a phone, then serving the Manager from the module and a live run of
+the whole thing, the software update included. Trusted Apps and the auxiliary pages after a decision on what stays.

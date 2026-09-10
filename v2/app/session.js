@@ -31,6 +31,8 @@ export class Session extends EventTarget {
       master: false,           // the settings were unlocked with the 24 words
       asking: null,            // { scope, since, until, cancel } while a phone is being asked for a token
       setup: null,             // personalisation in progress: { step, status, fields, result, error }
+      checkedInAt: null,       // when the broker last answered the check-in
+      update: null,            // a software update in flight: { kind, source, version, step, loaded, total, size, result, error }
     };
   }
 
@@ -69,10 +71,11 @@ export class Session extends EventTarget {
    */
   async prepare() {
     const status = await this.hem.getStatus({ timeoutMs: 5000 });
-    let health = null, online = false, paired = null;
+    let health = null, online = false, paired = null, checkedInAt = null;
     try {
       health = await this.hem.hemCheckin();
       online = true;
+      checkedInAt = Date.now();
     } catch (e) {
       if (!(e instanceof HemError)) throw e;
     }
@@ -80,8 +83,25 @@ export class Session extends EventTarget {
     // field a personalised module never sends. Nothing opens it until then.
     const phase = isUnpersonalised(status) ? 'unpersonalised'
       : this.state.phase === 'unpersonalised' ? 'reachable' : this.state.phase;
-    this.#set({ status, health, online, paired, phase, lastError: null });
+    this.#set({ status, health, online, paired, phase, checkedInAt, lastError: null });
     if (online && phase !== 'unpersonalised') await this.checkPaired();
+  }
+
+  /**
+   * Check in again: the backend says what software is newer than what the
+   * module runs, and sets its clock. A broker that does not answer leaves the
+   * last answer in place and says so through `online`.
+   */
+  async checkIn() {
+    try {
+      const health = await this.hem.hemCheckin();
+      this.#set({ health, online: true, checkedInAt: Date.now(), lastError: null });
+      return health;
+    } catch (e) {
+      if (!(e instanceof HemError)) throw e;
+      this.#set({ online: false, lastError: e });
+      return null;
+    }
   }
 
   /**
@@ -349,6 +369,72 @@ export class Session extends EventTarget {
     await this.refreshPhones().catch((e) => { if (!(e instanceof HemError)) throw e; });
     return done;
   }
+
+  // -- software --------------------------------------------------------------------
+
+  /**
+   * Update the firmware, from the backend (`version` as the check-in named it)
+   * or from a file (`bytes`). The steps are the ones v1 took: download, upload
+   * with progress, the module's own check of the signature (polled, it runs in
+   * the background), install. Installing reboots the module: drives lock,
+   * tokens die, and this browser starts over from the probe. `state.update`
+   * follows every step so the page can draw it.
+   */
+  updateFirmware({ version = null, bytes = null, signal = null, pollInterval = 4000 } = {}) {
+    return this.#runUpdate('firmware', { version, bytes, signal, pollInterval });
+  }
+
+  /** Update the Manager the module serves. Same steps; afterwards the page reloads itself. */
+  updateManager({ version = null, bytes = null, signal = null, pollInterval = 4000 } = {}) {
+    return this.#runUpdate('manager', { version, bytes, signal, pollInterval });
+  }
+
+  async #runUpdate(kind, { version, bytes, signal, pollInterval }) {
+    if (this.state.update && !['done', 'failed'].includes(this.state.update.step)) {
+      throw new HemError('Another update is in progress', { code: 'update_busy' });
+    }
+    const source = bytes ? 'file' : 'backend';
+    if (source === 'backend' && !this.state.online) throw new HemError('The Encedo backend is unreachable', { code: 'broker_error' });
+    if (source === 'backend' && !version) throw new HemError('Nothing newer to install', { code: 'nothing_newer' });
+    const step = (patch) => this.#set({ update: { ...this.state.update, ...patch } });
+    this.#set({ update: { kind, source, version, step: source === 'backend' ? 'download' : 'upload', loaded: 0, total: bytes?.length ?? 0, size: bytes?.length ?? 0, result: null, error: null } });
+    try {
+      // An unpersonalised module takes an upgrade without a token — that is how
+      // a module that shipped with old firmware gets current before its first use.
+      const token = this.state.phase === 'signed-in' ? await this.token('system:upgrade') : null;
+      let image = bytes;
+      if (source === 'backend') {
+        image = await this.hem.broker.download(kind === 'firmware' ? 'firmware' : 'dashboard', version, { signal });
+        step({ step: 'upload', size: image.length, total: image.length });
+      }
+      const onProgress = (loaded, total) => step({ loaded, total });
+      const name = kind === 'firmware' ? 'firmware.bin' : 'webroot.tar';
+      if (kind === 'firmware') await this.hem.uploadFirmware(token, image, name, { onProgress, signal });
+      else await this.hem.uploadUi(token, image, name, { onProgress, signal });
+      step({ step: 'verify', loaded: image.length });
+      const result = kind === 'firmware'
+        ? await this.hem.waitFirmwareCheck(token, { pollInterval, signal })
+        : await this.hem.waitUiCheck(token, { pollInterval, signal });
+      step({ step: 'install', result });
+      if (kind === 'firmware') {
+        await this.hem.installFirmware(token);
+        // The module reboots into the new firmware. Everything unlocked locks and every token dies with it.
+        this.hem.clearKeys();
+        step({ step: 'done' });
+        this.#set({ phase: 'probing', attempts: 0, status: null, keys: null, logs: null, selftest: null, mode: null, config: null, master: false });
+      } else {
+        await this.hem.installUi(token);
+        step({ step: 'done' });
+      }
+      return this.state.update;
+    } catch (e) {
+      step({ step: 'failed', error: e });
+      throw e;
+    }
+  }
+
+  /** Forget a finished or failed update, so the page shows the buttons again. */
+  clearUpdate() { this.#set({ update: null }); }
 
   // -- personalisation -----------------------------------------------------------
 
@@ -892,6 +978,16 @@ export function describeScope(scope) {
   return scope;
 }
 
+/**
+ * The number out of a version string: the module says 'Encedo nGINE FW v1.2.2',
+ * the backend 'v2.5.0+mock'. Two strings that name the same version compare
+ * equal here whatever else they carry.
+ */
+export function versionNumber(text) {
+  const m = /v?(\d+\.\d+(?:\.\d+)?(?:[-+][0-9A-Za-z.+-]*)?)/.exec(String(text ?? ''));
+  return m ? m[1] : String(text ?? '').trim();
+}
+
 /** '2 Feb 2026' — short enough for a table column, unambiguous in every locale. */
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 export function formatDate(seconds) {
@@ -923,6 +1019,8 @@ export function describeError(e) {
     case 'ext_register_error': return 'The module did not start the pairing.';
     case 'broker_refused': return e.message;
     case 'init_failed': return 'The module did not accept the personalisation.';
+    case 'update_busy': return 'Another update is in progress.';
+    case 'nothing_newer': return 'There is nothing newer to install.';
     case 'domain_failed': return 'The Encedo backend refused the name.';
     case 'mnemonic_invalid': return 'That is not a valid set of 24 words.';
     default: return e.message;

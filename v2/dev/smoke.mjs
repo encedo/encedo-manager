@@ -486,7 +486,23 @@ await evaluate(`location.hash = '#/'; document.querySelector('#password').value 
 if (!(await waitFor(`document.querySelector('h1')?.textContent === 'The module is sealed and reachable.'`))) await fail('the new password does not open the module');
 if (!(await evaluate(`document.body.textContent.includes('Ann')`))) await fail('the owner is not the one who personalised it');
 
+// 12. software: what runs and what is newer, then the firmware installed — the
+//     module reboots, the page waits for it and comes back on the new version
+await evaluate(`location.hash = '#/software'; true`);
+if (!(await waitFor(`document.querySelector('h1')?.textContent === 'Firmware 2.5.0+mock and Manager 2.1.0+mock are ready to install.'`))) await fail('the software page did not render');
+if (!(await evaluate(`document.body.textContent.includes('Encedo nGINE FW v1.2.2') && document.body.textContent.includes('Bootloader')`))) await fail('the versions are not shown');
+await shot('smoke-software.png');
+await evaluate(`[...document.querySelectorAll('button')].find(b => b.textContent === 'Install Firmware 2.5.0+mock').click(); true`);
+if (!(await waitFor(`[...document.querySelectorAll('.card-head .v')].some(v => /uploading|verifying|installing|rebooting/.test(v.textContent))`))) await fail('the update did not start');
+if (!(await waitFor(`document.body.textContent.includes('Verify')`))) await fail('the steps are not listed');
+await shot('smoke-software-update.png');
+if (!(await waitFor(`!!document.querySelector('#password')`, 30000))) await fail('the module did not come back to the sign-in after the firmware install');
+if (!(await waitFor(`document.body.textContent.includes('v2.5.0+mock')`))) await fail('the sign-in does not show the new firmware');
+await evaluate(`location.hash = '#/'; document.querySelector('#password').value = 'first-light'; document.querySelector('form').requestSubmit(); true`);
+if (!(await waitFor(`document.querySelector('h1')?.textContent === 'The module is sealed and reachable.'`))) await fail('could not sign in after the update');
+if (await evaluate(`document.body.textContent.includes('v2.5.0+mock available')`)) await fail('the overview still offers the firmware that is installed');
+
 const bad = logs.filter((l) => /EXCEPTION|error/i.test(l));
 if (bad.length) { console.log('console:', bad.join('\n')); await fail('page logged errors'); }
-console.log('OK: sign-in, overview, drive, keychain (paging/sorting/search/detail/share QR/import/create/edit/delete), operation log (index/verify/entries/check all), paired phones (list/pair via QR/unpair/do it anyway on a broker 4xx), hardware (health check/tokens/reboot guard/temperature), settings (owner/trust/master words/domain/wipe guard/password change), sign-out, phone sign-in with per-scope requests, wipe and personalise from the box');
+console.log('OK: sign-in, overview, drive, keychain (paging/sorting/search/detail/share QR/import/create/edit/delete), operation log (index/verify/entries/check all), paired phones (list/pair via QR/unpair/do it anyway on a broker 4xx), hardware (health check/tokens/reboot guard/temperature), settings (owner/trust/master words/domain/wipe guard/password change), sign-out, phone sign-in with per-scope requests, wipe and personalise from the box, software (versions/firmware install/reboot)');
 await cleanup();

@@ -1,10 +1,10 @@
 // The session logic against the mock module and broker. Run: node --test v2/dev/
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { createServer, MASTER_WORDS, PHONE_PIDS } from './serve.mjs';
+import { createServer, MASTER_WORDS, PHONE_PIDS, NEW_FIRMWARE, NEW_MANAGER } from './serve.mjs';
 import {
   Session, parseStorage, formatBytes, describeError, describeScope, formatDate,
-  isUnpersonalised, storageMode, parseStorageMode, gbToSectors, sectorsToGb, isPrefix,
+  isUnpersonalised, storageMode, parseStorageMode, gbToSectors, sectorsToGb, isPrefix, versionNumber,
   describeKey, asciiText, parseKeyBytes, buildShareCode, shareCodeText, parseShareCode,
   toB64Text, asB64Field, asLabel, isAsciiLabel, bytesToB64, b64ByteLength, textByteLength,
   DESCR_BYTES, LABEL_CHARS,
@@ -954,4 +954,137 @@ test('the proof of personalisation is a PDF a reader can open, with the words in
   assert.ok(odd.includes('\\(g'), 'the parenthesis is escaped');
   assert.ok(odd.includes('\\\\ ok'), 'so is the backslash');
   assert.ok(!/[^\x00-\xff]/.test(odd), 'nothing outside one byte per character');
+});
+
+// -- software: on a server of its own, because installing changes what the module runs ---
+
+const ownModule = async (opts = {}) => {
+  const server = await createServer({ approveAfter: 2, ...opts });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const b = `http://127.0.0.1:${server.address().port}`;
+  return { server, urls: { hem: `${b}/mock`, broker: `${b}/mockbroker` }, base: b };
+};
+
+test('a version string is read down to its number', () => {
+  assert.equal(versionNumber('Encedo nGINE FW v1.2.2'), '1.2.2');
+  assert.equal(versionNumber('v2.5.0+mock'), '2.5.0+mock');
+  assert.equal(versionNumber('2.0.0'), '2.0.0');
+  assert.equal(versionNumber('unknown'), 'unknown');
+});
+
+test('the firmware announced at check-in is downloaded, uploaded, checked by the module and installed; the module reboots', async () => {
+  const own = await ownModule();
+  try {
+    const s = new Session(own.urls);
+    await s.waitForDevice({ intervalMs: 10 });
+    await s.prepare();
+    assert.equal(s.state.health.newfws, NEW_FIRMWARE);
+    assert.ok(s.state.checkedInAt > 0);
+    await s.signIn('demo');
+    const steps = [];
+    s.addEventListener('change', () => { const st = s.state.update?.step; if (st && steps.at(-1) !== st) steps.push(st); });
+    const result = await s.updateFirmware({ version: NEW_FIRMWARE, pollInterval: 5 });
+    assert.deepEqual(steps, ['download', 'upload', 'verify', 'install', 'done']);
+    assert.equal(result.source, 'backend');
+    assert.equal(result.size, 24 * 1024, 'the image the backend handed out');
+    assert.equal(result.result.verified, true, 'what the module said when it had checked it');
+    assert.equal(s.state.phase, 'probing', 'the module is rebooting');
+    assert.equal(s.state.mode, null);
+
+    await s.waitForDevice({ intervalMs: 10 });
+    await s.prepare();
+    assert.equal(s.state.version.fwv, NEW_FIRMWARE, 'it came back on the new firmware');
+    assert.equal(s.state.health.newfws, null, 'and the backend has nothing newer');
+    assert.deepEqual(s.disks().map((d) => d.state), ['locked', 'locked']);
+    s.clearUpdate();
+    assert.equal(s.state.update, null);
+  } finally {
+    own.server.close();
+  }
+});
+
+test('the Manager is updated the same way, and the module keeps running', async () => {
+  const own = await ownModule();
+  try {
+    const s = new Session(own.urls);
+    await s.waitForDevice({ intervalMs: 10 });
+    await s.prepare();
+    assert.equal(s.state.health.newuis, NEW_MANAGER);
+    await s.signIn('demo');
+    const result = await s.updateManager({ version: NEW_MANAGER, pollInterval: 5 });
+    assert.equal(result.step, 'done');
+    assert.equal(result.size, 12 * 1024);
+    assert.equal(s.state.phase, 'signed-in', 'no reboot for the Manager');
+    assert.equal((await s.checkIn()).newuis, null, 'checked in again: nothing newer');
+  } finally {
+    own.server.close();
+  }
+});
+
+test('a firmware file goes in without the backend, and one the module does not trust fails at the check', async () => {
+  const own = await ownModule();
+  try {
+    const s = new Session({ hem: own.urls.hem, broker: 'http://127.0.0.1:9/nobroker' });
+    await s.waitForDevice({ intervalMs: 10 });
+    await s.prepare();
+    await s.signIn('demo');
+    await assert.rejects(s.updateFirmware({ version: 'v9' }), (e) => e.code === 'broker_error', 'nothing to download from');
+
+    const bad = new Uint8Array(4096).fill(0x11); bad[0] = 0xff;
+    await assert.rejects(s.updateFirmware({ bytes: bad, pollInterval: 5 }), (e) => e.code === 'http_400');
+    assert.equal(s.state.update.step, 'failed');
+    assert.equal(s.state.update.source, 'file');
+    assert.ok(s.state.update.error);
+    assert.equal(s.state.phase, 'signed-in', 'nothing was installed, nothing rebooted');
+    await assert.rejects(s.updateManager({ version: NEW_MANAGER }), (e) => e.code === 'broker_error');
+
+    s.clearUpdate();
+    const good = new Uint8Array(4096).fill(0x22);
+    const steps = [];
+    s.addEventListener('change', () => { const st = s.state.update?.step; if (st && steps.at(-1) !== st) steps.push(st); });
+    await s.updateFirmware({ bytes: good, pollInterval: 5 });
+    assert.deepEqual(steps, ['upload', 'verify', 'install', 'done'], 'no download step for a file');
+    assert.equal(s.state.phase, 'probing');
+  } finally {
+    own.server.close();
+  }
+});
+
+test('an update can be cancelled while the module is still checking, and only one runs at a time', async () => {
+  const own = await ownModule();
+  try {
+    const s = new Session(own.urls);
+    await s.waitForDevice({ intervalMs: 10 });
+    await s.prepare();
+    await s.signIn('demo');
+    const ctl = new AbortController();
+    const going = s.updateFirmware({ version: NEW_FIRMWARE, signal: ctl.signal, pollInterval: 50 });
+    await new Promise((r) => setTimeout(r, 5));
+    await assert.rejects(s.updateManager({ version: NEW_MANAGER }), (e) => e.code === 'update_busy');
+    while (s.state.update?.step !== 'verify') await new Promise((r) => setTimeout(r, 5));
+    ctl.abort();
+    await assert.rejects(going, (e) => e.code === 'aborted');
+    assert.equal(s.state.update.step, 'failed');
+    assert.equal(s.state.phase, 'signed-in');
+  } finally {
+    own.server.close();
+  }
+});
+
+test('a module out of the box takes a firmware update without a token', async () => {
+  const own = await ownModule({ personalised: false });
+  try {
+    const s = new Session(own.urls);
+    await s.waitForDevice({ intervalMs: 10 });
+    await s.prepare();
+    assert.equal(s.state.phase, 'unpersonalised');
+    await s.updateFirmware({ version: NEW_FIRMWARE, pollInterval: 5 });
+    assert.equal(s.state.update.step, 'done');
+    await s.waitForDevice({ intervalMs: 10 });
+    await s.prepare();
+    assert.equal(s.state.phase, 'unpersonalised', 'still out of the box');
+    assert.equal(s.state.version.fwv, NEW_FIRMWARE, 'on the new firmware');
+  } finally {
+    own.server.close();
+  }
 });

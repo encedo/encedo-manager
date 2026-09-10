@@ -5,6 +5,7 @@
 import { h, mark, render, field, select, copyControl, statusGrid } from '../ui.js';
 import { VERSION, PRODUCT } from '../version.js';
 import { describeError, isPrefix, sectorsToGb, gbToSectors, parseStorage, formatBytes } from '../session.js';
+import { progressBody } from './software.js';
 
 const YES_NO = [['1', 'Yes'], ['0', 'No']];
 
@@ -62,8 +63,36 @@ function welcome(session, view) {
         step('02', 'Choose a name under ence.do and how the drives are laid out.', online ? ' The backend issues the certificate for the name.' : ' The backend is unreachable, so the module keeps my.ence.do for now.'),
         step('03', 'Put the 24 words on paper.', ' They open the module when everything else is lost. Nobody else has them.')),
       h('div.row', {},
-        h('button.button', { type: 'button', onclick: () => view.start() }, 'Start'),
-        h('span.mono.muted', { style: 'font-size: 12px;' }, online ? 'backend reachable' : state.online === false ? 'air-gapped' : ''))));
+        h('button.button', { type: 'button', disabled: state.update ? true : null, onclick: () => view.start() }, 'Start'),
+        h('span.mono.muted', { style: 'font-size: 12px;' }, online ? 'backend reachable' : state.online === false ? 'air-gapped' : ''))),
+    firmwareFirst(session, view));
+}
+
+/**
+ * A module that shipped with old firmware gets current before its first use,
+ * as v1 allowed: the upgrade goes in without a token on a module nobody owns
+ * yet. Air-gapped, from a file; with the backend, whatever it announced.
+ */
+function firmwareFirst(session, view) {
+  const { state } = session;
+  const sw = view.software;
+  const newer = state.health?.newfws || null;
+  const update = state.update;
+  const input = h('input', { type: 'file', accept: '.bin,.hex,application/octet-stream', hidden: true, onchange: (e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) sw.pickFile(f); } });
+  return h('div.card-body', { style: 'border-top: 1px solid var(--rule);' },
+    h('div.stack-s', {},
+      h('h2', {}, 'Firmware first?'),
+      h('p.soft.measure', {}, `The module runs ${state.version?.fwv ?? 'unknown firmware'}. ${newer ? `The backend has ${newer}.` : 'A newer firmware can go in before it is personalised, from a file, or from the backend once it is reachable.'}`)),
+    update ? progressBody(update, sw) : [
+      sw.error ? h('p.error', { role: 'alert' }, sw.error) : null,
+      sw.notice ? h('p.notice', { role: 'status' }, sw.notice) : null,
+      input,
+      h('div.row', {},
+        newer ? h('button.button.plain', { type: 'button', onclick: () => sw.install('firmware', newer) }, `Install ${newer}`) : null,
+        sw.file
+          ? [h('button.button.exposed', { type: 'button', onclick: () => sw.installFile() }, `Install ${sw.file.name} (${formatBytes(sw.file.size)})`),
+             h('button.button.plain', { type: 'button', onclick: () => sw.dropFile() }, 'Leave it')]
+          : h('button.button.plain', { type: 'button', onclick: () => input.click() }, 'Firmware from a file'))]);
 }
 
 const step = (n, lead, rest) => h('div.step', {}, h('span.step-n', {}, n), h('p', {}, h('b', {}, lead), rest));
