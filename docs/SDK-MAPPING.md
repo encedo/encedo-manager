@@ -6,6 +6,10 @@ Manager v1 makes (from `src/encedo.js` and `src/core2.js`), the `HEM` method in
 what the SDK still lacks. SDK changes go upstream in the submodule, never in a
 copy (see `sdk/CLAUDE.md`).
 
+The endpoints themselves are documented at <https://docs.encedo.com/hem-api>,
+with `hem-api-tester` (sibling repo) as the reference implementation run
+against real devices.
+
 Status legend: **covered** = SDK call exists · **partial** = exists but misses
 something the Manager relies on · **missing** = no SDK counterpart yet ·
 **n/a** = stays in the app or is new in the SDK.

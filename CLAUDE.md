@@ -52,6 +52,12 @@ fails on a console error, so a stray exception does not slip through.
 
 ## Facts about the device that bite
 
+The endpoints are documented at <https://docs.encedo.com/hem-api>; the sibling
+repo `hem-api-tester` is the reference implementation, run against real
+hardware. Read both before guessing at a request shape. What follows is what
+neither of them says out loud.
+
+
 - A paired phone is a key in the keychain whose **description read as base64**
   is `RVhUQUlE` + the pid, and the pid is itself base64. Decoding the bytes as
   text gives nonsense that matches nothing the broker says.
