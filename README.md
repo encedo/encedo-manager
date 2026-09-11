@@ -87,13 +87,15 @@ npm run smoke:dist -- <out-dir>
 | Path | Role |
 | --- | --- |
 | `index.html` | Shell; loads `app/main.js` as a module |
-| `app/main.js` | Bootstrap: the session, the shell, the actions behind every page |
+| `app/main.js` | Bootstrap: the session, the routes, the wiring between pages and views |
 | `app/session.js` | State of one module and every SDK call, DOM-free |
+| `app/shell.js` | The frame a signed-in page is drawn in, and the modals over it |
 | `app/config.js` | Where the module and the broker are |
 | `app/router.js` | Hash routes, menu order |
 | `app/ui.js` | DOM helpers, icons, the mark |
 | `app/table.js` | Paging, shared by the pages that show lists |
-| `app/pages/*.js` | One module per screen |
+| `app/pages/*.js` | One module per screen: what it looks like, given a session and a view |
+| `app/views/*.js` | One module per screen: what its buttons do, and what it remembers |
 | `app/qr.js` | QR encoder, so a share code reaches a phone with the module air-gapped |
 | `app/pdf.js` | PDF writer, for the Proof of Personalisation — standard fonts, nothing embedded |
 | `app/logfile.js` | Reading an audit-log file: the module's event table, one entry per line |
