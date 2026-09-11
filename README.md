@@ -82,6 +82,32 @@ smoke runs against the bundle:
 npm run smoke:dist -- <out-dir>
 ```
 
+## Release it
+
+```bash
+npm run pack                     # -> release/<HHMMSS_DDMMYYYY>/
+```
+
+A release is a `webroot/` (the built files with their `.gz` twins), a
+`manifest` of everything in it, and `webroot_src.tar` of the lot, with the
+tar's SHA-256 beside it. Two packs of the same tree produce the same bytes and
+so the same version, which is the base64 of the SHA-256 of the manifest —
+the string the backend files the release under and a module asks for by name.
+
+The tar is signed by hand: a release engineer signs that SHA-256 with the
+release key and appends the trailer.
+
+```bash
+node pack.mjs attach release/*/webroot_src.tar --key <pub> --signature <sig>
+node pack.mjs verify release/*/webroot.tar --key <pub>
+```
+
+[`.github/workflows/release.yml`](.github/workflows/release.yml) does the
+build and the pack on a published release and attaches the unsigned tar and
+its digest; the signed `webroot.tar` is uploaded to the same release
+afterwards. [`docs/PACKAGING.md`](docs/PACKAGING.md) has the format, what the
+module checks, and what is still to settle with the firmware side.
+
 ## Layout
 
 | Path | Role |
@@ -102,6 +128,7 @@ npm run smoke:dist -- <out-dir>
 | `app/style.css` | Tokens and components from the encedo web kit |
 | `app/version.js` | The version the mastheads show |
 | `build.mjs` | Makes `dist/` for the module |
+| `pack.mjs` | Makes a release out of it: webroot, manifest, tar; attaches and checks a signature |
 | `dev/serve.mjs` | Dev server, with the mock module and broker in it |
 | `dev/session.test.mjs` | Tests for the session logic |
 | `dev/qr.test.mjs` | The QR encoder against vectors from an independent one |
@@ -110,7 +137,8 @@ npm run smoke:dist -- <out-dir>
 | `dev/fetch-logs.mjs` | Archive every audit-log file off a real module, verified |
 | `sdk/` | Submodule: [`encedo/hem-sdk-js`](https://github.com/encedo/hem-sdk-js), branch `manager-v2` |
 | `design/` | The product style, and the screen mockups as design-canvas artboards |
-| `docs/` | Where the Manager stands, and how Manager 1 maps onto the SDK |
+| `docs/` | Where the Manager stands, how Manager 1 maps onto the SDK, how a release is packed |
+| `CLAUDE.md` | The house rules, for an agent working here |
 
 Clone it with the SDK, or fetch the SDK afterwards:
 
@@ -132,5 +160,7 @@ git submodule update --init          # in a clone that already exists
   this does not, and what comes next.
 - [`docs/SDK-MAPPING.md`](docs/SDK-MAPPING.md) — every Manager 1 call against
   the device, the endpoint behind it and the SDK method that covers it.
+- [`docs/PACKAGING.md`](docs/PACKAGING.md) — the release format the module
+  takes, and how a release is signed.
 - [`design/STYLE.md`](design/STYLE.md) — the product style: the palette, the
   voice, and what changes for the phone app.

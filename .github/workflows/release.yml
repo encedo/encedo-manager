@@ -1,0 +1,74 @@
+# Builds the Manager and packs it the way the module takes it, then puts the
+# tar on the release beside the source archives GitHub attaches itself.
+#
+# The signature is not made here. A release engineer signs the tar's SHA-256
+# with a YubiKey and appends the trailer with `node pack.mjs attach`, then
+# uploads the resulting webroot.tar to the same release. docs/PACKAGING.md
+# explains why, and what the module checks.
+
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  webroot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The SDK is a submodule of its own repository. While hem-sdk-js is
+          # private, the default token cannot read it: give this a token that
+          # can, or the build has nothing to bundle.
+          submodules: recursive
+          # token: ${{ secrets.SDK_READ_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Test
+        run: npm test
+
+      - name: Pack
+        run: node pack.mjs --out release | tee pack.log
+
+      - name: Say what was built
+        run: |
+          {
+            echo '## Manager release'
+            echo
+            echo '```'
+            sed -n '/^packed/,$p' pack.log
+            echo '```'
+            echo
+            echo 'The tar is unsigned. Sign its SHA-256 with the release key, then:'
+            echo
+            echo '```'
+            echo 'node pack.mjs attach webroot_src.tar --key <pub> --signature <sig>'
+            echo 'node pack.mjs verify webroot.tar --key <pub>'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Attach to the release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" \
+            release/webroot_src.tar \
+            release/webroot_src.tar.sha256 \
+            --clobber
+
+      - name: Keep it for a manual run
+        if: github.event_name != 'release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: webroot
+          path: release/
+          retention-days: 30

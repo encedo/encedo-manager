@@ -15,6 +15,10 @@ import path from 'node:path';
 import { gzipSync, gunzipSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 
+// Pinned, so a release built on a runner is the release built on a desk.
+// Bump it deliberately; nothing else here has a version to track.
+const ROLLUP = 'rollup@4.63.1';
+
 const here = path.dirname(fileURLToPath(import.meta.url));
 const out = path.resolve(process.argv[2] ?? path.join(here, 'dist'));
 await fs.rm(out, { recursive: true, force: true });
@@ -22,7 +26,7 @@ await fs.mkdir(out, { recursive: true });
 
 // 1. the script: one module out of the graph
 const bundle = path.join(out, 'app.js');
-const rollup = spawnSync('npx', ['rollup', path.join(here, 'app/main.js'), '--format', 'es', '--file', bundle, '--silent'], { stdio: 'inherit' });
+const rollup = spawnSync('npx', ['--yes', ROLLUP, path.join(here, 'app/main.js'), '--format', 'es', '--file', bundle, '--silent'], { stdio: 'inherit' });
 if (rollup.status !== 0) { console.error('rollup failed'); process.exit(rollup.status ?? 1); }
 let js = await fs.readFile(bundle, 'utf8');
 // The SDK's Node transport imports node:* lazily, in a branch a browser never
