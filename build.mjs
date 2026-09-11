@@ -24,6 +24,17 @@ const out = path.resolve(process.argv[2] ?? path.join(here, 'dist'));
 await fs.rm(out, { recursive: true, force: true });
 await fs.mkdir(out, { recursive: true });
 
+// The SDK is a submodule and is bundled in; without it there is nothing to
+// build, and rollup's own message for that is not a helpful one.
+try {
+  await fs.access(path.join(here, 'sdk/hem-sdk.browser.js'));
+} catch {
+  console.error('sdk/hem-sdk.browser.js is missing — the SDK submodule is not checked out.\n' +
+                '  git submodule update --init\n' +
+                '  git -C sdk checkout manager-v2');
+  process.exit(1);
+}
+
 // 1. the script: one module out of the graph
 const bundle = path.join(out, 'app.js');
 const rollup = spawnSync('npx', ['--yes', ROLLUP, path.join(here, 'app/main.js'), '--format', 'es', '--file', bundle, '--silent'], { stdio: 'inherit' });
