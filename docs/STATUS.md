@@ -1,6 +1,6 @@
 # Manager 2.0 — where it stands
 
-Last updated 2026-09-11, branch `main`. What the Manager built on hem-sdk-js has,
+Last updated 2026-09-11, branch `main`, published. What the Manager built on hem-sdk-js has,
 what Manager v1 had that it does not, and the order the rest is planned in.
 The SDK mapping behind it is in [SDK-MAPPING.md](SDK-MAPPING.md); how to run
 and test it is in the [README](../README.md).
@@ -61,6 +61,9 @@ a password change without the password leaving the browser.
   base64 itself, not ASCII after `EXTAID`.
 - Breaking SDK changes are allowed when every affected consumer is fixed in
   the same sitting; the SDK lives on `manager-v2` in `encedo/hem-sdk-js`.
+- Manager 1.3 is archived on the `v1` branch and taken out of `main`; the
+  Manager sits at the root of the repository, and `dist/` is built for the
+  module rather than committed.
 
 ## Next
 
