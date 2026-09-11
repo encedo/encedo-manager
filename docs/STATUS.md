@@ -1,9 +1,9 @@
 # Manager 2.0 — where it stands
 
-Last updated 2026-09-10, branch `v2`. What the Manager built on hem-sdk-js has,
+Last updated 2026-09-11, branch `main`. What the Manager built on hem-sdk-js has,
 what Manager v1 had that it does not, and the order the rest is planned in.
 The SDK mapping behind it is in [SDK-MAPPING.md](SDK-MAPPING.md); how to run
-and test it is in [v2/README.md](../v2/README.md).
+and test it is in the [README](../README.md).
 
 ## Built and tested
 
@@ -56,12 +56,11 @@ a password change without the password leaving the browser.
 
 - Provisioning is done in production and sets up the secure element
   independently of the firmware; it is not part of the Manager.
-- The Proof of Personalisation is a PDF written by `v2/app/pdf.js`, no jsPDF.
+- The Proof of Personalisation is a PDF written by `app/pdf.js`, no jsPDF.
 - A paired phone's keychain entry reads `RVhUQUlE` + pid as base64; the pid is
   base64 itself, not ASCII after `EXTAID`.
 - Breaking SDK changes are allowed when every affected consumer is fixed in
-  the same sitting; the SDK lives on `manager-v2` in `encedo/hem-sdk-js` and is
-  pushed when the owner says so.
+  the same sitting; the SDK lives on `manager-v2` in `encedo/hem-sdk-js`.
 
 ## Next
 

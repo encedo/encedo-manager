@@ -3,7 +3,7 @@
 // zero byte when the bit stream already ends on a codeword boundary). Every
 // matrix below is that encoder's, module for module, hashed.
 //
-//   node --test v2/dev/qr.test.mjs
+//   node --test dev/qr.test.mjs
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

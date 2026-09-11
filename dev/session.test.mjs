@@ -1,4 +1,4 @@
-// The session logic against the mock module and broker. Run: node --test v2/dev/
+// The session logic against the mock module and broker. Run: node --test dev/
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer, MASTER_WORDS, PHONE_PIDS, NEW_FIRMWARE, NEW_MANAGER } from './serve.mjs';

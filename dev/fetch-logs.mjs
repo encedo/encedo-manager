@@ -1,8 +1,8 @@
 // Read every audit-log file off a real module and keep it.
 //
-//   node v2/dev/fetch-logs.mjs                          # https://my.ence.do, asks for the password
-//   node v2/dev/fetch-logs.mjs --hem https://192.168.7.1 --out ~/hem-logs
-//   node v2/dev/fetch-logs.mjs --phone                  # approve on the paired phone instead
+//   node dev/fetch-logs.mjs                          # https://my.ence.do, asks for the password
+//   node dev/fetch-logs.mjs --hem https://192.168.7.1 --out ~/hem-logs
+//   node dev/fetch-logs.mjs --phone                  # approve on the paired phone instead
 //
 // The password is read with the echo off, used to take one `logger:get` token,
 // and never written anywhere. Every file is verified in this process — the same
@@ -12,7 +12,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import readline from 'node:readline';
-import { HEM, HemError, verifyLog, verifyLoggerKey } from '../../sdk/hem-sdk.js';
+import { HEM, HemError, verifyLog, verifyLoggerKey } from '../sdk/hem-sdk.js';
 
 const args = process.argv.slice(2);
 const arg = (name, fallback) => {

@@ -38,13 +38,13 @@ What is left needs a decision, not code: the BIP39 master passphrase.
 | `auth()`, `postAuthToken()`, `scope()`, `scoped()`, `tokens[]` | `GET+POST api/auth/token` | `authorizePassword(pw, scope, exp)` + built-in token cache | covered | PBKDF2 (600k) → X25519 → eJWT and the per-scope cache move into the SDK; asking "password or phone?" stays UI policy |
 | `mobileConnection()`, `mobileAuth()` | `api/auth/ext/request`, broker `notify/session`, `notify/event/new`, `notify/event/check/{id}`, `api/auth/ext/token` | `authorizeRemote(scope, {pollInterval, pollTimeout, onPending, signal})` | covered | v1 polls every 3 s for ~200 s |
 | `mobileAuthCleanup()` | `DELETE` broker `notify/event/{id}` | inside `authorizeRemote` (on abort / timeout), `broker.eventDelete()` | covered | cancelling withdraws the event; `onEvent` exposes the id |
-| "Use Master Passphrase" (settings) | `api/auth/token` with a key derived from the BIP39 mnemonic | `authorizeMaster(mnemonic, scope)` | covered | built on v2's Settings page (2026-09-04); the 256-bit entropy of the 24 words IS the X25519 key, `{ legacy: true }` reproduces v1's `seedHex.substr(1, 64)` for modules personalised by v1 |
+| "Use Master Passphrase" (settings) | `api/auth/token` with a key derived from the BIP39 mnemonic | `authorizeMaster(mnemonic, scope)` | covered | built on the Settings page (2026-09-04); the 256-bit entropy of the 24 words IS the X25519 key, `{ legacy: true }` reproduces v1's `seedHex.substr(1, 64)` for modules personalised by v1 |
 
 ### Personalisation
 
 | Manager v1 | Endpoints | hem-sdk-js | Status | Note |
 |---|---|---|---|---|
-| `init()`, `initFinal()` | `GET+POST api/auth/init` | `initialize({ mnemonic }, userPw, cfg)` | covered | built on v2's personalisation flow (2026-09-07): `generateMnemonic()` makes the 24 words, which ARE the master key; the cfg fields are v1's (`user, email, hostname, ip, storage_mode, storage_disk0size, dnsd, trusted_ts, trusted_backend, allow_keysearch, origin, ctx`, `gen_csr` for a name of the owner's own); then `status.format` is polled, the name registered with the init's `genuine`/`csr` (`broker.domainRegister` + `waitDomain`), and `setConfig({ tls })`; a failure wipes with the init token, as v1's `initRollback` did |
+| `init()`, `initFinal()` | `GET+POST api/auth/init` | `initialize({ mnemonic }, userPw, cfg)` | covered | built on the personalisation flow (2026-09-07): `generateMnemonic()` makes the 24 words, which ARE the master key; the cfg fields are v1's (`user, email, hostname, ip, storage_mode, storage_disk0size, dnsd, trusted_ts, trusted_backend, allow_keysearch, origin, ctx`, `gen_csr` for a name of the owner's own); then `status.format` is polled, the name registered with the init's `genuine`/`csr` (`broker.domainRegister` + `waitDomain`), and `setConfig({ tls })`; a failure wipes with the init token, as v1's `initRollback` did |
 | `provisioning()` | broker `/provisioning`, `POST api/system/config/provisioning` | `provision()`, `installProvisioning()`, `broker.provisioning()` | covered | not part of the Manager: provisioning happens in production and sets up the secure element independently of the firmware (owner, 2026-09-07); v1 never called it from core2 either |
 | `updateTLS()`, domain flow (core2) | broker `domain/predefs`, `domain/check/{name}`, `domain/register/{prefix}`, `domain/register/{id}` | `registerDomain()`, `broker.domainPredefs()`, `broker.domainTaken()`, `broker.domainStatus()`, `broker.waitDomain()` | covered | `domainTaken` reads 200 as taken and 404 as free; a custom prefix answers 201 + id and is polled until the e-mail click (`pending` → `email_confirmed` → `done`), as v1's `checkDomainAfterInit` did |
 
@@ -52,7 +52,7 @@ What is left needs a decision, not code: the BIP39 master passphrase.
 
 | Manager v1 | Endpoints | hem-sdk-js | Status | Note |
 |---|---|---|---|---|
-| `pair()` + `pairdeviceNow` (core2) | `api/auth/ext/init`, broker `notify/session`, `notify/register/init|check|finalise`, `api/auth/ext/validate` | `registerExtAuth(token, {onQrCode, pollInterval, pollTimeout, onPending, signal})` | covered | built on v2's Paired phones page (2026-09-07): `onQrCode` hands over the exact JSON and v2/app/qr.js draws it, no library |
+| `pair()` + `pairdeviceNow` (core2) | `api/auth/ext/init`, broker `notify/session`, `notify/register/init|check|finalise`, `api/auth/ext/validate` | `registerExtAuth(token, {onQrCode, pollInterval, pollTimeout, onPending, signal})` | covered | built on the Paired phones page (2026-09-07): `onQrCode` hands over the exact JSON and `app/qr.js` draws it, no library |
 | `paired()` | `api/auth/ext/mac` + broker `notify/subscribers/list` | `listExtAuth(token)` | covered | v2 lists phones from the keychain (`listKeys`, description `EXTAID` + pid) and uses this to say which the broker still routes to; v1's `keymgmt/search` depended on `allow_keysearch` |
 | `unpair(pid)` | `api/auth/ext/mac` + broker `notify/subscribers/delete` | `deleteExtAuth(token, pid)` | covered | the keychain entry `RVhUQUlE` + pid is still deleted with `deleteKey`; air-gapped, v2 deletes the key alone (that is the half that revokes) and says the broker still lists it |
 | `checkPairing()` | `api/auth/token` + broker `notify/session` | `hasExtAuth()` | covered | no token needed |
@@ -61,7 +61,7 @@ What is left needs a decision, not code: the BIP39 master passphrase.
 
 | Manager v1 | Endpoints | hem-sdk-js | Status | Note |
 |---|---|---|---|---|
-| keychain pages (core2), `removeKey()` | `api/keymgmt/list|search|get|create|import|update|delete` | `listKeys`, `searchKeys`, `getPubKey`, `createKeyPair`, `importPublicKey`, `updateKey`, `deleteKey` | covered | built on v2's Keychain page (2026-09-04). Two SDK fixes on the way: `listKeys` returns `{ list, total }` with `created`/`updated`, so a page can show dates and know when to ask for the next page; `createKeyPair` / `deriveKey` send `mode` only where the device wants one — the SECP* curves, which the caller now chooses for — instead of `mode: 'AES256'` |
+| keychain pages (core2), `removeKey()` | `api/keymgmt/list|search|get|create|import|update|delete` | `listKeys`, `searchKeys`, `getPubKey`, `createKeyPair`, `importPublicKey`, `updateKey`, `deleteKey` | covered | built on the Keychain page (2026-09-04). Two SDK fixes on the way: `listKeys` returns `{ list, total }` with `created`/`updated`, so a page can show dates and know when to ask for the next page; `createKeyPair` / `deriveKey` send `mode` only where the device wants one — the SECP* curves, which the caller now chooses for — instead of `mode: 'AES256'` |
 | share key by e-mail (core2) | broker `share/emailpubkey` | `broker.shareEmailPubkey()` | covered | |
 
 ### Secure drive
@@ -81,7 +81,7 @@ What is left needs a decision, not code: the BIP39 master passphrase.
 
 | Manager v1 | Endpoints | hem-sdk-js | Status | Note |
 |---|---|---|---|---|
-| `getNewFirmware()`, `getNewDashboard()` | broker `download/firmware/{v}`, `download/dashboard/{v}`, then `POST upload_fw` / `upload_ui` via XHR with progress | `broker.download(kind, version)`, `uploadFirmware(token, bytes, name, {onProgress})`, `uploadUi(...)` | covered | built on v2's Software page (2026-09-10); a file from anywhere goes in the same way, and without a token on a module out of the box, as v1's `manual_update_before_init` relied on |
+| `getNewFirmware()`, `getNewDashboard()` | broker `download/firmware/{v}`, `download/dashboard/{v}`, then `POST upload_fw` / `upload_ui` via XHR with progress | `broker.download(kind, version)`, `uploadFirmware(token, bytes, name, {onProgress})`, `uploadUi(...)` | covered | built on the Software page (2026-09-10); a file from anywhere goes in the same way, and without a token on a module out of the box, as v1's `manual_update_before_init` relied on |
 | `checkNewFirmware()`, `installNewFirmware()`, `checkNewDashboard()`, `installNewDashboard()` | `check_fw`, `install_fw`, `check_ui`, `install_ui` | `checkFirmware` / `waitFirmwareCheck`, `installFirmware`, `checkUi` / `waitUiCheck`, `installUi` | covered | the device answers 201/202 while it is still checking (v1 polled every 4 s); `checkFirmware` now answers null then and `waitFirmwareCheck` polls (2026-09-10) |
 | — | `api/system/upgrade/usbmode` | `usbMode(token)` | n/a | Not needed by the Manager (decided 2026-09-03); USB ACM uploads have their own webshell |
 
@@ -116,17 +116,17 @@ Also fixed on the way: `registerExtAuth` sent `hash: 'not_implemented_yet'` in t
 | `authenticate` | `getVersion` / `getStatus` with `timeoutMs` while waiting for the device, `hemCheckin`, `hasExtAuth`, `authorizePassword` or `authorizeRemote` | — |
 | `home` | `getStatus`, `getConfig`, update flags from checkin | — |
 | `securestorage` | `unlockStorage`, `lockStorage` with `storage:disk<N>[:rw]` | — |
-| `devices`, `device_details` | `registerExtAuth` + QR render, `listExtAuth`, `deleteExtAuth` | — (built in v2) |
-| `keychain`, `key_*` | `listKeys`, `searchKeys`, `getPubKey`, `createKeyPair`, `importPublicKey`, `updateKey`, `deleteKey`, `broker.shareEmailPubkey` | — (built in v2) |
-| `hardware` | `getVersion`, `getStatus`, `selftest`, `reboot`, and the new `hem.tokens` getter | — (built in v2; the attestation is left alone — it can hand back a private key on a device that is not provisioned yet) |
-| `consolelog`, `consolelog_show` | `getLoggerKey`, `verifyLoggerKey`, `listLog`, `getLogEntry`, `verifyLog` | — (built in v2) |
-| `update`, `update_*_page` | checkin flags, `broker.download`, `uploadFirmware` / `waitFirmwareCheck` / `installFirmware`, `uploadUi` / `waitUiCheck` / `installUi` | — (built in v2; `update_bootloader_page` had no code behind it in v1 and stays out) |
-| `settings` | `getConfig`, `setConfig` (incl. wipeout), `setUserPassword`, `registerDomain`, `domainTaken`, `authorizeMaster` | — (built in v2; drive geometry is not, because changing it destroys the data on them) |
-| `gettingStarted`, `initialisationPage`, `domainSetupPage`, `tutorial` | `initialize`, `broker.domainRegister` + `waitDomain`, `setConfig({ tls })`; the proof PDF is written by v2/app/pdf.js | — (built in v2) |
+| `devices`, `device_details` | `registerExtAuth` + QR render, `listExtAuth`, `deleteExtAuth` | — (built) |
+| `keychain`, `key_*` | `listKeys`, `searchKeys`, `getPubKey`, `createKeyPair`, `importPublicKey`, `updateKey`, `deleteKey`, `broker.shareEmailPubkey` | — (built) |
+| `hardware` | `getVersion`, `getStatus`, `selftest`, `reboot`, and the new `hem.tokens` getter | — (built; the attestation is left alone — it can hand back a private key on a device that is not provisioned yet) |
+| `consolelog`, `consolelog_show` | `getLoggerKey`, `verifyLoggerKey`, `listLog`, `getLogEntry`, `verifyLog` | — (built) |
+| `update`, `update_*_page` | checkin flags, `broker.download`, `uploadFirmware` / `waitFirmwareCheck` / `installFirmware`, `uploadUi` / `waitUiCheck` / `installUi` | — (built; `update_bootloader_page` had no code behind it in v1 and stays out) |
+| `settings` | `getConfig`, `setConfig` (incl. wipeout), `setUserPassword`, `registerDomain`, `domainTaken`, `authorizeMaster` | — (built; drive geometry is not, because changing it destroys the data on them) |
+| `gettingStarted`, `initialisationPage`, `domainSetupPage`, `tutorial` | `initialize`, `broker.domainRegister` + `waitDomain`, `setConfig({ tls })`; the proof PDF is written by `app/pdf.js` | — (built) |
 
 ## 4. Integration notes
 
-- **Module loading.** The SDK is an ES module; `sdk/hem-sdk.browser.js` can be imported from a `<script type="module">` without a bundler, which suits the PPA's static hosting. The v2 build copies it into the served bundle.
+- **Module loading.** The SDK is an ES module; `sdk/hem-sdk.browser.js` can be imported from a `<script type="module">` without a bundler, which suits the PPA's static hosting. The build folds it into the served bundle.
 - **Browser floor.** SDK: Chrome 113+ / Firefox 130+ (X25519 in WebCrypto). v1 already requires Chrome 120+, Firefox 133+, Safari 17+. Verify X25519 on the Safari versions we want to support.
 - **Air-gapped operation.** Every backend call is a `Broker` method and no device-only method touches it, so the boundary is in the type system. `hemCheckin()` throws `broker_error` offline; the login flow catches it and continues with password auth, as v1's `check()` should have.
 - **Tokens.** SDK caches one JWT per scope and purges on expiry; v1's `app.tokens` map and the `scoped()` prompt logic reduce to UI policy (ask for password or push).

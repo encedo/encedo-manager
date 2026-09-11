@@ -2,7 +2,7 @@
 // DevTools protocol against the mock, sign in, unlock a drive, and take
 // screenshots. No dependencies beyond Node 22+ (global WebSocket) and Chromium.
 //
-//   node v2/dev/smoke.mjs [out-dir] [chromium-binary]
+//   node dev/smoke.mjs [out-dir] [chromium-binary]
 
 import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
@@ -21,8 +21,8 @@ let id, pending, logs, send;
 const server = await createServer({ approveAfter: 2 });
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
 const base = `http://127.0.0.1:${server.address().port}`;
-// MANAGER_PATH=/v2/dist/ runs the same smoke against the built bundle.
-const url = `${base}${process.env.MANAGER_PATH ?? '/v2/'}?hem=${base}/mock&broker=${base}/mockbroker`;
+// MANAGER_PATH=/dist/ runs the same smoke against the built bundle.
+const url = `${base}${process.env.MANAGER_PATH ?? '/'}?hem=${base}/mock&broker=${base}/mockbroker`;
 
 const profile = await fs.mkdtemp(path.join(outDir, '.chrome-'));
 const chrome = spawn(chromium, ['--headless=new', '--disable-gpu', '--no-sandbox', `--user-data-dir=${profile}`, `--remote-debugging-port=${DEBUG_PORT}`, '--window-size=1440,900', '--hide-scrollbars', 'about:blank'], { stdio: 'ignore' });

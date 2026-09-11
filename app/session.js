@@ -2,7 +2,7 @@
 // `session.state` and re-render on the 'change' event; Node tests drive it
 // against a mock. Every network call goes through hem-sdk-js.
 
-import { HEM, HemError, verifyLog, verifyLoggerKey, generateMnemonic } from '../../sdk/hem-sdk.browser.js';
+import { HEM, HemError, verifyLog, verifyLoggerKey, generateMnemonic } from '../sdk/hem-sdk.browser.js';
 
 export const SIGNIN_SCOPE = 'system:config';
 export const SIGNIN_EXP = 3600;

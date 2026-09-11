@@ -1,10 +1,10 @@
 // What a real module answers with, so a page can be built against it rather
 // than against a guess.
 //
-//   node v2/dev/probe.mjs                       # version and status: no password needed
-//   node v2/dev/probe.mjs --config              # also reads the configuration (asks for the password)
-//   node v2/dev/probe.mjs --selftest            # also runs the health check (asks for the password)
-//   node v2/dev/probe.mjs --hem https://192.168.7.1 --out hem-logs/probe.json
+//   node dev/probe.mjs                       # version and status: no password needed
+//   node dev/probe.mjs --config              # also reads the configuration (asks for the password)
+//   node dev/probe.mjs --selftest            # also runs the health check (asks for the password)
+//   node dev/probe.mjs --hem https://192.168.7.1 --out hem-logs/probe.json
 //
 // Version and status carry no secrets. The attestation does — it can hand back
 // a private key on a device that is not provisioned yet — so this never asks
@@ -12,7 +12,7 @@
 
 import fs from 'node:fs/promises';
 import readline from 'node:readline';
-import { HEM, HemError } from '../../sdk/hem-sdk.js';
+import { HEM, HemError } from '../sdk/hem-sdk.js';
 
 const args = process.argv.slice(2);
 const arg = (name, fallback) => { const at = args.indexOf(name); return at === -1 ? fallback : args[at + 1]; };

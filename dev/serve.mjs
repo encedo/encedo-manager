@@ -1,10 +1,10 @@
 // Dev server: the repo as static files, plus a mock module and a mock broker
 // for working on the Manager without a PPA on the desk.
 //
-//   node v2/dev/serve.mjs [port]
+//   node dev/serve.mjs [port]
 //
-//   http://localhost:8080/v2/                                  → the real module at https://my.ence.do
-//   http://localhost:8080/v2/?hem=http://localhost:8080/mock&broker=http://localhost:8080/mockbroker
+//   http://localhost:8080/                                     → the real module at https://my.ence.do
+//   http://localhost:8080/?hem=http://localhost:8080/mock&broker=http://localhost:8080/mockbroker
 //                                                              → the mock (password: demo)
 //
 // The mock speaks the wire format the SDK expects, verifies the eJWT the
@@ -15,9 +15,9 @@ import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { mnemonicToEntropy } from '../../sdk/hem-sdk.js';
+import { mnemonicToEntropy } from '../sdk/hem-sdk.js';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.json': 'application/json', '.map': 'application/json', '.woff2': 'font/woff2', '.ico': 'image/x-icon' };
 
 // ---- mock state --------------------------------------------------------------------------
@@ -641,9 +641,9 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   const port = Number(process.argv[2] ?? 8080);
   const server = await createServer();
   server.listen(port, '127.0.0.1', () => {
-    console.log(`Manager v2 dev server`);
-    console.log(`  real module:  http://localhost:${port}/v2/`);
-    console.log(`  mock module:  http://localhost:${port}/v2/?hem=http://localhost:${port}/mock&broker=http://localhost:${port}/mockbroker   (password: demo)`);
+    console.log(`Encedo HEM Manager dev server`);
+    console.log(`  real module:  http://localhost:${port}/`);
+    console.log(`  mock module:  http://localhost:${port}/?hem=http://localhost:${port}/mock&broker=http://localhost:${port}/mockbroker   (password: demo)`);
     console.log(`  master words: ${MASTER_WORDS}`);
   });
 }

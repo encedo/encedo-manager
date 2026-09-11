@@ -3,12 +3,12 @@
   "version": "2.0.0",
   "private": true,
   "type": "module",
-  "description": "Encedo HEM Manager: static ES modules on hem-sdk-js, no build step",
+  "description": "The web Manager built into the Encedo PPA: static ES modules on hem-sdk-js, served by the module itself",
   "scripts": {
     "dev": "node dev/serve.mjs",
     "test": "node --test dev/session.test.mjs dev/qr.test.mjs",
     "smoke": "node dev/smoke.mjs",
     "build": "node build.mjs",
-    "smoke:dist": "MANAGER_PATH=/v2/dist/ node dev/smoke.mjs"
+    "smoke:dist": "MANAGER_PATH=/dist/ node dev/smoke.mjs"
   }
 }

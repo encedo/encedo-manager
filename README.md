@@ -1,56 +1,134 @@
-# Encedo Manager
+# Encedo HEM Manager
 
-Web UI built into the Encedo PPA (HEM) and served by the device itself. It is a static, framework-less
-single-page application: `index.html` holds the app shell and all pages, `assets/build.js` holds the logic.
-Version: **v1.3.0** (see `_DVERSION` in `index.html`).
+The web Manager built into the Encedo PPA: it personalises a module out of the
+box, opens it with a password, the paired phone or the 24 words, and then runs
+the keychain, the secure drive, the audit log, the hardware and the software on
+it. Static ES modules on [hem-sdk-js](https://github.com/encedo/hem-sdk-js),
+served by the module itself, with no framework and no build step in
+development.
 
-The Manager must work air-gapped. Every library it needs ships in `assets/`; the public CDN
-(`https://encedo.com/a/`) is only a failover used when a local copy fails to load.
+Keys are derived in the browser and the module only ever sees a signed
+challenge. Everything works air-gapped; the Encedo backend is needed for
+phone sign-in, pairing, a name under `ence.do` and software downloads, and the
+pages say so when it cannot be reached.
+
+## Run it
+
+```bash
+node dev/serve.mjs               # http://localhost:8080/
+```
+
+Served from a laptop, the Manager talks to the module at `https://my.ence.do`
+(the module allows cross-origin calls). Another address: `?hem=https://192.168.7.1`,
+remembered by the browser until `?hem=` clears it. Served by the module, it
+talks to its own origin and needs no query string at all.
+
+Without a module on the desk, the dev server also runs a mock of the device and
+the broker — password `demo`, one paired phone, two drives, fourteen keys, a
+firmware and a Manager update announced. Wiping it from Settings leaves a module
+out of the box, to personalise again:
+
+```
+http://localhost:8080/?hem=http://localhost:8080/mock&broker=http://localhost:8080/mockbroker
+```
+
+## Test it
+
+```bash
+npm test                         # node --test dev/session.test.mjs dev/qr.test.mjs
+npm run smoke -- <out-dir>       # the real page in headless Chromium
+```
+
+The session logic has no DOM in it and runs against the mock: reaching the
+module, check-in with and without the broker, the three ways of signing in,
+drives, the keychain, the operation log, pairing and unpairing a phone,
+personalising a module from the box, and the software updates. The QR encoder is
+checked module for module against [segno](https://segno.readthedocs.io/), whose
+matrices are pinned as hashes so the check needs nothing installed. The log
+parser is pinned to lines taken off a real PPA (`Encedo nGINE FW v1.2.2`), which
+is also what corrected it: the module writes an mbedTLS error code where a
+string was expected, a slice of an HTTP header where a log id was, and logs a
+key integrity *check* whose result says how it went.
+
+The browser smoke drives every screen in order and leaves a screenshot of each:
+sign-in, the drive, the keychain, the log, the phones, the hardware, the
+settings, a wipe and a personalisation from the box, and a firmware update with
+the reboot after it.
+
+Against a module on the desk:
+
+```bash
+node dev/probe.mjs                               # what it answers with
+node dev/fetch-logs.mjs --out ~/hem-logs         # archive its audit log, each file verified
+```
+
+## Put it on a module
+
+```bash
+npm run build                    # -> dist/
+```
+
+Four files — `index.html`, `app.js`, `style.css`, `favicon.svg` — and a `.gz`
+twin of each, about 100 KB compressed. Rollup folds `app/main.js` and everything
+it imports, the SDK included, into the one `app.js`; nothing is minified, gzip
+does the work and a stack trace out of the module stays readable. The module
+answers `GET /x` with `x.gz` and a `Content-Encoding` header when the twin is
+there and with `x` when it is not, so both go on it.
+
+The sources stay loose modules for the dev server and the tests, and the same
+smoke runs against the bundle:
+
+```bash
+npm run smoke:dist -- <out-dir>
+```
 
 ## Layout
 
 | Path | Role |
 | --- | --- |
-| `index.html` | App shell: ~50 `div.page` screens, menu, bootstrap loader (`loadClever`) |
-| `src/encedo.js` | `Encedo` class: device API (`api/...`), cloud API (`api.encedo.com`), pairing, mobile auth, key derivation (WebCrypto) |
-| `src/core2.js` | UI logic: page switching, `register()` action handlers, forms, modals, lazy library loading |
-| `src/scopes.js` | `_scopes` (auth scopes with UI texts) and `_endpoints` (HEM endpoint registry) |
-| `assets/build.js` | **Generated** from `src/` by `./build.sh`. Do not edit by hand. |
-| `assets/build.css` | Hand-assembled bundle of the stylesheets in `assets/*.css` (no build step yet) |
-| `assets/*_v*.js` | Third-party libraries pinned by version, loaded locally with SRI hashes (tweetnacl, SweetAlert2, qr-code-styling, jsbip39, sjcl, zxcvbn, jsPDF) |
-| `launch.html` | Minimal "waiting for the device" page shown while the PPA boots |
-| `rescue.html`, `rescueweb.html` | Rescue dashboard, with its own scripts `assets/core-rescue-*.js` |
-| `manifest.webmanifest` | PWA manifest; `manifest` is a SHA-256 list from an older deployment |
-| `sdk/` | git submodule of [`encedo/hem-sdk-js`](https://github.com/encedo/hem-sdk-js) (branch `manager-v2`), the JS SDK v2 is built on; see [`docs/SDK-MAPPING.md`](docs/SDK-MAPPING.md) |
-| `v2/` | The Manager v2: ES modules on the SDK, no build step, with a dev server and a mock module; see [`v2/README.md`](v2/README.md) |
-| `design/v2/` | v2 screen mockups as design-canvas artboards, generated by `make-artboards.py` |
-| `design/STYLE.md` | The product style: palette, voice, components, and what changes for the phone app |
+| `index.html` | Shell; loads `app/main.js` as a module |
+| `app/main.js` | Bootstrap: the session, the shell, the actions behind every page |
+| `app/session.js` | State of one module and every SDK call, DOM-free |
+| `app/config.js` | Where the module and the broker are |
+| `app/router.js` | Hash routes, menu order |
+| `app/ui.js` | DOM helpers, icons, the mark |
+| `app/table.js` | Paging, shared by the pages that show lists |
+| `app/pages/*.js` | One module per screen |
+| `app/qr.js` | QR encoder, so a share code reaches a phone with the module air-gapped |
+| `app/pdf.js` | PDF writer, for the Proof of Personalisation — standard fonts, nothing embedded |
+| `app/logfile.js` | Reading an audit-log file: the module's event table, one entry per line |
+| `app/style.css` | Tokens and components from the encedo web kit |
+| `app/version.js` | The version the mastheads show |
+| `build.mjs` | Makes `dist/` for the module |
+| `dev/serve.mjs` | Dev server, with the mock module and broker in it |
+| `dev/session.test.mjs` | Tests for the session logic |
+| `dev/qr.test.mjs` | The QR encoder against vectors from an independent one |
+| `dev/smoke.mjs` | The real page in headless Chromium, screen by screen |
+| `dev/probe.mjs` | What a real module answers with, so a page is built against it |
+| `dev/fetch-logs.mjs` | Archive every audit-log file off a real module, verified |
+| `sdk/` | Submodule: [`encedo/hem-sdk-js`](https://github.com/encedo/hem-sdk-js), branch `manager-v2` |
+| `design/` | The product style, and the screen mockups as design-canvas artboards |
+| `docs/` | Where the Manager stands, and how Manager 1 maps onto the SDK |
 
-## Building
+Clone it with the SDK, or fetch the SDK afterwards:
 
+```bash
+git clone --recurse-submodules git@github.com:encedo/encedo-manager.git
+git submodule update --init          # in a clone that already exists
 ```
-./build.sh
-```
 
-Requires `node` (used only for syntax checks). The script concatenates `src/encedo.js`, `src/core2.js` and
-`src/scopes.js` into `assets/build.js`.
+## Branches
 
-## Legacy files kept for now
+| Branch | What it is |
+| --- | --- |
+| `main` | The Manager, version 2.x — this code |
+| `v1` | Manager 1.3, archived as it was: one `index.html`, `assets/`, `src/`, `build.sh` |
 
-- `assets/encedo.js` (Encedo v0.67, 2021) and `assets/scopes.js`: older snapshots still loaded directly by
-  `rescue.html` and `rescueweb.html`. The Manager itself uses the newer sources in `src/`.
-- `assets/core2.js`, `assets/dashboard.js`: not loaded by anything.
-- `index.htm`: copy of the v1.2.1 page.
+## Also here
 
-## Changelog
-
-### v1.3.0
-- Sources of the shipped bundle recovered from `assets/build.js` into `src/` and a reproducible `build.sh` added.
-- Asset loader prefers the PPA's local files; the CDN is only a failover for external libraries.
-- Cache-busting keyed to the Manager version instead of a random number.
-- Local jsPDF renamed to `jspdf.min_v1.js`, the name the app requests, so PDF export works offline.
-- `loadScript` passed the callback's result instead of the callback.
-- Duplicate keys in `_endpoints` merged (`api/system/config`, `api/logger/*`, `api/storage/unlock`,
-  `api/crypto/exdsa/verify`): later entries silently overwrote earlier ones in the object literal.
-- Base URL for local assets keeps the port (`location.host`), so the page also works from a dev server.
-- Mangled characters in the browser-support console message replaced.
+- [`docs/STATUS.md`](docs/STATUS.md) — what is built, what Manager 1 had that
+  this does not, and what comes next.
+- [`docs/SDK-MAPPING.md`](docs/SDK-MAPPING.md) — every Manager 1 call against
+  the device, the endpoint behind it and the SDK method that covers it.
+- [`design/STYLE.md`](design/STYLE.md) — the product style: the palette, the
+  voice, and what changes for the phone app.

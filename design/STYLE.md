@@ -1,12 +1,12 @@
 # The Encedo product style, so the next interface does not have to invent one
 
-Written 2026-09-03, after the Manager v2 screens were drawn, built and looked
+Written 2026-09-03, after the Manager screens were drawn, built and looked
 at. It is the product-side companion to `~/develop/www/STYLE.md`, which governs
 the marketing sites. Same palette, same voice, same restraint; this one is about
 screens people operate rather than pages people read.
 
-**The reference implementations are `encedo-manager/v2/app/style.css`** (tokens
-and components, ready to copy) **and `encedo-manager/design/v2/*.dc.html`** (the
+**The reference implementations are `encedo-manager/app/style.css`** (tokens
+and components, ready to copy) **and `encedo-manager/design/screens/*.dc.html`** (the
 screens as drawn). Read one of them before starting. The next interface this
 document is for is the **HEM Authenticator**, the phone app; the last section is
 about what changes there.
@@ -182,7 +182,7 @@ a "Needs you" card that only exists when something does.
 
 ## Components worth reusing
 
-All of them are in `v2/app/style.css`.
+All of them are in `app/style.css`.
 
 | Class | For |
 |---|---|

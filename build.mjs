@@ -2,7 +2,7 @@
 // twin. The PPA answers GET /x with x.gz and a Content-Encoding header when
 // the twin is there, and with x itself when it is not, so both are written.
 //
-//   node v2/build.mjs            -> v2/dist/
+//   node build.mjs               -> dist/
 //
 // Rollup folds app/main.js and everything it imports — the SDK included — into
 // one ES module; nothing is minified, gzip does the work and a stack trace out
