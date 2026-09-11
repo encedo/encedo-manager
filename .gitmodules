@@ -1,3 +1,4 @@
 [submodule "sdk"]
 	path = sdk
 	url = git@github.com:encedo/hem-sdk-js.git
+	branch = manager-v2

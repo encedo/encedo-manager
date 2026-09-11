@@ -8,11 +8,14 @@ a day each.
 
 ## Ground rules
 
-- **The SDK is a submodule, not a copy.** Anything the Manager needs from
-  hem-sdk-js is changed in `sdk/` on branch `manager-v2`, following
-  [`sdk/CLAUDE.md`](sdk/CLAUDE.md): rebuild the browser bundle, update the
-  typings, the docs and the tests in the same sitting, then commit the
-  submodule pointer here. Never work around a missing SDK call in `app/`.
+- **The SDK is a submodule, not a copy**, and other projects use the same
+  repository. Anything the Manager needs from hem-sdk-js is changed in `sdk/`
+  on branch `manager-v2`, following [`sdk/CLAUDE.md`](sdk/CLAUDE.md): rebuild
+  the browser bundle, update the typings, the docs and the tests in the same
+  commit. Then push it there, and commit the moved pointer here. Never work
+  around a missing SDK call in `app/`, and never leave a change sitting in
+  `sdk/` uncommitted — `npm run pack` refuses to build a release from one.
+  Whether the SDK is pushed is the owner's call; ask before pushing it.
 - **`dist/` and `release/` are generated.** Edit the sources and run the build.
 - **Nothing real from a device goes in.** No keys, no seeds, no logs off a
   module (`hem-logs/` is ignored for that reason), no customer data. The

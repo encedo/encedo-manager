@@ -49,6 +49,7 @@ try {
 // -- pack ---------------------------------------------------------------------------------
 
 async function pack() {
+  checkSdk();
   const out = path.resolve(flag('out') ?? path.join(HERE, 'release', stamp()));
   const webroot = path.join(out, 'webroot');
   await fs.rm(out, { recursive: true, force: true });
@@ -91,6 +92,32 @@ async function pack() {
   console.log(`  version (base64url)  ${b64url(version)}        <- download/dashboard/<this>`);
   console.log(`  tar SHA-256          ${digest.toString('hex')}   <- sign this`);
   console.log(`\nSign that digest, then: node pack.mjs attach ${path.relative(process.cwd(), tar)} --key <pub> --signature <sig>`);
+}
+
+/**
+ * The SDK is a repository of its own, shared with the other projects that use
+ * it, and it is bundled into app.js. A release built from a working copy
+ * nobody else can obtain is a release nobody can rebuild — so an uncommitted
+ * change stops this, and a commit that is not on a remote is called out.
+ * `--dirty-sdk` is for trying something, never for a release.
+ */
+function checkSdk() {
+  const sdk = path.join(HERE, 'sdk');
+  const git = (args) => spawnSync('git', ['-C', sdk, ...args], { encoding: 'utf8' });
+  if (git(['rev-parse', '--git-dir']).status !== 0) die('sdk/ is not checked out: git submodule update --init');
+
+  const dirty = (git(['status', '--porcelain']).stdout ?? '').trim();
+  if (dirty && !argv.includes('--dirty-sdk')) {
+    die(`sdk/ has changes that are not committed:\n${dirty}\n\n` +
+        'Commit them in sdk/ and push them, then commit the submodule pointer here.\n' +
+        'To pack anyway, for something that is not a release: --dirty-sdk');
+  }
+
+  const head = (git(['rev-parse', 'HEAD']).stdout ?? '').trim();
+  const onRemote = (git(['branch', '-r', '--contains', 'HEAD']).stdout ?? '').trim();
+  if (dirty) console.log(`! sdk/ is dirty and you said to pack anyway`);
+  else if (onRemote) console.log(`  sdk ${head.slice(0, 8)} on ${onRemote.split('\n')[0].trim()}`);
+  else console.log(`! sdk ${head.slice(0, 8)} is on no remote branch this clone knows of — push it, or nobody can rebuild this`);
 }
 
 /** A release directory is named the way the packaging CI has always named one. */
