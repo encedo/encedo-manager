@@ -344,6 +344,12 @@ test('a NIST key is created with the use it was given, an imported key is public
   const nist = await s.createKey({ label: 'both jobs', type: 'SECP384R1', mode: 'ECDH,ExDSA', descr: '' });
   assert.deepEqual(s.state.keys.find((k) => k.kid === nist).uses, ['ECDH', 'ExDSA']);
 
+  // A NIST curve is the only kind told what it may do; everything else the
+  // module works out from the type, and the request carries no mode at all.
+  const plain = await s.createKey({ label: 'one job', type: 'CURVE25519', descr: '' });
+  assert.deepEqual(s.state.keys.find((k) => k.kid === plain).uses, ['ECDH'], 'the module knows what a 25519 key is for');
+  await s.removeKey(plain);
+
   const kid = await s.importKey({ label: 'bob', type: 'ED25519', pubkey: 'AA'.repeat(32), descr: toB64Text('from bob') });
   const imported = s.state.keys.find((k) => k.kid === kid);
   assert.equal(imported.sealed, false);

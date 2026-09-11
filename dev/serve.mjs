@@ -138,6 +138,15 @@ async function buildLogs(keys) {
   };
 }
 const listed = (keys) => keys.map(({ pubkey, ...rest }) => rest);   // the list endpoint has no pubkey in it
+
+/**
+ * What a key may be used for, as the module reports it back in the type
+ * string. The module knows this from the key type — a CURVE25519 key agrees
+ * secrets and an ED25519 key signs, whatever the request said — and only the
+ * NIST curves, which can do both, are told which by a `mode`.
+ */
+const USES = { CURVE25519: 'ECDH', CURVE448: 'ECDH', ED25519: 'ExDSA', ED448: 'ExDSA' };
+const usesFor = (type, mode = null) => mode ?? USES[type] ?? null;
 /**
  * A paired phone's key: the description is 'EXTAID' followed by the bytes the
  * pid is the base64 of, so that the field's base64 reads 'RVhUQUlE' + pid —
@@ -464,14 +473,14 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
     if (p === '/mock/api/keymgmt/create' && method === 'POST') {
       if (scopeOf(req) !== 'keymgmt:gen') return [403, { error: 'scope' }];
       const kid = newKid();
-      const type = ['PKEY', body.mode, body.type].filter(Boolean).join(',');
+      const type = ['PKEY', usesFor(body.type, body.mode), body.type].filter(Boolean).join(',');
       state.keys.unshift({ kid, label: body.label, type, descr: body.descr ?? '', created: nowSecs(), updated: nowSecs(), pubkey: Buffer.from(kid.repeat(4).slice(0, 32), 'utf8').toString('base64') });
       return [200, { kid }];
     }
     if (p === '/mock/api/keymgmt/import' && method === 'POST') {
       if (scopeOf(req) !== 'keymgmt:imp') return [403, { error: 'scope' }];
       const kid = newKid();
-      state.keys.unshift({ kid, label: body.label, type: [body.mode, body.type].filter(Boolean).join(','), descr: body.descr ?? '', created: nowSecs(), updated: nowSecs(), pubkey: body.pubkey });
+      state.keys.unshift({ kid, label: body.label, type: [usesFor(body.type, body.mode), body.type].filter(Boolean).join(','), descr: body.descr ?? '', created: nowSecs(), updated: nowSecs(), pubkey: body.pubkey });
       return [200, { kid }];
     }
     if (p === '/mock/api/keymgmt/update' && method === 'POST') {
