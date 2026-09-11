@@ -31,7 +31,7 @@ try {
 } catch {
   console.error('sdk/hem-sdk.browser.js is missing — the SDK submodule is not checked out.\n' +
                 '  git submodule update --init\n' +
-                '  git -C sdk checkout manager-v2');
+                '  git -C sdk checkout main');
   process.exit(1);
 }
 

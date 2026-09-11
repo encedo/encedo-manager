@@ -10,9 +10,10 @@ a day each.
 
 - **The SDK is a submodule, not a copy**, and other projects use the same
   repository. Anything the Manager needs from hem-sdk-js is changed in `sdk/`
-  on branch `manager-v2`, following [`sdk/CLAUDE.md`](sdk/CLAUDE.md): rebuild
+  on `main` — it has one line and no branches — following [`sdk/CLAUDE.md`](sdk/CLAUDE.md): rebuild
   the browser bundle, update the typings, the docs and the tests in the same
-  commit. Then push it there, and commit the moved pointer here. Never work
+  commit, and a breaking change goes in sdk/MIGRATION.md with it. Then push
+  it there, and commit the moved pointer here. Never work
   around a missing SDK call in `app/`, and never leave a change sitting in
   `sdk/` uncommitted — `npm run pack` refuses to build a release from one.
   Whether the SDK is pushed is the owner's call; ask before pushing it.

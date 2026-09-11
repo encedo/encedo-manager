@@ -60,7 +60,8 @@ a password change without the password leaving the browser.
 - A paired phone's keychain entry reads `RVhUQUlE` + pid as base64; the pid is
   base64 itself, not ASCII after `EXTAID`.
 - Breaking SDK changes are allowed when every affected consumer is fixed in
-  the same sitting; the SDK lives on `manager-v2` in `encedo/hem-sdk-js`.
+  the same sitting, and written into `sdk/MIGRATION.md`; the SDK is one line
+  on `main` in `encedo/hem-sdk-js`, shared with the other projects that use it.
 - Manager 1.3 is archived on the `v1` branch and taken out of `main`; the
   Manager sits at the root of the repository, and `dist/` is built for the
   module rather than committed.

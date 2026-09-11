@@ -10,7 +10,7 @@ Status legend: **covered** = SDK call exists · **partial** = exists but misses
 something the Manager relies on · **missing** = no SDK counterpart yet ·
 **n/a** = stays in the app or is new in the SDK.
 
-Coverage of the 30 rows below, after SDK branch `manager-v2` (`a750037`):
+Coverage of the 30 rows below, after the SDK work merged to `main` (`a750037` onwards):
 **25 covered · 1 partial · 1 missing · 3 n/a.** Before that branch it was
 14 · 4 · 9 · 3; the nine broker-side gaps were closed by moving every
 `api.encedo.com` call into a new `Broker` class and composing it from `HEM`.
@@ -95,7 +95,7 @@ What is left needs a decision, not code: the BIP39 master passphrase.
 
 ## 2. Gaps in milestone order
 
-Closed on SDK branch `manager-v2` (`a750037`), each with a test in `sdk/test/sdk.test.mjs`:
+Closed in the SDK (`a750037` onwards), each with a test in `sdk/test/sdk.test.mjs`:
 
 1. ~~Login: `hemCheckin()` payload~~ returns `{ status, newfws, newuis }`.
 2. ~~Login: cancelling a mobile request~~ `authorizeRemote` deletes the broker event on abort and timeout.

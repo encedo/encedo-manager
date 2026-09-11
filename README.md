@@ -135,7 +135,7 @@ module checks, and what is still to settle with the firmware side.
 | `dev/smoke.mjs` | The real page in headless Chromium, screen by screen |
 | `dev/probe.mjs` | What a real module answers with, so a page is built against it |
 | `dev/fetch-logs.mjs` | Archive every audit-log file off a real module, verified |
-| `sdk/` | Submodule: [`encedo/hem-sdk-js`](https://github.com/encedo/hem-sdk-js), branch `manager-v2` |
+| `sdk/` | Submodule: [`encedo/hem-sdk-js`](https://github.com/encedo/hem-sdk-js) |
 | `design/` | The product style, and the screen mockups as design-canvas artboards |
 | `docs/` | Where the Manager stands, how Manager 1 maps onto the SDK, how a release is packed |
 | `CLAUDE.md` | The house rules, for an agent working here |
@@ -143,13 +143,14 @@ module checks, and what is still to settle with the firmware side.
 ## The SDK
 
 [hem-sdk-js](https://github.com/encedo/hem-sdk-js) is its own repository, used
-by more than this project, and it lives here as the `sdk/` submodule on branch
-`manager-v2` — checked out to be worked in, not just read.
+by more than this project, and it lives here as the `sdk/` submodule —
+checked out to be worked in, not just read. It has one line, `main`, so what
+goes in reaches every project that uses it.
 
 ```bash
 git clone --recurse-submodules git@github.com:encedo/encedo-manager.git
 git submodule update --init          # in a clone that already exists
-git -C sdk checkout manager-v2       # onto the branch, not a detached head
+git -C sdk checkout main             # onto the branch, not a detached head
 ```
 
 Changing something the Manager needs means changing it there, never working
@@ -158,7 +159,8 @@ around it in `app/`:
 ```bash
 cd sdk
 # edit, then follow sdk/CLAUDE.md: rebuild the browser bundle, update the
-# typings, the docs and the tests in the same commit
+# typings, the docs and the tests in the same commit, and note a breaking
+# change in sdk/MIGRATION.md
 npm test && npx rollup -c rollup.browser.config.js
 git commit -am "..." && git push            # it goes upstream, for every project that uses it
 cd ..
