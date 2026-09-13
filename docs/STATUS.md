@@ -7,9 +7,11 @@ and test it is in the [README](../README.md).
 
 ## Built and tested
 
-Every screen the menu names. 60 session tests and a browser smoke run against
-the mock; the phone paths are confirmed on a real PPA with the Authenticator v2
-app; the software update is not yet tried on a real module.
+Every screen the menu names. 61 session tests and a browser smoke run against
+the mock; the phone paths were tried on a real PPA with the Authenticator v2
+app, which is how the missing `exp` on a phone request came to light. The
+software update, a personalisation and a release on the module have not been
+tried on hardware yet.
 
 | Screen | What it does |
 | --- | --- |
@@ -76,4 +78,5 @@ a password change without the password leaving the browser.
 
 A live run on a module: a release on it, the software update, a personalisation
 from the box, and a key of each 25519 type since `mode` stopped being sent.
-Then EPA, then renaming a phone. Trusted Apps and the auxiliary pages after a decision on what stays.
+Then EPA, which starts with `cname` in the SDK, then renaming a phone. Trusted
+Apps and the auxiliary pages are writing, not building: they wait on copy.
