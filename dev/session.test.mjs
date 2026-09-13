@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { createServer, MASTER_WORDS, PHONE_PIDS, NEW_FIRMWARE, NEW_MANAGER } from './serve.mjs';
 import {
   Session, parseStorage, formatBytes, describeError, describeScope, formatDate,
-  isUnpersonalised, storageMode, parseStorageMode, gbToSectors, sectorsToGb, isPrefix, versionNumber,
+  isUnpersonalised, storageMode, parseStorageMode, gbToSectors, sectorsToGb, isPrefix, versionNumber, SIGNIN_SCOPE,
   describeKey, asciiText, parseKeyBytes, buildShareCode, shareCodeText, parseShareCode,
   toB64Text, asB64Field, asLabel, isAsciiLabel, bytesToB64, b64ByteLength, textByteLength,
   DESCR_BYTES, LABEL_CHARS,
@@ -173,6 +173,24 @@ test('signed in with the phone, an operation without a token asks the phone and 
   assert.equal(describeScope('storage:disk1:rw'), 'unlock disk1 read-write');
   assert.equal(describeScope('keymgmt:use:abc'), 'use a key');
   assert.equal(describeScope('something:new'), 'something:new');
+});
+
+test('a phone request carries the lifetime the device asks for, and only a real request covers the page', async () => {
+  const s = new Session(urls());
+  await s.waitForDevice({ intervalMs: 10 });
+  await s.prepare();
+  await s.signInWithPhone();
+  // Signing in already put a token in the cache; asking for that same scope
+  // again must not reach the phone, and must not cover the page either.
+  let covered = 0;
+  s.addEventListener('change', () => { if (s.state.asking) covered++; });
+  await s.token(SIGNIN_SCOPE);
+  assert.equal(covered, 0, 'a token the SDK still holds never rang the phone');
+  assert.equal(s.state.asking, null);
+
+  await s.token('keymgmt:list');
+  assert.ok(covered > 0, 'a scope it does not hold does');
+  assert.equal(s.state.asking, null, 'and the page is uncovered once the phone answers');
 });
 
 test('two operations that need different scopes ask the phone one after the other', async () => {

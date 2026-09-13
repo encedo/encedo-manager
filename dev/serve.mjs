@@ -415,7 +415,12 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
       if (!ok) return [401, { error: 'authentication failed' }];
       return [200, { token: jwt({ scope: payload.scope, exp: payload.exp, sub: payload.iss === masterPub ? 'master' : 'user' }) }];
     }
-    if (p === '/mock/api/auth/ext/request') return [200, { challenge: 'mock', epk: body.epk, scope: body.scope }];
+    if (p === '/mock/api/auth/ext/request') {
+      // `exp` is required: the device is being told how long the token it
+      // issues should live, and a missing one reads as a request from 1970.
+      if (!Number.isFinite(body.exp)) return [400, { error: 'exp required' }];
+      return [200, { challenge: 'mock', epk: body.epk, scope: body.scope, exp: body.exp }];
+    }
     if (p === '/mock/api/auth/ext/token') {
       // The reply names the scope the phone approved, the way the real one is bound to it.
       const scope = String(body.authreply ?? '').replace(/^mock-reply:/, '') || 'system:config';

@@ -8,6 +8,8 @@ export const SIGNIN_SCOPE = 'system:config';
 export const SIGNIN_EXP = 3600;
 
 export class Session extends EventTarget {
+  #phoneRequest = null;      // the phone request in flight, so two never overlap
+
   constructor({ hem, broker }, { HEMClass = HEM } = {}) {
     super();
     this.urls = { hem, broker };
@@ -162,22 +164,44 @@ export class Session extends EventTarget {
    * page can tell the person to pick the phone up. One request at a time: a
    * second scope waits for the first to finish rather than sending two pushes.
    */
-  async askPhone(scope, { pollTimeout = 180_000, signal = null, ...opts } = {}) {
-    const cached = this.hem.tokens.find((t) => t.scope === scope && t.exp > Date.now() / 1000 + 5);
-    if (cached) return this.hem.authorizeRemote(scope);          // the SDK hands the cached one back
-    while (this.state.asking) await this.state.asking.done.catch(() => {});
+  async askPhone(scope, opts = {}) {
+    // One at a time: a second scope waits rather than putting a second request
+    // on a phone that is already showing one.
+    while (this.#phoneRequest) await this.#phoneRequest.catch(() => {});
+    const run = this.#askPhoneOnce(scope, opts);
+    this.#phoneRequest = run;
+    try {
+      return await run;
+    } finally {
+      if (this.#phoneRequest === run) this.#phoneRequest = null;
+    }
+  }
+
+  async #askPhoneOnce(scope, { pollTimeout = 180_000, signal = null, ...opts }) {
     const ctl = new AbortController();
     signal?.addEventListener('abort', () => ctl.abort(), { once: true });
-    const asking = { scope, since: Date.now(), until: Date.now() + pollTimeout, cancel: () => ctl.abort(), done: null };
-    asking.done = (async () => {
-      try {
-        return await this.hem.authorizeRemote(scope, { pollInterval: 2000, pollTimeout, ...opts, signal: ctl.signal });
-      } finally {
-        if (this.state.asking === asking) this.#set({ asking: null });
-      }
-    })();
-    this.#set({ asking });
-    return asking.done;
+    let done;
+    // `onEvent` fires when the SDK has actually put a request on the broker —
+    // that is the moment a phone starts ringing, and the only moment worth
+    // covering the page for. A token the SDK still holds never gets that far,
+    // so nothing flashes on screen for it. Whether a token is still good is
+    // the SDK's own question: asking it here as well, against this browser's
+    // clock rather than the module's, is how a module whose clock is behind
+    // ends up asking the phone for something it had already been given.
+    const asking = {
+      scope, since: Date.now(), until: Date.now() + pollTimeout,
+      cancel: () => ctl.abort(),
+      get done() { return done; },
+    };
+    done = this.hem.authorizeRemote(scope, {
+      pollInterval: 2000, pollTimeout, ...opts, signal: ctl.signal,
+      onEvent: () => this.#set({ asking }),
+    });
+    try {
+      return await done;
+    } finally {
+      if (this.state.asking === asking) this.#set({ asking: null });
+    }
   }
 
   // -- the module --------------------------------------------------------------
