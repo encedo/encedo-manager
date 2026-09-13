@@ -1,6 +1,6 @@
 # Manager 2.0 — where it stands
 
-Last updated 2026-09-11, branch `main`, published. What the Manager built on hem-sdk-js has,
+Last updated 2026-09-13, branch `main`, published. What the Manager built on hem-sdk-js has,
 what Manager v1 had that it does not, and the order the rest is planned in.
 The SDK mapping behind it is in [SDK-MAPPING.md](SDK-MAPPING.md); how to run
 and test it is in the [README](../README.md).
@@ -37,20 +37,23 @@ a password change without the password leaving the browser.
    say how a bootloader is updated.
 2. **Renaming a paired phone** (`device_edit`). A phone is a key, so this is a
    rename in the phone's row. Small.
-3. **Drive geometry in Settings.** Left out on purpose: changing it destroys
-   the data. Set once at personalisation. If wanted, it needs a typed
-   confirmation like the wipe.
-4. **Trusted Apps** (`thirdparties`: File transfer, Onchato, Video call). In v1
-   a launcher for separate applications, mostly "stay tuned". Depends on whether
-   those applications come to v2 at all.
+3. **EPA.** Required, not optional (owner, 2026-09-13). `state.model` already
+   tells one from a PPA and the personalisation skips the drive layout and the
+   format wait for it. What is left is the rest of the differences, and they
+   are in the naming: an EPA has no USB network, so it registers its name by
+   `cname` rather than `ip` — v1 sent `{ genuine: 'EPA:GenuineToken', csr,
+   cname }` and hem-api-tester test_2 branches the same way — and the prefix is
+   a choice the owner has to make, with the e-mail confirmation, rather than
+   one of the broker's free names. `broker.domainRegister()` takes no `cname`
+   yet: that is an SDK change first.
+4. **Trusted Apps** — a marketing page (owner, 2026-09-13): a list of links to
+   the Encedo applications at a frozen version, Onchato and Meet among them.
+   Not a launcher and nothing the module answers for; copy and links decide it.
 5. **Auxiliary pages** (`about`, `problems_with_login`, `notifications`,
    `favourites`, `qrcode`, `search`). Placeholder text in v1. Only `about` and
    sign-in help are worth carrying, once there is copy for them.
-6. **Dark mode by the hour.** An open v1 decision; v2 has the colour tokens, so
-   it is mostly CSS.
-7. **EPA.** `state.model` is the hook (an EPA skips the drive section and the
-   format wait); the rest of v1's EPA branches are not carried. Later, by
-   decision.
+6. **Dark mode by the hour.** An open v1 decision; the colour tokens are there,
+   so it is mostly CSS.
 
 ## Decided along the way
 
@@ -59,6 +62,9 @@ a password change without the password leaving the browser.
 - The Proof of Personalisation is a PDF written by `app/pdf.js`, no jsPDF.
 - A paired phone's keychain entry reads `RVhUQUlE` + pid as base64; the pid is
   base64 itself, not ASCII after `EXTAID`.
+- **The drive layout is set once, at personalisation** (owner, 2026-09-13).
+  Little of what a module is given at initialisation can be changed afterwards,
+  and changing the geometry destroys what is on it. Settings does not offer it.
 - Breaking SDK changes are allowed when every affected consumer is fixed in
   the same sitting, and written into `sdk/MIGRATION.md`; the SDK is one line
   on `main` in `encedo/hem-sdk-js`, shared with the other projects that use it.
@@ -68,5 +74,6 @@ a password change without the password leaving the browser.
 
 ## Next
 
-Renaming a phone, then serving the Manager from the module and a live run of
-the whole thing, the software update included. Trusted Apps and the auxiliary pages after a decision on what stays.
+A live run on a module: a release on it, the software update, a personalisation
+from the box, and a key of each 25519 type since `mode` stopped being sent.
+Then EPA, then renaming a phone. Trusted Apps and the auxiliary pages after a decision on what stays.
