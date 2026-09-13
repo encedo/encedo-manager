@@ -67,6 +67,7 @@ export function renderKeychain(session, view) {
     pageHead('Keychain', title(keys), 'Private keys are generated in the module and never exported. Apps ask the module to sign or agree a secret; you decide which of them may, and for how long.'),
     view.error ? h('p.error', { role: 'alert' }, view.error) : null,
     view.notice ? h('p.notice', { role: 'status' }, view.notice) : null,
+    !keys && view.error ? retryCard(view) : null,
     h('div.between', {},
       h('div', { style: 'width: 360px;' }, field('Search by label or description', search)),
       h('div.row', {},
@@ -343,4 +344,16 @@ function deleteBlock(key, view) {
           h('button.button.small.exposed', { type: 'button', disabled: view.busy === 'delete' || null, onclick: () => view.remove(key.kid) }, view.busy === 'delete' ? 'Deleting…' : 'Delete for good'),
           h('button.button.plain.small', { type: 'button', onclick: () => view.cancelDelete() }, 'Keep it'))
       : h('div.row', {}, h('button.button.small.exposed', { type: 'button', onclick: () => view.askDelete(key.kid) }, 'Delete this key')));
+}
+
+/**
+ * The keychain could not be read — a refused password, a module that went
+ * away. Whatever it was, the way out is to ask again, and there is nothing
+ * else on this page until it works.
+ */
+function retryCard(view) {
+  return h('div.card', {},
+    h('div.card-body', {},
+      h('p.soft.measure', {}, 'The keys could not be read. Nothing has changed on the module.'),
+      h('div.row', {}, h('button.button', { type: 'button', onclick: () => view.retry() }, 'Try again'))));
 }

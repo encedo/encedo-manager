@@ -57,6 +57,13 @@ export function createLogView({ session, paint }) {
         .finally(() => { view.busy = null; paint(); }));
     },
 
+    /** Ask for it again after a read that failed — a refused password, say. */
+    retry() {
+      view.error = null;
+      view.ensure();
+      paint();
+    },
+
     reset() {
       Object.assign(view, { page: 1, open: null, files: {}, busy: null, checked: 0, error: null, notice: null });
     },

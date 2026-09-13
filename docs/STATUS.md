@@ -7,7 +7,7 @@ and test it is in the [README](../README.md).
 
 ## Built and tested
 
-Every screen the menu names. 61 session tests and a browser smoke run against
+Every screen the menu names. 62 session tests and a browser smoke run against
 the mock; the phone paths were tried on a real PPA with the Authenticator v2
 app, which is how the missing `exp` on a phone request came to light. The
 software update, a personalisation and a release on the module have not been
@@ -25,6 +25,7 @@ tried on hardware yet.
 | Settings | Owner, the three things the module takes on faith, a password change that never sends the password, the 24 words as authorisation, a name under ence.do with its certificate, a wipe behind a typed WIPE |
 | Personalisation | A module out of the box (`inited` in its status) goes through v1's steps: owner, password, name (free, or its own confirmed by e-mail), drive layout, trust; 24 words made in the browser as the master key; init, format, certificate; a Proof of Personalisation PDF written in JS. A failure wipes back to the box. Air-gapped it keeps my.ence.do |
 | Phone sessions | Any operation without a cached token asks the phone, one request at a time, behind a modal naming the operation, with cancel |
+| Password sessions | The sign-in form offers "remember the password for this session", unticked as v1 had it. Ticked, the key derived from it is kept and nothing asks again. Unticked, every scope is a question naming the operation, with the same offer in it. Tokens are cached either way, so no scope is asked about twice |
 | Software | What the module runs and what the backend has newer; firmware or Manager installed as v1 did it (download, upload with progress, the module's own check polled, install); a firmware file from anywhere for the air-gapped case, also before personalisation; firmware reboots the module and the page waits for it, the Manager reloads the page |
 
 Things v1 did not have: log verification in the browser, the keychain/broker

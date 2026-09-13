@@ -9,6 +9,7 @@ export const SIGNIN_EXP = 3600;
 
 export class Session extends EventTarget {
   #phoneRequest = null;      // the phone request in flight, so two never overlap
+  #authRequest = null;       // the password question in flight, likewise
 
   constructor({ hem, broker }, { HEMClass = HEM } = {}) {
     super();
@@ -31,7 +32,8 @@ export class Session extends EventTarget {
       logs: null,              // { ids, key, signed } once the log page has asked
       selftest: null,          // the last health check this session ran
       master: false,           // the settings were unlocked with the 24 words
-      asking: null,            // { scope, since, until, cancel } while a phone is being asked for a token
+      remember: false,         // the password is kept for this session, so only the first scope asks
+      asking: null,            // { kind, scope, ... } while the person is being asked to authorise something
       setup: null,             // personalisation in progress: { step, status, fields, result, error }
       checkedInAt: null,       // when the broker last answered the check-in
       update: null,            // a software update in flight: { kind, source, version, step, loaded, total, size, result, error }
@@ -122,8 +124,16 @@ export class Session extends EventTarget {
 
   // -- signing in --------------------------------------------------------------
 
-  async signIn(password) {
-    const token = await this.hem.authorizePassword(password, SIGNIN_SCOPE, SIGNIN_EXP);
+  /**
+   * Sign in with the password. `remember` decides where the key derived from it
+   * lives: kept for this session, so every operation that follows is authorised
+   * without asking, or used for this one sign-in and let go, so each scope asks
+   * again — as v1 did, with its tick unticked. Either way the tokens the module
+   * issues are cached, so no scope is asked about twice.
+   */
+  async signIn(password, { remember = false } = {}) {
+    const token = await this.hem.authorizePassword(password, SIGNIN_SCOPE, SIGNIN_EXP, { remember });
+    this.#set({ remember });
     await this.#afterSignIn('password', token);
   }
 
@@ -143,7 +153,7 @@ export class Session extends EventTarget {
 
   signOut() {
     this.hem.clearKeys();      // derived keys and every cached token, master included
-    this.#set({ phase: 'reachable', mode: null, config: null, phones: null, keys: null, logs: null, master: false, lastError: null });
+    this.#set({ phase: 'reachable', mode: null, config: null, phones: null, keys: null, logs: null, master: false, remember: false, asking: null, lastError: null });
     if (this.state.online) this.checkPaired().catch(() => {});
   }
 
@@ -153,8 +163,52 @@ export class Session extends EventTarget {
    */
   async token(scope, opts = {}) {
     if (this.state.phase !== 'signed-in') throw new HemError('Not signed in', { code: 'not_signed_in' });
-    if (this.state.mode === 'password') return this.hem.authorizePassword(null, scope);
+    if (this.state.mode === 'password') return this.askPassword(scope);
     return this.askPhone(scope, opts);
+  }
+
+  /**
+   * A token for `scope` with the password. A token already held costs nothing,
+   * and so does a password this session was told to remember. Otherwise the
+   * person is asked for it, for this operation, with what it is for spelled
+   * out — `state.asking` carries the question and the page draws it.
+   */
+  async askPassword(scope) {
+    try {
+      return await this.hem.authorizePassword(null, scope);       // cached token, or a remembered key
+    } catch (e) {
+      if (!(e instanceof HemError) || e.code !== 'auth_password_required') throw e;
+    }
+    while (this.#authRequest) await this.#authRequest.catch(() => {});
+    const run = this.#askPasswordOnce(scope);
+    this.#authRequest = run;
+    try {
+      return await run;
+    } finally {
+      if (this.#authRequest === run) this.#authRequest = null;
+    }
+  }
+
+  #askPasswordOnce(scope) {
+    return new Promise((resolve, reject) => {
+      const asking = {
+        kind: 'password',
+        scope,
+        since: Date.now(),
+        // Answering it: the password, and whether to stop being asked.
+        submit: (password, remember = false) => {
+          this.#set({ asking: null });
+          this.hem.authorizePassword(password, scope, SIGNIN_EXP, { remember })
+            .then((token) => { if (remember) this.#set({ remember: true }); resolve(token); })
+            .catch(reject);
+        },
+        cancel: () => {
+          this.#set({ asking: null });
+          reject(new HemError('Cancelled', { code: 'aborted' }));
+        },
+      };
+      this.#set({ asking });
+    });
   }
 
   /**

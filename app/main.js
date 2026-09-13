@@ -73,6 +73,7 @@ function watchAsking(on) {
 let lastPhase = null;
 function forgetPageState() {
   for (const view of pageViews) view.reset();
+  signIn.reset();
 }
 
 function paint() {

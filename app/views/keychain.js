@@ -95,6 +95,13 @@ export function createKeychainView({ session, paint }) {
         .finally(() => { view.busy = null; paint(); }));
     },
 
+    /** Ask for it again after a read that failed — a refused password, say. */
+    retry() {
+      view.error = null;
+      view.ensure();
+      paint();
+    },
+
     reset() {
       Object.assign(view, { q: '', page: 1, form: null, open: null, detail: null, share: null, shareNote: '', shareEmail: '', editing: null, confirmDelete: null, busy: null, error: null, notice: null });
     },

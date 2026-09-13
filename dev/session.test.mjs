@@ -83,7 +83,7 @@ test('a wrong password is refused, the right one signs in and lists the paired p
   await s.prepare();
   await assert.rejects(s.signIn('wrong'), (e) => e.code === 'http_401');
   assert.equal(describeError(await s.signIn('wrong').catch((e) => e)), 'The password is not correct.');
-  await s.signIn('demo');
+  await s.signIn('demo', { remember: true });
   assert.equal(s.state.phase, 'signed-in');
   assert.equal(s.state.mode, 'password');
   assert.equal(s.state.config.user, 'Ann');
@@ -95,7 +95,7 @@ test('signing out asks the broker again whether a phone is paired', async () => 
   await s.waitForDevice({ intervalMs: 10 });
   await s.prepare();
   assert.equal(s.state.paired, true);
-  await s.signIn('demo');
+  await s.signIn('demo', { remember: true });
   s.state.paired = false;                    // as if the broker had changed its mind meanwhile
   s.signOut();
   await new Promise((r) => setTimeout(r, 100));
@@ -111,7 +111,7 @@ test('unlock and lock a drive through scoped tokens', async () => {
   const s = new Session(urls());
   await s.waitForDevice({ intervalMs: 10 });
   await s.prepare();
-  await s.signIn('demo');
+  await s.signIn('demo', { remember: true });
   await s.unlockDisk(0, 'rw');
   assert.equal(s.disks()[0].state, 'rw');
   await s.unlockDisk(1, 'ro');
@@ -140,6 +140,55 @@ test('phone sign-in polls the broker and can be cancelled', async () => {
   setTimeout(() => ctl.abort(), 20);
   await assert.rejects(s2.signInWithPhone({ signal: ctl.signal }), (e) => e.code === 'aborted');
   assert.equal(s2.state.phase, 'reachable');
+});
+
+test('without "remember", every scope asks for the password, and the tick stops it', async () => {
+  const s = new Session(urls());
+  await s.waitForDevice({ intervalMs: 10 });
+  await s.prepare();
+  await s.signIn('demo');                       // unticked, as the form starts
+  assert.equal(s.state.remember, false);
+  assert.equal(s.state.config.user, 'Ann', 'signing in itself needed nothing more');
+
+  // The scope the sign-in took a token for costs nothing: it is cached.
+  assert.ok(await s.token(SIGNIN_SCOPE));
+  assert.equal(s.state.asking, null);
+
+  // Another scope is a question, and the question says what it is for.
+  const asked = [];
+  s.addEventListener('change', () => { if (s.state.asking) asked.push(s.state.asking); });
+  const keys = s.loadKeys();
+  await new Promise((r) => setTimeout(r, 20));
+  assert.equal(asked.length, 1);
+  assert.equal(asked[0].kind, 'password');
+  assert.equal(asked[0].scope, 'keymgmt:list');
+  assert.equal(describeScope(asked[0].scope), 'list the keys');
+  asked[0].submit('demo');
+  await keys;
+  assert.ok(s.state.keys.length > 0);
+  assert.equal(s.state.asking, null);
+  assert.equal(s.state.remember, false, 'answering once did not change that');
+
+  // A wrong password comes back as a failure, not as a token.
+  const failing = s.token('keymgmt:gen');
+  await new Promise((r) => setTimeout(r, 20));
+  s.state.asking.submit('not the password');
+  await assert.rejects(failing, (e) => e.code === 'http_401');
+
+  // Cancelling is a refusal, and the operation behind it says so.
+  const cancelled = s.token('keymgmt:del');
+  await new Promise((r) => setTimeout(r, 20));
+  s.state.asking.cancel();
+  await assert.rejects(cancelled, (e) => e.code === 'aborted');
+
+  // Ticking "do not ask again" while answering keeps the key for what follows.
+  const upd = s.token('keymgmt:upd');
+  await new Promise((r) => setTimeout(r, 20));
+  s.state.asking.submit('demo', true);
+  await upd;
+  assert.equal(s.state.remember, true);
+  assert.ok(await s.token('keymgmt:imp'), 'a scope it has no token for no longer asks');
+  assert.equal(s.state.asking, null);
 });
 
 test('signed in with the phone, an operation without a token asks the phone and says so', async () => {
@@ -212,18 +261,23 @@ test('air-gapped: no broker, still signs in with the password', async () => {
   await s.prepare();
   assert.equal(s.state.online, false);
   assert.equal(s.state.paired, null);
-  await s.signIn('demo');
+  await s.signIn('demo', { remember: true });
   assert.equal(s.state.phase, 'signed-in');
   assert.equal(s.state.phones, null);
 });
 
 // ---- the keychain ---------------------------------------------------------------------
 
+/**
+ * Signed in with the password remembered, which is what most of these tests
+ * are about: the operation, not the asking. The tests that are about the
+ * asking sign in without it.
+ */
 const signedIn = async () => {
   const s = new Session(urls());
   await s.waitForDevice({ intervalMs: 10 });
   await s.prepare();
-  await s.signIn('demo');
+  await s.signIn('demo', { remember: true });
   return s;
 };
 
@@ -461,7 +515,7 @@ test('air-gapped: the keychain works, sharing by e-mail does not', async () => {
   const s = new Session({ hem: `${base}/mock`, broker: 'http://127.0.0.1:9' });
   await s.waitForDevice({ intervalMs: 10 });
   await s.prepare();
-  await s.signIn('demo');
+  await s.signIn('demo', { remember: true });
   const keys = await s.loadKeys();
   assert.ok(keys.some((k) => k.label === 'wg-peer-03'), 'the module answers on its own');
   await assert.rejects(s.shareKeyByEmail('bob@example.com', {}), (e) => e.code === 'broker_error');
@@ -474,7 +528,7 @@ test('the phones are read out of the keychain and checked against the broker', a
   const s = new Session(urls());
   await s.waitForDevice({ intervalMs: 10 });
   await s.prepare();
-  await s.signIn('demo');
+  await s.signIn('demo', { remember: true });
   assert.deepEqual(s.pairedPhones(), [], 'nothing before the keychain is read');
   await s.loadKeys();
   const phones = s.pairedPhones();
@@ -489,7 +543,7 @@ test('a phone is paired through a QR code that carries the link and a hash of th
   const s = new Session(urls());
   await s.waitForDevice({ intervalMs: 10 });
   await s.prepare();
-  await s.signIn('demo');
+  await s.signIn('demo', { remember: true });
   await s.loadKeys();
   const before = s.pairedPhones().length;
   let qr = null;
@@ -521,7 +575,7 @@ test('air-gapped: unpairing takes the key, pairing does not start', async () => 
   const s = new Session({ hem: `${base}/mock`, broker: 'http://127.0.0.1:9/nobroker' });
   await s.waitForDevice({ intervalMs: 10 });
   await s.prepare();
-  await s.signIn('demo');
+  await s.signIn('demo', { remember: true });
   await s.loadKeys();
   const phone = s.pairedPhones().at(-1);              // the one the test above paired
   assert.equal(phone.atBroker, null, 'the broker was not asked');
@@ -534,7 +588,7 @@ test('unpairing removes the key and the subscription, or whichever half exists',
   const s = new Session(urls());
   await s.waitForDevice({ intervalMs: 10 });
   await s.prepare();
-  await s.signIn('demo');
+  await s.signIn('demo', { remember: true });
   await s.loadKeys();
   const both = s.pairedPhones().find((p) => p.pid === PHONE_PIDS.pixel);
   assert.deepEqual(await s.unpairPhone(both), { broker: true, key: true });
@@ -756,11 +810,11 @@ test('changing the password ends the session, and the new one opens the module',
   assert.equal(s.state.config, null);
 
   await assert.rejects(s.signIn('demo'), (e) => e.code === 'http_401', 'the old password is done');
-  await s.signIn('a new password');
+  await s.signIn('a new password', { remember: true });
   assert.equal(s.state.phase, 'signed-in');
 
   await s.changePassword('demo');           // the mock keychain is shared; put it back
-  await s.signIn('demo');
+  await s.signIn('demo', { remember: true });
   assert.equal(s.state.phase, 'signed-in');
 });
 
@@ -779,7 +833,7 @@ test('air-gapped, a domain cannot be registered and says so', async () => {
   const s = new Session({ hem: `${base}/mock`, broker: 'http://127.0.0.1:9' });
   await s.waitForDevice({ intervalMs: 10 });
   await s.prepare();
-  await s.signIn('demo');
+  await s.signIn('demo', { remember: true });
   await assert.rejects(s.registerDomain('anything'), (e) => e.code === 'broker_error');
 });
 
@@ -875,7 +929,7 @@ test('a module out of the box is told by its status, and the words plus the pass
     assert.equal(s.state.phase, 'reachable', 'personalised now');
     assert.equal(s.state.status.inited, undefined);
     await assert.rejects(s.signIn('demo'), (e) => e.code === 'http_401', 'the old mock password is nobody');
-    await s.signIn('first-light');
+    await s.signIn('first-light', { remember: true });
     assert.equal(s.state.config.user, 'Ann');
     assert.equal(s.state.config.storage_mode, 0x51);
     assert.equal(s.state.config.trusted_backend, false);
@@ -1004,7 +1058,7 @@ test('the firmware announced at check-in is downloaded, uploaded, checked by the
     await s.prepare();
     assert.equal(s.state.health.newfws, NEW_FIRMWARE);
     assert.ok(s.state.checkedInAt > 0);
-    await s.signIn('demo');
+    await s.signIn('demo', { remember: true });
     const steps = [];
     s.addEventListener('change', () => { const st = s.state.update?.step; if (st && steps.at(-1) !== st) steps.push(st); });
     const result = await s.updateFirmware({ version: NEW_FIRMWARE, pollInterval: 5 });
@@ -1034,7 +1088,7 @@ test('the Manager is updated the same way, and the module keeps running', async 
     await s.waitForDevice({ intervalMs: 10 });
     await s.prepare();
     assert.equal(s.state.health.newuis, NEW_MANAGER);
-    await s.signIn('demo');
+    await s.signIn('demo', { remember: true });
     const result = await s.updateManager({ version: NEW_MANAGER, pollInterval: 5 });
     assert.equal(result.step, 'done');
     assert.equal(result.size, 12 * 1024);
@@ -1051,7 +1105,7 @@ test('a firmware file goes in without the backend, and one the module does not t
     const s = new Session({ hem: own.urls.hem, broker: 'http://127.0.0.1:9/nobroker' });
     await s.waitForDevice({ intervalMs: 10 });
     await s.prepare();
-    await s.signIn('demo');
+    await s.signIn('demo', { remember: true });
     await assert.rejects(s.updateFirmware({ version: 'v9' }), (e) => e.code === 'broker_error', 'nothing to download from');
 
     const bad = new Uint8Array(4096).fill(0x11); bad[0] = 0xff;
@@ -1080,7 +1134,7 @@ test('an update can be cancelled while the module is still checking, and only on
     const s = new Session(own.urls);
     await s.waitForDevice({ intervalMs: 10 });
     await s.prepare();
-    await s.signIn('demo');
+    await s.signIn('demo', { remember: true });
     const ctl = new AbortController();
     const going = s.updateFirmware({ version: NEW_FIRMWARE, signal: ctl.signal, pollInterval: 50 });
     await new Promise((r) => setTimeout(r, 5));

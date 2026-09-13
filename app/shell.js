@@ -40,6 +40,38 @@ export function renderShell(root, { session, config, route, content, modal = nul
  * behind it blurred, because nothing else can happen until the phone answers.
  */
 export function askingModal(asking) {
+  return asking.kind === 'password' ? passwordModal(asking) : phoneModal(asking);
+}
+
+/**
+ * The password, for this operation. Shown when the person did not ask for it
+ * to be remembered — every scope is a question, and the question says what it
+ * is for. The tick here is the same offer as the one on the sign-in form, for
+ * somebody who has changed their mind.
+ */
+function passwordModal(asking) {
+  const pw = h('input', { id: 'scope-password', type: 'password', autocomplete: 'current-password', autofocus: true, required: true });
+  const keep = h('input', { id: 'scope-remember', type: 'checkbox' });
+  const submit = (ev) => { ev.preventDefault(); if (pw.value) asking.submit(pw.value, keep.checked); };
+  return veil('password-title',
+    h('form', { onsubmit: submit },
+      h('div.card-head', {}, h('span', {}, 'Your password'), h('span.v', {}, asking.scope)),
+      h('div.card-body', {},
+        h('div.stack-s', {},
+          h('p.eyebrow', {}, 'Authorise'),
+          h('h1', { id: 'password-title' }, 'Allow this?'),
+          h('p.soft', { style: 'font-size: 15.5px;' },
+            'The module wants your approval to ',
+            h('b', { style: 'font-weight: 600; color: var(--ink);' }, describeScope(asking.scope)),
+            '. Your password stays in this browser: it derives a key here, and the module sees a signed challenge.')),
+        h('div.field', {}, h('label', { for: 'scope-password' }, 'Password'), pw),
+        h('label.tick', { for: 'scope-remember' }, keep, h('span', {}, 'Do not ask again this session')),
+        h('div.row', {},
+          h('button.button', { type: 'submit' }, 'Allow'),
+          h('button.button.plain', { type: 'button', onclick: () => asking.cancel() }, 'Cancel')))));
+}
+
+function phoneModal(asking) {
   const left = Math.max(0, Math.ceil((asking.until - Date.now()) / 1000));
   return veil('asking-title',
     h('div.card-head', {}, h('span', {}, 'Confirm on your phone'), h('span.v', {}, `${left} s left`)),

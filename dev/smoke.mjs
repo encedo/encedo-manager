@@ -90,7 +90,7 @@ await evaluate(`document.querySelector('#password').value = 'nope'; document.que
 if (!(await waitFor(`document.body.textContent.includes('The password is not correct.')`))) await fail('wrong password was not refused');
 
 // 3. right password signs in and the overview renders
-await evaluate(`document.querySelector('#password').value = 'demo'; document.querySelector('form').requestSubmit(); true`);
+await evaluate(`document.querySelector('#remember').checked = true; document.querySelector('#password').value = 'demo'; document.querySelector('form').requestSubmit(); true`);
 if (!(await waitFor(`document.querySelector('h1')?.textContent === 'The module is sealed and reachable.'`))) await fail('overview did not render after sign-in');
 if (!(await waitFor(`document.body.textContent.includes('v2.5.0+mock available')`))) await fail('update flag missing on overview');
 await shot('smoke-overview.png');
@@ -410,7 +410,7 @@ await evaluate(`(() => {
 if (!(await waitFor(`!!document.querySelector('#password')`))) await fail('changing the password did not end the session');
 await evaluate(`document.querySelector('#password').value = 'demo'; document.querySelector('form').requestSubmit(); true`);
 if (!(await waitFor(`document.body.textContent.includes('The password is not correct.')`))) await fail('the old password still worked');
-await evaluate(`document.querySelector('#password').value = 'demo2'; document.querySelector('form').requestSubmit(); true`);
+await evaluate(`document.querySelector('#remember').checked = true; document.querySelector('#password').value = 'demo2'; document.querySelector('form').requestSubmit(); true`);
 if (!(await waitFor(`!!document.querySelector('.sidebar')`))) await fail('the new password did not sign in');
 // Signing in again lands on the page that was open, and the master authorisation went with the old session.
 if (!(await waitFor(`document.querySelector('h1')?.textContent === 'Ann R’s module, as it is set up now.'`))) await fail('the settings still claim the master passphrase is in use');
@@ -419,6 +419,27 @@ if (!(await waitFor(`document.querySelector('h1')?.textContent === 'The module i
 
 // 9. sign out returns to the form
 await evaluate(`[...document.querySelectorAll('a')].find(a => a.textContent === 'Sign out').click(); true`);
+if (!(await waitFor(`!!document.querySelector('#password')`))) await fail('sign out did not return to the form');
+
+// 9b. without the tick, a page that needs a token asks for the password, says
+//     what for, and stops asking once "do not ask again" is answered
+await evaluate(`document.querySelector('#password').value = 'demo2'; document.querySelector('form').requestSubmit(); true`);
+if (!(await waitFor(`document.querySelector('h1')?.textContent === 'The module is sealed and reachable.'`))) await fail('unticked sign-in did not get in');
+await evaluate(`location.hash = '#/keychain'; true`);
+if (!(await waitFor(`document.querySelector('.veil h1')?.textContent === 'Allow this?'`))) await fail('the keychain did not ask for the password');
+if (!(await evaluate(`document.body.textContent.includes('list the keys')`))) await fail('the question does not say what it is for');
+await shot('smoke-password-scope.png');
+await evaluate(`document.querySelector('#scope-password').value = 'wrong'; document.querySelector('.veil form').requestSubmit(); true`);
+if (!(await waitFor(`document.body.textContent.includes('The password is not correct.')`))) await fail('a wrong password at a scope was not reported');
+if (!(await waitFor(`[...document.querySelectorAll('button')].some(b => b.textContent === 'Try again')`))) await fail('a refused password left no way back');
+await evaluate(`[...document.querySelectorAll('button')].find(b => b.textContent === 'Try again').click(); true`);
+if (!(await waitFor(`document.querySelector('.veil h1')?.textContent === 'Allow this?'`))) await fail('it did not ask again after the wrong one');
+await evaluate(`document.querySelector('#scope-remember').checked = true; document.querySelector('#scope-password').value = 'demo2'; document.querySelector('.veil form').requestSubmit(); true`);
+if (!(await waitFor(`!document.querySelector('.veil') && document.querySelectorAll('tbody tr').length > 0`, 10000))) await fail('the keychain did not open after the password');
+await evaluate(`location.hash = '#/log'; true`);
+if (!(await waitFor(`document.querySelector('h1')?.textContent.startsWith('7 log files')`, 10000))) await fail('the log asked again after "do not ask again"');
+if (await evaluate(`!!document.querySelector('.veil')`)) await fail('and it should not have asked at all');
+await evaluate(`location.hash = '#/'; [...document.querySelectorAll('a')].find(a => a.textContent === 'Sign out').click(); true`);
 if (!(await waitFor(`!!document.querySelector('#password')`))) await fail('sign out did not return to the form');
 
 // 10. signed in with the phone, a page that needs a token asks the phone and says so
@@ -444,7 +465,7 @@ if (!(await waitFor(`!!document.querySelector('#password')`))) await fail('sign 
 
 // 11. a module out of the box: wipe this one from Settings, then personalise it
 //     through the form, get the proof, and sign in with the new password
-await evaluate(`location.hash = '#/'; document.querySelector('#password').value = 'demo2'; document.querySelector('form').requestSubmit(); true`);   // step 8 changed it
+await evaluate(`location.hash = '#/'; document.querySelector('#remember').checked = true; document.querySelector('#password').value = 'demo2'; document.querySelector('form').requestSubmit(); true`);   // step 8 changed it
 if (!(await waitFor(`document.querySelector('h1')?.textContent === 'The module is sealed and reachable.'`))) await fail('could not sign in again for the wipe');
 await evaluate(`location.hash = '#/settings'; true`);
 if (!(await waitFor(`[...document.querySelectorAll('button')].some(b => b.textContent === 'Wipe the module')`))) await fail('the settings did not render');
@@ -483,7 +504,7 @@ await evaluate(`[...document.querySelectorAll('button')].find(b => b.textContent
 if (!(await waitFor(`![...document.querySelectorAll('button')].find(b => b.textContent.startsWith('Continue'))?.disabled`))) await fail('the download did not release the gate');
 await evaluate(`[...document.querySelectorAll('button')].find(b => b.textContent === 'Continue to sign-in').click(); true`);
 if (!(await waitFor(`!!document.querySelector('#password')`, 15000))) await fail('the sign-in did not come back after personalising');
-await evaluate(`location.hash = '#/'; document.querySelector('#password').value = 'first-light'; document.querySelector('form').requestSubmit(); true`);
+await evaluate(`location.hash = '#/'; document.querySelector('#remember').checked = true; document.querySelector('#password').value = 'first-light'; document.querySelector('form').requestSubmit(); true`);
 if (!(await waitFor(`document.querySelector('h1')?.textContent === 'The module is sealed and reachable.'`))) await fail('the new password does not open the module');
 if (!(await evaluate(`document.body.textContent.includes('Ann')`))) await fail('the owner is not the one who personalised it');
 
@@ -499,7 +520,7 @@ if (!(await waitFor(`document.body.textContent.includes('Verify')`))) await fail
 await shot('smoke-software-update.png');
 if (!(await waitFor(`!!document.querySelector('#password')`, 30000))) await fail('the module did not come back to the sign-in after the firmware install');
 if (!(await waitFor(`document.body.textContent.includes('v2.5.0+mock')`))) await fail('the sign-in does not show the new firmware');
-await evaluate(`location.hash = '#/'; document.querySelector('#password').value = 'first-light'; document.querySelector('form').requestSubmit(); true`);
+await evaluate(`location.hash = '#/'; document.querySelector('#remember').checked = true; document.querySelector('#password').value = 'first-light'; document.querySelector('form').requestSubmit(); true`);
 if (!(await waitFor(`document.querySelector('h1')?.textContent === 'The module is sealed and reachable.'`))) await fail('could not sign in after the update');
 if (await evaluate(`document.body.textContent.includes('v2.5.0+mock available')`)) await fail('the overview still offers the firmware that is installed');
 

@@ -53,7 +53,10 @@ function form(session, view) {
   const local = view.local;   // { busy, error, phone: { pending, cancel, secondsLeft } }
   const pw = h('input', { id: 'password', type: 'password', autocomplete: 'current-password', required: true, disabled: local.busy || null });
 
-  const submit = (ev) => { ev.preventDefault(); view.signIn(pw.value); };
+  // v1 asked for the password at every operation and offered to stop asking;
+  // this is the same offer, made once, before any of them.
+  const keep = h('input', { id: 'remember', type: 'checkbox', checked: local.remember || null, onchange: (e) => { local.remember = e.target.checked; } });
+  const submit = (ev) => { ev.preventDefault(); view.signIn(pw.value, keep.checked); };
 
   const phoneRow = local.phone
     ? h('div.row', {},
@@ -75,9 +78,15 @@ function form(session, view) {
         h('p.soft', { style: 'font-size: 15.5px;' }, local.phone
           ? 'A request went to the phones paired with this module. Approving it on one of them signs you in here.'
           : 'Your password never leaves this browser. It derives a key here; the module only sees a signed challenge.')),
-      local.phone ? null : h('div.field', {},
-        h('input', { type: 'text', name: 'username', autocomplete: 'username', value: 'user', hidden: true, 'aria-hidden': 'true', tabindex: '-1' }),
-        h('label', { for: 'password' }, 'Password'), pw),
+      local.phone ? null : h('div.stack-s', {},
+        h('div.field', {},
+          h('input', { type: 'text', name: 'username', autocomplete: 'username', value: 'user', hidden: true, 'aria-hidden': 'true', tabindex: '-1' }),
+          h('label', { for: 'password' }, 'Password'), pw),
+        h('label.tick', { for: 'remember' }, keep,
+          h('span', {}, 'Remember the password for this session'),
+          h('span.hint', {}, local.remember
+            ? 'Everything you do is authorised without asking again.'
+            : 'Each operation asks for it again, and says what it is for.'))),
       local.error ? h('p.error', { role: 'alert' }, local.error) : null,
       phoneRow,
       h('div.card-foot', {}, lines.map((l) => h('span.note', {}, l)))));
