@@ -4,7 +4,11 @@ import { describeError } from '../session.js';
 
 /** `local` is what the form itself remembers; the page reads it straight off. */
 export function createSignInView({ session, paint }) {
-  const local = { busy: false, error: null, phone: null, remember: false };
+  // Ticked when the page is opened: signing in and then being asked again for
+  // every operation is not what somebody sitting down at their own module
+  // wants. Signing out unticks it — that is the moment the module might be
+  // handed on, and the next person should say for themselves.
+  const local = { busy: false, error: null, phone: null, remember: true };
   const view = {
       local,
     async signIn(password, remember = false) {
@@ -23,9 +27,9 @@ export function createSignInView({ session, paint }) {
     cancelPhone() { local.phone?.cancel(); },
 
     /**
-     * The form starts over when a session ends. The tick in particular: it is a
-     * choice about this session, and leaving it set would opt the next person
-     * in without their saying so.
+     * The form starts over when a session ends, and the tick comes back
+     * unticked rather than as it was: signing out is where a module changes
+     * hands, and the next person says for themselves.
      */
     reset() { Object.assign(local, { busy: false, error: null, phone: null, remember: false }); },
     changeAddress() {

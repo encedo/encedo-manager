@@ -90,7 +90,8 @@ await evaluate(`document.querySelector('#password').value = 'nope'; document.que
 if (!(await waitFor(`document.body.textContent.includes('The password is not correct.')`))) await fail('wrong password was not refused');
 
 // 3. right password signs in and the overview renders
-await evaluate(`document.querySelector('#remember').checked = true; document.querySelector('#password').value = 'demo'; document.querySelector('form').requestSubmit(); true`);
+if (!(await evaluate(`document.querySelector('#remember').checked`))) await fail('the password tick should start ticked');
+await evaluate(`document.querySelector('#password').value = 'demo'; document.querySelector('form').requestSubmit(); true`);
 if (!(await waitFor(`document.querySelector('h1')?.textContent === 'The module is sealed and reachable.'`))) await fail('overview did not render after sign-in');
 if (!(await waitFor(`document.body.textContent.includes('v2.5.0+mock available')`))) await fail('update flag missing on overview');
 await shot('smoke-overview.png');
@@ -423,6 +424,7 @@ if (!(await waitFor(`!!document.querySelector('#password')`))) await fail('sign 
 
 // 9b. without the tick, a page that needs a token asks for the password, says
 //     what for, and stops asking once "do not ask again" is answered
+if (await evaluate(`document.querySelector('#remember').checked`)) await fail('signing out should have unticked it');
 await evaluate(`document.querySelector('#password').value = 'demo2'; document.querySelector('form').requestSubmit(); true`);
 if (!(await waitFor(`document.querySelector('h1')?.textContent === 'The module is sealed and reachable.'`))) await fail('unticked sign-in did not get in');
 await evaluate(`location.hash = '#/keychain'; true`);
