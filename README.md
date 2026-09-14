@@ -24,13 +24,20 @@ remembered by the browser until `?hem=` clears it. Served by the module, it
 talks to its own origin and needs no query string at all.
 
 Without a module on the desk, the dev server also runs a mock of the device and
-the broker — password `demo`, one paired phone, two drives, fourteen keys, a
-firmware and a Manager update announced. Wiping it from Settings leaves a module
-out of the box, to personalise again:
+the broker, and prints the address to open:
 
 ```
 http://localhost:8080/?hem=http://localhost:8080/mock&broker=http://localhost:8080/mockbroker
 ```
+
+The password is `demo`, and the mock's 24 master words are printed at start-up,
+so the words can be tried as an authorisation too. It has two drives, fourteen
+keys, one paired phone, and a firmware and a Manager update announced. A phone
+request approves itself after a couple of polls, so the "confirm on your phone"
+modal and the per-scope questions behave as they do on hardware. **Wiping it
+from Settings leaves a module out of the box**, which is the way to walk through
+personalisation as often as you like — and afterwards it opens with the password
+you just chose, not with `demo`.
 
 ## Test it
 
@@ -52,8 +59,17 @@ key integrity *check* whose result says how it went.
 
 The browser smoke drives every screen in order and leaves a screenshot of each:
 sign-in, the drive, the keychain, the log, the phones, the hardware, the
-settings, a wipe and a personalisation from the box, and a firmware update with
-the reboot after it.
+settings, a wipe and a personalisation from the box, a firmware update with the
+reboot after it, and both ways of authorising an operation — the phone, and the
+password asked for scope by scope. It fails on a console error, so a stray
+exception does not slip through. It needs a Chromium binary: `/usr/bin/chromium-browser`
+unless `CHROMIUM` or a second argument says otherwise.
+
+The built bundle is worth the same run before it goes anywhere:
+
+```bash
+npm run build && npm run smoke:dist -- <out-dir>
+```
 
 Against a module on the desk:
 
