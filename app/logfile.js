@@ -52,6 +52,23 @@ export const EVENTS = [
   ['Data encrypted (%)', 'kid'],
   ['Data decrypted (%)', 'kid'],
   ['Shared secret agreed (%)', 'kid'],
+  ['ML-KEM encapsulated (%)', 'kid'],
+  ['ML-KEM decapsulated (%)', 'kid'],
+  ['ML-DSA signature created (%)', 'kid'],
+  ['ML-DSA signature verified (%)', 'kid'],
+  ['Attestation signed (%)', 'kid'],
+  ['Key storage reclaimed', 'bytes'],
+  ['Key storage repaired', 'bytes'],
+  ['Key derived by KDF (%)', 'kid'],
+  ['One-time password (%)', 'kid'],
+  ['X-Wing encapsulated (%)', 'kid'],
+  ['X-Wing decapsulated (%)', 'kid'],
+  ['Log signing key rotated', 'bytes'],
+  ['% events not logged', 'count'],
+  ['Drive unlocked (%)', 'text'],
+  ['Drive locked (%)', 'text'],
+  ['HPKE sealed (%)', 'kid'],
+  ['HPKE opened (%)', 'kid'],
 ];
 
 /** The module records how an operation ended, in three words. */
@@ -121,6 +138,10 @@ function readExtra(field, kind) {
     const seconds = readUint32(bytes);
     const at = new Date(seconds * 1000);
     return { kind, at, text: at.toISOString().slice(0, 19).replace('T', ' '), ...raw };
+  }
+  if (kind === 'count') {
+    const count = readUint32(bytes);
+    return { kind, count, text: String(count), ...raw };
   }
   if (kind === 'error') {
     const code = readUint32(bytes) | 0;              // the module writes them signed
