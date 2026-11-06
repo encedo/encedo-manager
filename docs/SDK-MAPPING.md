@@ -65,7 +65,7 @@ What is left needs a decision, not code: the BIP39 master passphrase.
 
 | Manager v1 | Endpoints | hem-sdk-js | Status | Note |
 |---|---|---|---|---|
-| keychain pages (core2), `removeKey()` | `api/keymgmt/list|search|get|create|import|update|delete` | `listKeys`, `searchKeys`, `getPubKey`, `createKeyPair`, `importPublicKey`, `updateKey`, `deleteKey` | covered | built on the Keychain page (2026-09-04). Two SDK fixes on the way: `listKeys` returns `{ list, total }` with `created`/`updated`, so a page can show dates and know when to ask for the next page; `createKeyPair` / `deriveKey` send `mode` only where the device wants one — the SECP* curves, which the caller now chooses for — instead of `mode: 'AES256'` |
+| keychain pages (core2), `removeKey()` | `api/keymgmt/list|search|get|create|import|update|delete` | `listKeys`, `searchKeys`, `getKeyPublicInfo`, `createKeyPair`, `importPublicKey`, `updateKey`, `deleteKey` | covered | built on the Keychain page (2026-09-04); signatures for firmware 1.3 since 2026-11-06 (sdk/MIGRATION.md). Two SDK fixes on the way: `listKeys` returns `{ list, total }` with `created`/`updated`, so a page can show dates and know when to ask for the next page; `createKeyPair` / `deriveKey` send `mode` only where the device wants one — the SECP* curves, which the caller now chooses for — instead of `mode: 'AES256'` |
 | share key by e-mail (core2) | broker `share/emailpubkey` | `broker.shareEmailPubkey()` | covered | |
 
 ### Secure drive
@@ -78,8 +78,8 @@ What is left needs a decision, not code: the BIP39 master passphrase.
 
 | Manager v1 | Endpoints | hem-sdk-js | Status | Note |
 |---|---|---|---|---|
-| consolelog pages (core2) | `api/logger/key`, `api/logger/list`, `api/logger/{id}` | `getLoggerKey`, `listLog`, `getLogEntry` | covered | |
-| `check_log_integrity()` (core2) | client-side: Ed25519 verify of the signed nonce, HMAC-SHA256 per line | `verifyLog()`, `verifyLoggerKey()`, `verifyLogEntry(token, id)` | covered | result names the first failing line and why. `verifyLoggerKey` was added on 2026-09-04: `/api/logger/key` answers with a nonce and its signature, and without checking that, a verified file only agrees with itself. Both were run over 137 files off a real PPA — all verified |
+| consolelog pages (core2) | `api/logger/key`, `api/logger/list`, `api/logger/{id}` | `getLoggerKey`, `listLogFiles`, `getLogFile` | covered | 1.3: the file being written is not listed (`current`) and answers 409 |
+| `check_log_integrity()` (core2) | client-side: Ed25519 verify of our nonce, then of every line (format v2, firmware 1.3) | `verifyLog()`, `verifyLoggerKey()`, `verifyLogFile(token, id)` | covered | result names the first failing line and why. `verifyLoggerKey` was added on 2026-09-04: `/api/logger/key` answers with a nonce and its signature, and without checking that, a verified file only agrees with itself. Both were run over 137 files off a real PPA — all verified |
 
 ### Software updates
 
@@ -87,7 +87,7 @@ What is left needs a decision, not code: the BIP39 master passphrase.
 |---|---|---|---|---|
 | `getNewFirmware()`, `getNewDashboard()` | broker `download/firmware/{v}`, `download/dashboard/{v}`, then `POST upload_fw` / `upload_ui` via XHR with progress | `broker.download(kind, version)`, `uploadFirmware(token, bytes, name, {onProgress})`, `uploadUi(...)` | covered | built on the Software page (2026-09-10); a file from anywhere goes in the same way, and without a token on a module out of the box, as v1's `manual_update_before_init` relied on |
 | `checkNewFirmware()`, `installNewFirmware()`, `checkNewDashboard()`, `installNewDashboard()` | `check_fw`, `install_fw`, `check_ui`, `install_ui` | `checkFirmware` / `waitFirmwareCheck`, `installFirmware`, `checkUi` / `waitUiCheck`, `installUi` | covered | the device answers 201/202 while it is still checking (v1 polled every 4 s); `checkFirmware` now answers null then and `waitFirmwareCheck` polls (2026-09-10) |
-| — | `api/system/upgrade/usbmode` | `usbMode(token)` | n/a | Not needed by the Manager (decided 2026-09-03); USB ACM uploads have their own webshell |
+| — | `api/system/upgrade/usbmode` | `rebootToUsbMode(token)` | n/a | Not needed by the Manager (decided 2026-09-03); USB ACM uploads have their own webshell |
 
 ### Helpers
 
@@ -106,8 +106,8 @@ Closed in the SDK (`a750037` onwards), each with a test in `sdk/test/sdk.test.mj
 3. ~~Login, UI: export `jwtParse`~~ exported.
 4. Disk unlock: nothing was missing; v1's `/ro` and `/rw` paths are dropped, the scope selects the mode.
 5. ~~Paired devices~~ `listExtAuth`, `deleteExtAuth`, `hasExtAuth`.
-6. ~~Operation log~~ `verifyLog`, `verifyLogEntry`.
-7. ~~Software updates~~ `broker.download`, `onProgress` on uploads. `usbMode` is not needed by the Manager.
+6. ~~Operation log~~ `verifyLog`, `verifyLogFile`.
+7. ~~Software updates~~ `broker.download`, `onProgress` on uploads. `rebootToUsbMode` is not needed by the Manager.
 8. ~~Keychain share~~ `broker.shareEmailPubkey`.
 9. Personalisation: ~~`provision`~~, ~~domains~~ done. **Decided: the BIP39 master passphrase stays.** The SDK gets it in two places, at the dashboard-building stage: `initialize` with a mnemonic-derived admin key, and a master-passphrase `authorize` for the settings page. v1 derives the admin key as `nacl.box.keyPair.fromSecretKey(hex(seed).substr(1, 64))`, one character into the BIP39 seed's hex string; devices in the field were personalised that way, so the SDK must reproduce it exactly.
 
@@ -121,9 +121,9 @@ Also fixed on the way: `registerExtAuth` sent `hash: 'not_implemented_yet'` in t
 | `home` | `getStatus`, `getConfig`, update flags from checkin | — |
 | `securestorage` | `unlockStorage`, `lockStorage` with `storage:disk<N>[:rw]` | — |
 | `devices`, `device_details` | `registerExtAuth` + QR render, `listExtAuth`, `deleteExtAuth` | — (built) |
-| `keychain`, `key_*` | `listKeys`, `searchKeys`, `getPubKey`, `createKeyPair`, `importPublicKey`, `updateKey`, `deleteKey`, `broker.shareEmailPubkey` | — (built) |
+| `keychain`, `key_*` | `listKeys`, `searchKeys`, `getKeyPublicInfo`, `createKeyPair`, `importPublicKey`, `updateKey`, `deleteKey`, `broker.shareEmailPubkey` | — (built) |
 | `hardware` | `getVersion`, `getStatus`, `selftest`, `reboot`, and the new `hem.tokens` getter | — (built; the attestation is left alone — it can hand back a private key on a device that is not provisioned yet) |
-| `consolelog`, `consolelog_show` | `getLoggerKey`, `verifyLoggerKey`, `listLog`, `getLogEntry`, `verifyLog` | — (built) |
+| `consolelog`, `consolelog_show` | `getLoggerKey`, `verifyLoggerKey`, `listLogFiles`, `getLogFile`, `verifyLog` | — (built) |
 | `update`, `update_*_page` | checkin flags, `broker.download`, `uploadFirmware` / `waitFirmwareCheck` / `installFirmware`, `uploadUi` / `waitUiCheck` / `installUi` | — (built; `update_bootloader_page` had no code behind it in v1 and stays out) |
 | `settings` | `getConfig`, `setConfig` (incl. wipeout), `setUserPassword`, `registerDomain`, `domainTaken`, `authorizeMaster` | — (built; drive geometry is not, because changing it destroys the data on them) |
 | `gettingStarted`, `initialisationPage`, `domainSetupPage`, `tutorial` | `initialize`, `broker.domainRegister` + `waitDomain`, `setConfig({ tls })`; the proof PDF is written by `app/pdf.js` | — (built) |

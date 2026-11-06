@@ -63,17 +63,18 @@ try {
   process.exit(1);
 }
 
-const loggerKey = await hem.getLoggerKey(token);
-const signed = await verifyLoggerKey(loggerKey);
+const nonce = crypto.getRandomValues(new Uint8Array(32));
+const loggerKey = await hem.getLoggerKey(token, { nonce });
+const signed = await verifyLoggerKey(loggerKey, nonce);
 console.log(`logger key ${loggerKey.key?.slice(0, 16)}… · nonce ${signed ? 'signed by this module' : 'NOT SIGNED — the key proves nothing'}`);
 
 const ids = [];
-let page = await hem.listLog(token, 0);
+let page = await hem.listLogFiles(token);
 const total = Number(page.total ?? page.id?.length ?? 0);
 while (page.id?.length) {
   ids.push(...page.id);
   if (ids.length >= total) break;
-  page = await hem.listLog(token, ids.length);
+  page = await hem.listLogFiles(token, { offset: ids.length });
 }
 console.log(`${ids.length} log file${ids.length === 1 ? '' : 's'}\n`);
 
@@ -87,7 +88,7 @@ const index = { module: hemUrl, firmware: version, loggerKey, keySigned: signed,
 async function readFile(id, attempts = 3) {
   for (let attempt = 1; ; attempt++) {
     try {
-      return await hem.getLogEntry(token, id);
+      return await hem.getLogFile(token, id);
     } catch (e) {
       if (attempt >= attempts) throw e;
       await new Promise((r) => setTimeout(r, 400 * attempt));

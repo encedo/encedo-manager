@@ -283,17 +283,21 @@ export class Session extends EventTarget {
   // -- the keychain ------------------------------------------------------------
 
   /**
-   * Every key in the repository. The device answers one page at a time and says
-   * how many keys it holds, so this asks again until it has them all; a PPA
-   * keychain is small enough that the page can then search it without asking.
+   * Every key in the repository. The device answers 15 slots a page and says
+   * how many records it holds, so this asks again from `offset + listed` until
+   * it has them all; a PPA keychain is small enough that the page can then
+   * search it without asking. A record that fails its check takes a slot and
+   * is not listed.
    */
-  async loadKeys({ pageSize = 50 } = {}) {
+  async loadKeys() {
     const token = await this.token('keymgmt:list');
-    let page = await this.hem.listKeys(token, 0, pageSize);
+    let page = await this.hem.listKeys(token);
     const list = [...page.list];
-    while (list.length < page.total && page.list.length) {
-      page = await this.hem.listKeys(token, list.length, pageSize);
+    let next = page.offset + page.listed;
+    while (next < page.total && page.listed) {
+      page = await this.hem.listKeys(token, { offset: next });
       list.push(...page.list);
+      next = page.offset + page.listed;
     }
     const keys = list.map(describeKey);
     this.#set({ keys, lastError: null });
@@ -309,7 +313,7 @@ export class Session extends EventTarget {
   async findKeys(pattern) {
     const token = await this.token('keymgmt:search');
     try {
-      return (await this.hem.searchKeys(token, pattern)).map(describeKey);
+      return (await this.hem.searchKeys(token, pattern)).list.map(describeKey);
     } catch (e) {
       if (e instanceof HemError && e.code === 'http_404') return [];
       throw e;
@@ -318,8 +322,9 @@ export class Session extends EventTarget {
 
   /** Type and public key of one entry; the list carries no key bytes. */
   async keyPublic(kid) {
-    const data = await this.hem.getPubKey(await this.token('keymgmt:get'), kid);
-    return { kid, type: data.type ?? '', pubkey: data.pubkey ?? data.der ?? '', updated: data.updated ?? null };
+    const key = await this.hem.getKeyPublicInfo(await this.token('keymgmt:get'), kid);
+    const pub = key.pubkey ?? key.der;
+    return { kid, type: [...key.flags, key.type].join(','), pubkey: pub ? bytesToB64(pub) : '', updated: key.updated };
   }
 
   /**
@@ -328,7 +333,7 @@ export class Session extends EventTarget {
    * a caller that has text to put there encodes it with toB64Text() first.
    */
   async createKey({ label, type, mode = null, descr = '' }) {
-    const { kid } = await this.hem.createKeyPair(await this.token('keymgmt:gen'), asLabel(label), type, asB64Field(descr), mode);
+    const { kid } = await this.hem.createKeyPair(await this.token('keymgmt:gen'), asLabel(label), type, { descr: descrBytes(descr), mode });
     await this.loadKeys();
     return kid;
   }
@@ -336,14 +341,14 @@ export class Session extends EventTarget {
   /** Import someone else's public key, pasted as base64 or hex. */
   async importKey({ label, type, mode = null, pubkey, descr = '' }) {
     const bytes = parseKeyBytes(pubkey);
-    const { kid } = await this.hem.importPublicKey(await this.token('keymgmt:imp'), asLabel(label), type, bytes, asB64Field(descr), mode);
+    const { kid } = await this.hem.importPublicKey(await this.token('keymgmt:imp'), asLabel(label), type, bytes, { descr: descrBytes(descr), mode });
     await this.loadKeys();
     return kid;
   }
 
   /** Label and description are the only parts of a key that can change. */
   async renameKey(kid, label, descr) {
-    await this.hem.updateKey(await this.token('keymgmt:upd'), kid, asLabel(label), asB64Field(descr));
+    await this.hem.updateKey(await this.token('keymgmt:upd'), kid, asLabel(label), descrBytes(descr));
     await this.loadKeys();
   }
 
@@ -486,9 +491,8 @@ export class Session extends EventTarget {
         step({ step: 'upload', size: image.length, total: image.length });
       }
       const onProgress = (loaded, total) => step({ loaded, total });
-      const name = kind === 'firmware' ? 'firmware.bin' : 'webroot.tar';
-      if (kind === 'firmware') await this.hem.uploadFirmware(token, image, name, { onProgress, signal });
-      else await this.hem.uploadUi(token, image, name, { onProgress, signal });
+      if (kind === 'firmware') await this.hem.uploadFirmware(token, image, { onProgress, signal });
+      else await this.hem.uploadUi(token, image, { onProgress, signal });
       step({ step: 'verify', loaded: image.length });
       const result = kind === 'firmware'
         ? await this.hem.waitFirmwareCheck(token, { pollInterval, signal })
@@ -743,24 +747,30 @@ export class Session extends EventTarget {
 
   /**
    * The log files the module still holds, and the key it seals them with. The
-   * key comes with a nonce the module signs on the spot: without that, a key is
-   * only a number, and verifying files against it would prove nothing.
+   * key comes with a signature over a nonce of ours, made on the spot: without
+   * that, a key is only a number, and verifying files against it would prove
+   * nothing. The device does not list the file of the running session - it is
+   * still being written - but names it `current`; it goes last in `ids`.
    */
   async loadLogs() {
     const token = await this.token('logger:get');
-    const loggerKey = await this.hem.getLoggerKey(token);
-    const signed = await verifyLoggerKey(loggerKey);
+    const nonce = crypto.getRandomValues(new Uint8Array(32));
+    const loggerKey = await this.hem.getLoggerKey(token, { nonce });
+    const signed = await verifyLoggerKey(loggerKey, nonce);
 
-    let page = await this.hem.listLog(token, 0);
+    let page = await this.hem.listLogFiles(token);
     const ids = [...(page.id ?? [])];
     const total = Number(page.total ?? ids.length);
     let guard = 0;
     while (ids.length < total && page.id?.length && guard++ < 100) {
-      page = await this.hem.listLog(token, ids.length);
+      page = await this.hem.listLogFiles(token, { offset: ids.length });
       if (!page.id?.length) break;
       ids.push(...page.id);
     }
-    const logs = { ids, key: loggerKey.key ?? '', signed, total: ids.length };
+    // The open file is shown too, as the one that cannot be read yet.
+    const current = page.current ?? null;
+    if (current && !ids.includes(current)) ids.push(current);
+    const logs = { ids, current, key: loggerKey.key ?? '', signed, total: ids.length };
     this.#set({ logs, lastError: null });
     return logs;
   }
@@ -774,12 +784,12 @@ export class Session extends EventTarget {
     const token = await this.token('logger:get');
     let answer;
     try {
-      answer = await this.hem.getLogEntry(token, id);
+      answer = await this.hem.getLogFile(token, id);
     } catch (e) {
-      // The module refuses the file it is writing into right now with a 406.
-      // Watched across two archive runs of a real PPA, it was the newest file
-      // both times, and both times it read fine once that session had ended.
-      if (e instanceof HemError && e.code === 'http_406') {
+      // The module refuses the file it is writing into right now: 409 since
+      // firmware 1.3 (406 before). It is not listed any more, but its id is
+      // `current`, and it reads fine once that session has ended.
+      if (e instanceof HemError && (e.code === 'http_409' || e.code === 'http_406')) {
         throw new HemError('The module is still writing this file', { code: 'log_in_progress' });
       }
       throw e;
@@ -890,7 +900,8 @@ export const phonePid = (descrB64) => (descrB64?.startsWith(PHONE_PREFIX_B64) &&
  * for. Everything else is read out of the description.
  */
 export function describeKey(k) {
-  const parts = String(k.type ?? '').split(',').filter(Boolean);
+  // The SDK splits the device's 'FLAGS,TYPE'; a raw type string is split here.
+  const parts = k.flags ? [...k.flags, k.type ?? ''] : String(k.type ?? '').split(',').filter(Boolean);
   const algorithm = parts.at(-1) ?? '';
   const flags = parts.slice(0, -1);
   const symmetric = /^(AES|SHA)/.test(algorithm);
@@ -898,7 +909,7 @@ export function describeKey(k) {
   return {
     kid: k.kid,
     label: k.label ?? '',
-    type: k.type ?? '',
+    type: [...flags, algorithm].join(','),
     algorithm,
     flags,
     uses: flags.filter((f) => f === 'ECDH' || f === 'ExDSA'),
@@ -970,6 +981,12 @@ export function asB64Field(value) {
     throw new HemError(`The description field holds ${DESCR_BYTES} bytes and that is ${bytes}`, { code: 'descr_too_long' });
   }
   return text;
+}
+
+/** The description field as the SDK takes it: bytes, or null for none. */
+export function descrBytes(value) {
+  const text = asB64Field(value);
+  return text ? Uint8Array.from(atob(text), (c) => c.charCodeAt(0)) : null;
 }
 
 /** A public key pasted as base64 or as hex. Hex wins when it could be either. */

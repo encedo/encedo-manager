@@ -263,7 +263,8 @@ await evaluate(`location.hash = '#/log'; true`);
 if (!(await waitFor(`document.querySelector('h1')?.textContent === '7 log files, none read yet.'`))) await fail('the log index did not render');
 if (!(await evaluate(`document.body.textContent.includes('The module signed a fresh nonce with it')`))) await fail('the logger key is not vouched for');
 if (!(await evaluate(`document.querySelectorAll('tbody tr:not(.detail)').length === 7`))) await fail('the log files are not listed');
-// The newest file is the session the module is still writing: it refuses it with a 406.
+// The newest file is the session the module is still writing: the device does not list
+// it (it names it `current`) and refuses it with a 409.
 await evaluate(`document.querySelector('tbody tr td.actions button').click(); true`);
 if (!(await waitFor(`document.body.textContent.includes('still being written')`))) await fail('the open file is not reported as open');
 if (!(await evaluate(`document.body.textContent.includes('hands a file over once that session ends')`))) await fail('and it does not say why');
@@ -286,9 +287,9 @@ await evaluate(`document.querySelector('tr.detail').scrollIntoView({ block: 'cen
 await shot('smoke-log.png');
 
 await evaluate(`[...document.querySelectorAll('button')].find(b => b.textContent.startsWith('Check every file')).click(); true`);
-if (!(await waitFor(`document.body.textContent.includes('One file does not match its seal.')`, 20000))) await fail('checking every file did not find the edited one');
+if (!(await waitFor(`document.body.textContent.includes('One file does not match its signature.')`, 20000))) await fail('checking every file did not find the edited one');
 if (!(await evaluate(`document.body.textContent.includes('Fails at entry')`))) await fail('the edited file is not marked in the list');
-if (!(await evaluate(`document.querySelector('h1')?.textContent.includes('one does not match its seal')`))) await fail('the heading does not report it');
+if (!(await evaluate(`document.querySelector('h1')?.textContent.includes('one does not match its signature')`))) await fail('the heading does not report it');
 if (!(await evaluate(`document.body.textContent.includes('still being written')`))) await fail('checking every file lost the open one');
 
 // 6b. paired phones: the two in the keychain, one of them unknown to the broker;
@@ -327,7 +328,7 @@ if (!(await waitFor(`document.querySelector('h1')?.textContent === 'One phone ca
 await evaluate(`location.hash = '#/hardware'; true`);
 if (!(await waitFor(`document.querySelector('h1')?.textContent === 'The module reports nothing wrong.'`))) await fail('the hardware page did not render');
 if (!(await evaluate(`document.body.textContent.includes('PPA rev 2.2')`))) await fail('the model is missing');
-if (!(await evaluate(`document.body.textContent.includes('Encedo nGINE FW v1.2.2')`))) await fail('the firmware version is missing');
+if (!(await evaluate(`document.body.textContent.includes('Encedo nGINE FW v1.3.0')`))) await fail('the firmware version is missing');
 if (!(await evaluate(`document.body.textContent.includes('Bootloader signature')`))) await fail('what signed the software is missing');
 if (!(await evaluate(`/\\d+(\\.\\d+)? °C/.test(document.body.textContent)`))) await fail('no temperature');
 
@@ -450,7 +451,7 @@ if (!(await waitFor(`document.querySelector('h1')?.textContent === 'Confirm on y
 if (!(await waitFor(`document.querySelector('h1')?.textContent === 'The module is sealed and reachable.'`, 15000))) await fail('the mock phone did not approve the sign-in');
 if (!(await evaluate(`document.body.textContent.includes('signed in with the phone')`))) await fail('the masthead does not say how');
 await evaluate(`location.hash = '#/log'; true`);
-if (await evaluate(`document.body.textContent.includes('does not match its seal')`)) await fail('the last session\'s log notice survived the sign-out');
+if (await evaluate(`document.body.textContent.includes('does not match its signature')`)) await fail('the last session\'s log notice survived the sign-out');
 if (!(await waitFor(`!!document.querySelector('.card.asking')`))) await fail('the log page did not ask the phone');
 if (!(await evaluate(`document.body.textContent.includes('read the operation log')`))) await fail('the banner does not say what for');
 await shot('smoke-asking.png');
@@ -514,7 +515,7 @@ if (!(await evaluate(`document.body.textContent.includes('Ann')`))) await fail('
 //     module reboots, the page waits for it and comes back on the new version
 await evaluate(`location.hash = '#/software'; true`);
 if (!(await waitFor(`document.querySelector('h1')?.textContent === 'Firmware 2.5.0+mock and Manager 2.1.0+mock are ready to install.'`))) await fail('the software page did not render');
-if (!(await evaluate(`document.body.textContent.includes('Encedo nGINE FW v1.2.2') && document.body.textContent.includes('Bootloader')`))) await fail('the versions are not shown');
+if (!(await evaluate(`document.body.textContent.includes('Encedo nGINE FW v1.3.0') && document.body.textContent.includes('Bootloader')`))) await fail('the versions are not shown');
 await shot('smoke-software.png');
 await evaluate(`[...document.querySelectorAll('button')].find(b => b.textContent === 'Install Firmware 2.5.0+mock').click(); true`);
 if (!(await waitFor(`[...document.querySelectorAll('.card-head .v')].some(v => /uploading|verifying|installing|rebooting/.test(v.textContent))`))) await fail('the update did not start');

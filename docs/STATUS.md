@@ -20,7 +20,7 @@ tried on hardware yet.
 | Secure drive | Unlock read-only or read-write, lock |
 | Keychain | Sorted, searched, paged; a key opens under its own row: public half, description as bytes, rename, delete, share code with QR or by e-mail; create, import, read a pasted share code |
 | Paired phones | Read out of the keychain and checked against the broker (a phone in one place only is shown as such); pairing by QR drawn here; unpairing takes both halves — a 4xx from the broker asks "Do it anyway?" and, on yes, the key goes regardless |
-| Operation log | File index; the logger key checked against a nonce the module signs; each file's HMAC chain replayed in the browser; entries read into words; the file still being written shown as such |
+| Operation log | File index; the logger key checked against a nonce of ours the module signs; every line's signature (format v2) checked in the browser; entries read into words; the file still being written shown as such |
 | Hardware | Version, what signed the firmware and bootloader, temperature while the page is open, the module's self-test, the scopes this browser holds (and "forget them"), a reboot that asks twice |
 | Settings | Owner, the three things the module takes on faith, a password change that never sends the password, the 24 words as authorisation, a name under ence.do with its certificate, a wipe behind a typed WIPE |
 | Personalisation | A module out of the box (`inited` in its status) goes through v1's steps: owner, password, name (free, or its own confirmed by e-mail), drive layout, trust; 24 words made in the browser as the master key; init, format, certificate; a Proof of Personalisation PDF written in JS. A failure wipes back to the box. Air-gapped it keeps my.ence.do |

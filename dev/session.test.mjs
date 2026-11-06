@@ -61,7 +61,7 @@ test('probe counts attempts while the module is away, then reaches it', async ()
   s.addEventListener('change', () => changes.push(s.state.phase));
   await s.waitForDevice({ intervalMs: 10 });
   assert.equal(s.state.phase, 'reachable');
-  assert.equal(s.state.version.fwv, 'Encedo nGINE FW v1.2.2');
+  assert.equal(s.state.version.fwv, 'Encedo nGINE FW v1.3.0');
   await s.prepare();
   assert.equal(s.state.online, true);
   assert.equal(s.state.paired, true);
@@ -650,7 +650,7 @@ test('a log line is read the way the module wrote it', () => {
 
   const keyLine = parseLogLine('0|69d7d1b4|0|0|42PxAFOtW_G7WLOu-OrfVmZwo6z4GpiCUAWaO1JqpL8|YqJu0R6aeg2YBYuU_GftTXvzoPz8GN5JH7CfUZGg6EEQOCphJTu_7ko5ZKJcQ5SY_-yb7HXKhWhOfXNbE3FTBA|1M4_m-_7oyieCAHqPIUqKA');
   assert.equal(keyLine.keyLine, true);
-  assert.equal(keyLine.event, 'Log integrity key created');
+  assert.equal(keyLine.event, 'Log signing key certified');
   assert.equal(keyLine.subject, null, 'the nonce is not a subject');
 
   assert.equal(parseLogLine('# Encedo nGINE FW v1.2.2'), null);
@@ -683,9 +683,10 @@ test('an entry from before the clock was set is dated from the file it is in', (
 test('the file the module is still writing is a state, not a failure', async () => {
   const s = await signedIn();
   const logs = await s.loadLogs();
-  const newest = [...logs.ids].sort((a, b) => parseInt(b, 16) - parseInt(a, 16))[0];
-  await assert.rejects(s.readLog(newest), (e) => e.code === 'log_in_progress');
-  assert.equal(describeError(await s.readLog(newest).catch((e) => e)),
+  assert.ok(logs.current, 'the device names the open file current');
+  assert.equal(logs.ids.at(-1), logs.current, 'and it is shown last');
+  await assert.rejects(s.readLog(logs.current), (e) => e.code === 'log_in_progress');
+  assert.equal(describeError(await s.readLog(logs.current).catch((e) => e)),
     'The module is still writing this file. It can be read once that session ends.');
   const older = [...logs.ids].sort((a, b) => parseInt(b, 16) - parseInt(a, 16))[1];
   assert.equal((await s.readLog(older)).ok, true, 'the one before it reads fine');
@@ -694,8 +695,8 @@ test('the file the module is still writing is a state, not a failure', async () 
 test('the log index comes with a key the module proves it holds', async () => {
   const s = await signedIn();
   const logs = await s.loadLogs();
-  assert.equal(logs.ids.length, 7);
-  assert.equal(logs.signed, true, 'the module signed the nonce it sent with the key');
+  assert.equal(logs.ids.length, 7, 'six finished files and the open one');
+  assert.equal(logs.signed, true, 'the module signed the nonce we sent it');
   assert.ok(logs.key.length > 20);
   assert.equal(s.state.logs.ids[0], logs.ids[0]);
 });
@@ -714,7 +715,7 @@ test('a file is verified here, entry by entry, before it is read', async () => {
   assert.equal(entries[0].keyLine, true);
   assert.deepEqual(entries.slice(1, 4).map((e) => e.event), ['System powered up', 'Key integrity check', 'Self-test passed']);
   assert.ok(entries.some((e) => e.event.startsWith('Key generated (')));
-  assert.equal(logFileHeader(read.text), 'Encedo nGINE FW v1.2.2');
+  assert.equal(logFileHeader(read.text), 'Encedo nGINE FW v1.3.0');
 });
 
 test('a file that was changed after the module wrote it says which entry', async () => {
@@ -730,10 +731,10 @@ test('a file that was changed after the module wrote it says which entry', async
   }
   assert.equal(results.length, 6, 'six finished files, one still being written');
   const failed = results.filter((r) => !r.ok);
-  assert.equal(failed.length, 1, 'one file in the mock was edited after sealing');
-  assert.equal(failed[0].reason, 'hmac');
+  assert.equal(failed.length, 1, 'one file in the mock was edited after signing');
+  assert.equal(failed[0].reason, 'signature');
   assert.equal(typeof failed[0].line, 'number');
-  assert.match(describeVerification(failed[0]), /does not match its seal/);
+  assert.match(describeVerification(failed[0]), /does not match its signature/);
 
   // The entries are still readable; nothing is hidden because one line failed.
   assert.ok(parseLogFile(failed[0].text).length > 5);

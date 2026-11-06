@@ -68,7 +68,8 @@ neither of them says out loud.
 - `check_fw` and `check_ui` answer **201 or 202 while the module is still
   verifying** an uploaded image. The SDK's `waitFirmwareCheck` / `waitUiCheck`
   poll them.
-- The module refuses the **log file it is writing** with a 406. That is a
+- The module refuses the **log file it is writing** with a 409 (406 before
+  firmware 1.3), and 1.3 does not list it: its id is `current`. That is a
   state, not a failure.
 - A release's version is the hash of the **manifest**, not of the tar — see
   [`docs/PACKAGING.md`](docs/PACKAGING.md).

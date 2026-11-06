@@ -7,15 +7,15 @@
 //
 //   <counter hex>|<epoch hex>|<type hex>|<result>|<subject>|<extra>|<mac>
 //
-// The first line of every file is a key line (type 0, result 0) whose subject
-// field is the nonce that seals the rest of the file and whose extra field is
-// that nonce's signature. Comment lines start with '#'.
+// The first line of every file is a header (type 0, result 0, subject `v2`)
+// whose extra field is the file's signing key, certified by the module's log
+// key; every line ends with its signature. Comment lines start with '#'.
 
 import { bytesToHex, bytesToB64, asciiText } from './session.js';
 
 /** The module's event table: what each type means, and what its extra field holds. */
 export const EVENTS = [
-  ['Log integrity key created'],
+  ['Log signing key certified'],
   ['System powered up'],
   ['System rebooted'],
   ['System shut down'],
@@ -169,7 +169,7 @@ export function parseLogLine(line, bootEpoch = null) {
     type,
     result: RESULTS[result] ?? `result ${result}`,
     ok: result === 0,
-    event: keyLine ? 'Log integrity key created' : event,
+    event: keyLine ? 'Log signing key certified' : event,
     subject,
     extra,
     keyLine,
@@ -206,12 +206,21 @@ export function logFileTime(id) {
 export function describeVerification(result) {
   if (!result) return 'Not read yet.';
   if (result.ok) return `${result.lines} entries verified.`;
-  const where = result.line === undefined ? '' : ` at entry ${result.line}`;
+  const where = result.line ? ` at line ${result.line}` : '';
   switch (result.reason) {
-    case 'signature': return `The key line${where} is not signed by this module.`;
-    case 'sequence': return `The counter jumps${where}: entries are missing.`;
-    case 'no_key': return `There is no key line before entry ${result.line}.`;
-    case 'hmac': return `Entry ${result.line} does not match its seal — it was changed after the module wrote it.`;
+    case 'signature': return `Line ${result.line} does not match its signature — it was changed after the module wrote it.`;
+    case 'header': return `The signing key${where} is not certified by this module.`;
+    case 'rotate': return `The signing key changes${where} without the line that announces it.`;
+    case 'no_header': return 'There is no signing key at the top of the file.';
+    case 'cut_front': return 'The beginning of the file is missing.';
+    case 'format': return `Line ${result.line} is not a log line.`;
+    case undefined: {
+      // Every line there verifies; what is missing are lines in between.
+      const missing = (result.gaps ?? []).reduce((n, g) => n + g.next - g.after - 1, 0);
+      if (missing) return `${result.lines} entries verified, ${missing} deleted.`;
+      if (result.keyProven === false) return 'The module did not prove it holds the key.';
+      return 'Verification failed.';
+    }
     default: return `Verification failed${where}.`;
   }
 }

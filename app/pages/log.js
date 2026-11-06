@@ -40,7 +40,7 @@ function title(logs, view) {
   const verified = read.filter((f) => f.result?.ok).length;
   const writing = read.filter((f) => f.writing).length;
   const count = logs.ids.length === 1 ? 'One log file' : `${logs.ids.length} log files`;
-  if (failed) return `${count}; ${failed === 1 ? 'one does not match its seal' : `${failed} do not match their seals`}.`;
+  if (failed) return `${count}; ${failed === 1 ? 'one does not match its signature' : `${failed} do not match their signatures`}.`;
   if (!verified) return `${count}, none read yet.`;
   if (verified + writing === logs.ids.length) {
     return writing ? `${count}, every finished one verified.` : `${count}, every one verified.`;

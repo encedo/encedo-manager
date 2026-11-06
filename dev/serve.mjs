@@ -41,7 +41,7 @@ const key = (kid, label, type, descr, created) => ({
 const newKid = () => [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, '0')).join('');
 const hexBytes = (hex) => Uint8Array.from(hex.match(/../g) ?? [], (b) => parseInt(b, 16));
 const b64urlText = (text) => Buffer.from(text, 'utf8').toString('base64url');
-const FIRMWARE = 'Encedo nGINE FW v1.2.2';
+const FIRMWARE = 'Encedo nGINE FW v1.3.0';
 /** What the mock backend announces at check-in, and what the module runs once installed. */
 export const NEW_FIRMWARE = 'v2.5.0+mock';
 export const NEW_MANAGER = 'v2.1.0+mock';
@@ -60,42 +60,41 @@ async function pubFromSeed(seed) {
 }
 
 /**
- * One audit-log file, sealed the way the device seals it: a key line carrying a
- * fresh nonce and its Ed25519 signature, then entries whose last field is the
- * first 16 bytes of HMAC-SHA256(nonce, everything up to and including the last
- * `|`). Counters run in hex without gaps. `tamperAt` edits one entry after it
- * was sealed, which is what a log someone has been at looks like.
+ * One audit-log file, signed the way firmware 1.3 signs it (format v2): a
+ * header line carrying a per-file Ed25519 key certified by the device log key,
+ * then entries, every line signed with the per-file key over everything up to
+ * and including the last `|`. `seq` is hex and runs from 0 without gaps.
+ * `tamperAt` edits one entry after it was signed, which is what a log someone
+ * has been at looks like.
  */
-async function buildLogFile(signKey, startedAt, entries, { tamperAt = null } = {}) {
-  const nonce = crypto.getRandomValues(new Uint8Array(32));
-  const signature = new Uint8Array(await crypto.subtle.sign({ name: 'Ed25519' }, signKey, nonce));
-  const hmacKey = await crypto.subtle.importKey('raw', nonce, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const seal = async (prefix) => {
-    const mac = new Uint8Array(await crypto.subtle.sign('HMAC', hmacKey, Buffer.from(prefix, 'utf8'))).subarray(0, 16);
-    return prefix + Buffer.from(mac).toString('base64url');
+async function buildLogFile(deviceKey, startedAt, entries, { tamperAt = null } = {}) {
+  const fileKey = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+  const pub = new Uint8Array(await crypto.subtle.exportKey('raw', fileKey.publicKey));
+  const cert = new Uint8Array(await crypto.subtle.sign({ name: 'Ed25519' }, deviceKey, pub));
+  const sign = async (text) => {
+    const sig = new Uint8Array(await crypto.subtle.sign({ name: 'Ed25519' }, fileKey.privateKey, Buffer.from(text, 'utf8')));
+    return text + Buffer.from(sig).toString('base64url');
   };
 
-  // Counters start at 0 and the first entries carry seconds since boot, because
-  // the clock is not set until the module is told the time — that is what a real
-  // file looks like (`# Encedo nGINE FW v1.2.2`, checked against 137 of them).
+  // The first entries carry seconds since boot, because the clock is not set
+  // until the module is told the time — that is what a real file looks like.
   const lines = [`# ${FIRMWARE}`];
-  let counter = 0;
+  let seq = 0;
   let clock = 0;
-  const stamp = () => (clock ? (clock += 23) : (counter + 6)).toString(16);
-  lines.push(await seal(`0|${stamp()}|0|0|${Buffer.from(nonce).toString('base64url')}|${Buffer.from(signature).toString('base64url')}|`));
+  const stamp = () => (clock ? (clock += 23) : (seq + 6)).toString(16);
+  lines.push(await sign(`0|${stamp()}|0|0|v2|${Buffer.concat([pub, cert]).toString('base64url')}|`));
   for (const [type, result, subject = '', extra = ''] of entries) {
-    counter++;
+    seq++;
     if (type === 0x13) clock = startedAt;                 // the clock is set here
-    lines.push(await seal(`${counter.toString(16)}|${stamp()}|${type.toString(16)}|${result}|${subject}|${extra}|`));
+    lines.push(await sign(`${seq.toString(16)}|${stamp()}|${type.toString(16)}|${result}|${subject}|${extra}|`));
   }
   if (tamperAt !== null) {
-    const fields = lines[tamperAt].split('|');    // the seal is the last field; edit what it covers
+    const fields = lines[tamperAt].split('|');    // the signature is the last field; edit what it covers
     fields[5] += 'Cg';
     lines[tamperAt] = fields.join('|');
   }
-  return { entries: counter, text: lines.join('\n') + '\n' };
+  return { entries: seq, text: lines.join('\n') + '\n' };
 }
-
 /** A handful of files, oldest first, one of them edited after the fact. */
 async function buildLogs(keys) {
   const signing = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
@@ -132,6 +131,7 @@ async function buildLogs(keys) {
   files.push({ id: (0x68baf780).toString(16), ...live, open: true });
   return {
     files,
+    signer: signing.privateKey,
     key: Buffer.from(new Uint8Array(await crypto.subtle.exportKey('raw', signing.publicKey))).toString('base64'),
     nonce: Buffer.from(proof).toString('base64'),
     nonce_signed: Buffer.from(new Uint8Array(await crypto.subtle.sign({ name: 'Ed25519' }, signing.privateKey, proof))).toString('base64'),
@@ -416,10 +416,9 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
       return [200, { token: jwt({ scope: payload.scope, exp: payload.exp, sub: payload.iss === masterPub ? 'master' : 'user' }) }];
     }
     if (p === '/mock/api/auth/ext/request') {
-      // `exp` is required: the device is being told how long the token it
-      // issues should live, and a missing one reads as a request from 1970.
-      if (!Number.isFinite(body.exp)) return [400, { error: 'exp required' }];
-      return [200, { challenge: 'mock', epk: body.epk, scope: body.scope, exp: body.exp }];
+      // The real authreq is a JWT with the scope sealed for each phone; the
+      // mock passes the scope along in clear so its phone can answer for it.
+      return [200, { authreq: 'mock', epk: body.epk, scope: body.scope }];
     }
     if (p === '/mock/api/auth/ext/token') {
       // The reply names the scope the phone approved, the way the real one is bound to it.
@@ -457,30 +456,36 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
     // ---- keychain ---------------------------------------------------------------------
     if (p.startsWith('/mock/api/keymgmt/list')) {
       if (scopeOf(req) !== 'keymgmt:list') return [403, { error: 'scope' }];
-      const [offset = 0, limit = 15] = p.split('/').slice(5).map(Number);
-      const page = state.keys.slice(offset, offset + limit);
-      return [200, { total: state.keys.length, listed: page.length, list: listed(page) }];
+      // /list/<offset>/<limit>[/pubkey], at most 15 a page, as the device does
+      const [offset = 0, limit = 15] = p.split('/').slice(5, 7).map(Number);
+      const page = state.keys.slice(offset, offset + Math.min(limit, 15));
+      return [200, { offset, deleted: 0, invalid: 0, total: state.keys.length, listed: page.length, list: listed(page) }];
     }
     if (p === '/mock/api/keymgmt/search' && method === 'POST') {
       if (scopeOf(req) !== 'keymgmt:search') return [403, { error: 'scope' }];
-      const want = Buffer.from(String(body.descr ?? '').replace(/^\^/, ''), 'base64');
-      const hits = state.keys.filter((k) => Buffer.from(k.descr, 'base64').subarray(0, want.length).equals(want));
-      const offset = Number(body.offset ?? 0), limit = Number(body.limit ?? 15);
+      // '^' prefix, '$' suffix, neither: anywhere; `total` counts every record, not the matches
+      const pattern = String(body.descr ?? '');
+      const want = Buffer.from(pattern.replace(/^\^/, '').replace(/\$$/, ''), 'base64');
+      const at = (d) => (pattern.startsWith('^') ? d.subarray(0, want.length).equals(want)
+        : pattern.endsWith('$') ? d.subarray(d.length - want.length).equals(want) : d.includes(want));
+      const hits = state.keys.filter((k) => at(Buffer.from(k.descr, 'base64')));
+      const offset = Number(body.offset ?? 0), limit = Math.min(Number(body.limit ?? 15), 15);
       const page = hits.slice(offset, offset + limit);
-      if (!hits.length) return [404, { error: 'not found' }];
-      return [200, { total: hits.length, listed: page.length, list: listed(page) }];
+      return [200, { offset, deleted: 0, invalid: 0, total: state.keys.length, listed: page.length, list: listed(page) }];
     }
     if (p.startsWith('/mock/api/keymgmt/get/')) {
       if (scopeOf(req) !== 'keymgmt:get') return [403, { error: 'scope' }];
       const k = state.keys.find((x) => x.kid === p.split('/').pop());
-      return k ? [200, { type: k.type, pubkey: k.pubkey, updated: k.updated }] : [404, { error: 'no such key' }];
+      return k ? [200, { type: k.type, label: k.label, ...(k.descr ? { descr: k.descr } : {}), created: k.created, updated: k.updated, pubkey: k.pubkey }] : [404, { error: 'no such key' }];
     }
     if (p === '/mock/api/keymgmt/create' && method === 'POST') {
       if (scopeOf(req) !== 'keymgmt:gen') return [403, { error: 'scope' }];
       const kid = newKid();
       const type = ['PKEY', usesFor(body.type, body.mode), body.type].filter(Boolean).join(',');
-      state.keys.unshift({ kid, label: body.label, type, descr: body.descr ?? '', created: nowSecs(), updated: nowSecs(), pubkey: Buffer.from(kid.repeat(4).slice(0, 32), 'utf8').toString('base64') });
-      return [200, { kid }];
+      const made = { kid, label: body.label, type, descr: body.descr ?? '', created: nowSecs(), updated: nowSecs(), pubkey: Buffer.from(kid.repeat(4).slice(0, 32), 'utf8').toString('base64') };
+      state.keys.unshift(made);
+      const { pubkey, descr, ...stored } = made;
+      return [200, { ...stored, ...(descr ? { descr } : {}), ...(body.return_pubkey ? { pubkey } : {}) }];
     }
     if (p === '/mock/api/keymgmt/import' && method === 'POST') {
       if (scopeOf(req) !== 'keymgmt:imp') return [403, { error: 'scope' }];
@@ -493,7 +498,7 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
       const k = state.keys.find((x) => x.kid === body.kid);
       if (!k) return [404, { error: 'no such key' }];
       k.label = body.label ?? k.label;
-      if (body.descr !== undefined) k.descr = body.descr;
+      k.descr = body.descr ?? '';                // absent removes it, as on the device
       k.updated = nowSecs();
       return [200, { updated: true }];
     }
@@ -505,22 +510,30 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
       return before === state.keys.length ? [404, { error: 'no such key' }] : [200, { deleted: kid }];
     }
     // ---- the audit log ------------------------------------------------------------------
-    if (p === '/mock/api/logger/key') {
+    if (p.startsWith('/mock/api/logger/key')) {
       if (scopeOf(req) !== 'logger:get') return [403, { error: 'scope' }];
-      const { key, nonce, nonce_signed } = state.logger;
-      return [200, { key, nonce, nonce_signed }];
+      const asked = p.split('/')[5];              // /logger/key/<nonce base64url>: sign the caller's nonce
+      const { key, nonce, nonce_signed, signer } = state.logger;
+      if (!asked) return [200, { key, nonce, nonce_signed }];
+      const bytes = Buffer.from(asked, 'base64url');
+      if (bytes.length < 32 || bytes.length > 64) return [400, { error: 'nonce' }];
+      const sig = new Uint8Array(await crypto.subtle.sign({ name: 'Ed25519' }, signer, bytes));
+      return [200, { key, nonce: bytes.toString('base64'), nonce_signed: Buffer.from(sig).toString('base64') }];
     }
     if (p.startsWith('/mock/api/logger/list')) {
       if (scopeOf(req) !== 'logger:get') return [403, { error: 'scope' }];
-      const offset = Number(p.split('/')[5] ?? 0);
-      const page = state.logger.files.slice(offset, offset + 120);
-      return [200, { id: page.map((f) => f.id), total: state.logger.files.length, listed: page.length }];
+      // The file being written is not listed; its id comes back as `current`.
+      const [offset = 0, limit = 128] = p.split('/').slice(5, 7).map(Number);
+      const done = state.logger.files.filter((f) => !f.open);
+      const page = done.slice(offset, offset + Math.min(limit, 128));
+      const current = state.logger.files.find((f) => f.open)?.id;
+      return [200, { offset, total: done.length, listed: page.length, ...(done.length ? { oldest: done[0].id, newest: done.at(-1).id } : {}), ...(current ? { current } : {}), id: page.map((f) => f.id) }];
     }
     if (p.startsWith('/mock/api/logger/')) {
       if (scopeOf(req) !== 'logger:get') return [403, { error: 'scope' }];
       const file = state.logger.files.find((f) => f.id === p.split('/').pop());
       if (!file) return [404, { error: 'no such log file' }];
-      if (file.open) return [406, { error: 'log file still open' }];
+      if (file.open) return [409, { error: 'log file still open' }];
       return [200, file.text, 'text/plain; charset=utf-8'];
     }
     // ---- broker -----------------------------------------------------------------------

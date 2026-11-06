@@ -39,7 +39,7 @@ export function createLogView({ session, paint }) {
         }
         const failed = Object.values(view.files).filter((f) => f.result && !f.result.ok).length;
         view.notice = failed
-          ? (failed === 1 ? 'One file does not match its seal.' : `${failed} files do not match their seals.`)
+          ? (failed === 1 ? 'One file does not match its signature.' : `${failed} files do not match their signatures.`)
           : 'Every file verified.';
       } catch (e) {
         view.error = describeError(e);
