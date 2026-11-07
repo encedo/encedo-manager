@@ -153,9 +153,9 @@ function form(session, view) {
           field('Password', pw, 'Derives the everyday key in this browser. The module sees a signed challenge, never the password.'),
           field('Again', pw2))),
 
-      pg ? section('Name and network',
+      pg ? section('Name',
         h('div.stack-s', {},
-          statusGrid([['Name', pg], ['Certificate', 'the playground’s'], ['Address on the USB network', '192.168.7.1']]),
+          statusGrid([['Name', pg], ['Certificate', 'the playground’s']], { cols: 2 }),
           h('p.soft', {}, 'Set by the playground, not here. A virtual module has no USB network and no drives, and nothing is registered under ence.do for it.'))) :
       section('Name under ence.do',
         online

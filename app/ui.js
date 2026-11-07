@@ -129,8 +129,8 @@ export function select(options, value = null, attrs = {}) {
   return el;
 }
 
-export function statusGrid(items) {
-  return h('dl.status-grid', {}, items.map(([dt, dd, cls]) =>
+export function statusGrid(items, { cols = 3 } = {}) {
+  return h(cols === 2 ? 'dl.status-grid.cols-2' : 'dl.status-grid', {}, items.map(([dt, dd, cls]) =>
     h('div', {}, h('dt', {}, dt), h(`dd${cls ? '.' + cls : ''}`, {}, dd))));
 }
 
