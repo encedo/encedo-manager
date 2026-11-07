@@ -18,6 +18,7 @@ export class Session extends EventTarget {
     this.state = {
       phase: 'probing',        // probing | reachable | unpersonalised | signed-in
       model: null,             // 'ppa' | 'epa', read off the version once the module answers
+      playground: false,       // a virtual module of the HEM Playground (see isPlayground)
       attempts: 0,
       lastError: null,         // HemError from the last failed probe or action
       version: null,           // getVersion()
@@ -52,7 +53,7 @@ export class Session extends EventTarget {
     try {
       const version = await this.hem.getVersion({ timeoutMs, signal });
       const model = /EPA/i.test(String(version?.hwv ?? '')) ? 'epa' : 'ppa';
-      this.#set({ version, model, phase: this.state.phase === 'probing' ? 'reachable' : this.state.phase, lastError: null });
+      this.#set({ version, model, playground: isPlayground(version), phase: this.state.phase === 'probing' ? 'reachable' : this.state.phase, lastError: null });
       return true;
     } catch (e) {
       if (e instanceof HemError && e.code === 'aborted' && signal?.aborted) throw e;
@@ -539,7 +540,8 @@ export class Session extends EventTarget {
    *   2. POST /api/auth/init with the configuration, signed by the master key.
    *      The module answers with a token for what follows, and an instance id.
    *   3. A PPA formats its drive; this waits until `format` says done.
-   *   4. With the backend reachable, the name under ence.do: a free one is
+   *   4. With the backend reachable, the name under ence.do (never for a
+   *      playground module, which keeps the playground's name): a free one is
    *      registered at once; one of the owner's own is confirmed by e-mail
    *      first. The tls block goes to the module. Offline, the module keeps
    *      my.ence.do and the certificate can be fetched later from Settings.
@@ -547,10 +549,13 @@ export class Session extends EventTarget {
    * words stay in it until finishPersonalisation() or rollbackPersonalisation().
    */
   async personalise(fields, { signal = null, pollInterval = 4000 } = {}) {
-    const online = this.state.online === true;
+    // A playground module has its name and certificate from the playground: it keeps
+    // both, and nothing is registered with the Encedo backend for it.
+    const playground = this.state.playground;
+    const online = this.state.online === true && !playground;
     const custom = Boolean(fields.custom) && online;
     const prefix = online ? String(fields.prefix || 'my').trim() : 'my';
-    const hostname = `${prefix}.ence.do`;
+    const hostname = playground ? new URL(this.urls.hem).hostname : `${prefix}.ence.do`;
     const progress = (step, status = null) => this.#set({ setup: { ...this.state.setup, step, status } });
     this.#set({ setup: { step: 'words', status: null, fields: { ...fields, hostname }, result: null, error: null } });
 
@@ -576,7 +581,7 @@ export class Session extends EventTarget {
       if (custom) cfg.gen_csr = true;
       const init = await this.hem.initialize({ mnemonic: words }, fields.password, cfg);
       if (!init?.token) throw new HemError('The module accepted nothing', { code: 'init_failed' });
-      const result = { words, token: init.token, instanceid: init.instanceid ?? null, hostname, genuine: init.genuine ?? null, csr: init.csr ?? null, tls: null, rebootRequired: hostname !== 'my.ence.do', config: null };
+      const result = { words, token: init.token, instanceid: init.instanceid ?? null, hostname, genuine: init.genuine ?? null, csr: init.csr ?? null, tls: null, rebootRequired: !playground && hostname !== 'my.ence.do', config: null };
       this.#set({ setup: { ...this.state.setup, result } });
       // The ids the proof document names (eid, devid, eid_sign) live in the config.
       try { result.config = await this.hem.getConfig(init.token); } catch (e) { if (!(e instanceof HemError)) throw e; }
@@ -827,6 +832,13 @@ export const sectorsToGb = (sectors) => Math.floor(Number(sectors || 0) / SECTOR
 export const gbToSectors = (gb) => Math.max(0, Math.round(Number(gb || 0))) * SECTORS_PER_GB;
 
 /** What a prefix under ence.do may look like: lower-case letters, digits, dashes inside. */
+/**
+ * A virtual module of the HEM Playground (playground.ence.do): its firmware
+ * version ends in `-sim`. Its name, certificate and network are the
+ * playground's, so personalisation leaves them as they are.
+ */
+export const isPlayground = (version) => /-sim$/i.test(String(version?.fwv ?? '').trim());
+
 export const isPrefix = (value) => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(String(value ?? ''));
 
 /** status.storage is ["<512-byte sectors>:<state>", ...]; state is '-', 'ro' ('r') or 'rw'. */

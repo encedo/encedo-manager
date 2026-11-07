@@ -48,9 +48,13 @@ const head = (session, right) => {
 
 // -- welcome ----------------------------------------------------------------------------
 
+/** A playground module keeps the name it was registered under; this is that name. */
+const playgroundHost = (session) => (session.state.playground ? new URL(session.urls.hem).hostname : null);
+
 function welcome(session, view) {
   const { state } = session;
   const online = state.online === true;
+  const pg = playgroundHost(session);
   return h('div.card.lifted', {},
     head(session),
     h('div.card-body', {},
@@ -60,7 +64,9 @@ function welcome(session, view) {
         h('p.soft', { style: 'font-size: 15.5px;' }, 'It has not been personalised yet, so nothing opens it. Personalising takes about a minute and happens once: it makes the module yours, and yours only.')),
       h('div.steps', {},
         step('01', 'Say who it belongs to and choose a password.', ' The password derives a key here; the module never sees it.'),
-        step('02', 'Choose a name under ence.do and how the drives are laid out.', online ? ' The backend issues the certificate for the name.' : ' The backend is unreachable, so the module keeps my.ence.do for now.'),
+        pg
+          ? step('02', 'Say what it takes on faith.', ` It is a playground module: it keeps its name, ${pg}, and the playground's certificate.`)
+          : step('02', 'Choose a name under ence.do and how the drives are laid out.', online ? ' The backend issues the certificate for the name.' : ' The backend is unreachable, so the module keeps my.ence.do for now.'),
         step('03', 'Put the 24 words on paper.', ' They open the module when everything else is lost. Nobody else has them.')),
       h('div.row', {},
         h('button.button', { type: 'button', disabled: state.update ? true : null, onclick: () => view.start() }, 'Start'),
@@ -103,7 +109,8 @@ function form(session, view) {
   const { state } = session;
   const f = view.form;
   const online = state.online === true;
-  const ppa = state.model !== 'epa';
+  const pg = playgroundHost(session);
+  const ppa = state.model !== 'epa' && !pg;   // a playground module has no drive to lay out
   const disks = parseStorage(state.status);
   const totalSectors = disks.reduce((sum, d) => sum + d.bytes / 512, 0);
   const totalGb = sectorsToGb(totalSectors);
@@ -133,19 +140,23 @@ function form(session, view) {
       h('div.stack-s', {},
         h('p.eyebrow', {}, 'Personalisation'),
         h('h1', {}, 'Make it yours.'),
-        h('p.soft', { style: 'font-size: 15.5px;' }, 'Everything below is stored on the module and can be changed later in Settings — except the drive layout, which is set once.')),
+        h('p.soft', { style: 'font-size: 15.5px;' }, ppa ? 'Everything below is stored on the module and can be changed later in Settings — except the drive layout, which is set once.' : 'Everything below is stored on the module and can be changed later in Settings.')),
       view.error ? h('p.error', { role: 'alert' }, view.error) : null,
 
       section('Who it belongs to',
         h('div.form-grid', {},
           field('Your name', user, 'What the module calls you, and what a phone sees when it is asked.'),
-          field('E-mail', email, online ? 'Optional. Needed to confirm a name of your own, and for the backend to reach you about this module.' : 'Optional.'))),
+          field('E-mail', email, pg ? 'Optional. Kept on the module; the playground sends nothing to the Encedo backend.' : online ? 'Optional. Needed to confirm a name of your own, and for the backend to reach you about this module.' : 'Optional.'))),
 
       section('Password',
         h('div.form-grid', {},
           field('Password', pw, 'Derives the everyday key in this browser. The module sees a signed challenge, never the password.'),
           field('Again', pw2))),
 
+      pg ? section('Name and network',
+        h('div.stack-s', {},
+          statusGrid([['Name', pg], ['Certificate', 'the playground’s'], ['Address on the USB network', '192.168.7.1']]),
+          h('p.soft', {}, 'Set by the playground, not here. A virtual module has no USB network and no drives, and nothing is registered under ence.do for it.'))) :
       section('Name under ence.do',
         online
           ? h('div.form-grid', {},
@@ -180,9 +191,9 @@ const section = (title, body) => h('div.stack-s', { style: 'padding-top: 6px; bo
 
 function working(session, view) {
   const setup = session.state.setup;
-  const online = session.state.online === true;
+  const online = session.state.online === true && !session.state.playground;   // a playground module registers no name
   const custom = Boolean(setup.fields?.custom) && online;
-  const order = STEPS.filter(([id]) => (online || (id !== 'domain' && id !== 'tls' && id !== 'email')) && (custom || id !== 'email') && (session.state.model !== 'epa' || id !== 'format'));
+  const order = STEPS.filter(([id]) => (online || (id !== 'domain' && id !== 'tls' && id !== 'email')) && (custom || id !== 'email') && ((session.state.model !== 'epa' && !session.state.playground) || id !== 'format'));
   const current = order.findIndex(([id]) => id === setup.step);
   return h('div.card.lifted', {},
     head(session, 'step 2 of 2'),
@@ -219,7 +230,8 @@ function done(session, view) {
         ['Hostname', r.hostname],
         ['Instance ID', r.instanceid ?? '—'],
         ['Owner', state.setup.fields.user],
-        ['Certificate', r.tls ? 'installed' : 'not yet — fetch it later from Settings', r.tls ? '' : 'pending'],
+        state.playground ? ['Certificate', 'the playground’s']
+          : ['Certificate', r.tls ? 'installed' : 'not yet — fetch it later from Settings', r.tls ? '' : 'pending'],
       ]),
       h('div.stack-s', {},
         h('div.field-head', {}, h('span.name', {}, 'Master passphrase · 24 words'), copyControl(r.words)),

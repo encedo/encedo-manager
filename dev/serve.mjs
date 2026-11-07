@@ -155,7 +155,7 @@ const usesFor = (type, mode = null) => mode ?? USES[type] ?? null;
 export const PHONE_PIDS = { pixel: 'UElELW1vY2stMQ==', iphone: 'UElELW1vY2stMg==' };
 const phoneDescr = (pid) => [...Buffer.from('EXTAID', 'utf8'), ...Buffer.from(pid, 'base64')];
 
-export async function createMock({ password = 'demo', eid = 'mock-eid-0001', approveAfter = 3, personalised = true } = {}) {
+export async function createMock({ password = 'demo', eid = 'mock-eid-0001', approveAfter = 3, personalised = true, playground = false } = {}) {
   const devKeys = await crypto.subtle.generateKey({ name: 'X25519' }, true, ['deriveBits']);
   const spk = b64(new Uint8Array(await crypto.subtle.exportKey('raw', devKeys.publicKey)));
   // The public key a correct password derives (PBKDF2-SHA256, 600k, salt = eid),
@@ -263,7 +263,7 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
     // signing keys and signatures of what it is running. The values are made up.
     if (p === '/mock/api/system/version') return [200, {
       hwv: 'PPA rev 2.2',
-      fwv: state.fwv,
+      fwv: playground ? `${state.fwv}-sim` : state.fwv,   // a playground module says so in its version
       fwk: 'x/aUqQQG0w2APlV4i6QdIMY1mYQbemkNwzfSaXTzobw=',
       fws: 'T8Ihe616IGmxiOHf2Ze8UNaplG3NjZ4RLeOmUv+1D0ENBleDxk37j0DHOq5q8c/z0tJ+rQBrnnMBP3YjNSN7pQ==',
       blv: 'Encedo Secure Bootloader v2.0.1',

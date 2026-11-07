@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { createServer, MASTER_WORDS, PHONE_PIDS, NEW_FIRMWARE, NEW_MANAGER } from './serve.mjs';
 import {
   Session, parseStorage, formatBytes, describeError, describeScope, formatDate,
-  isUnpersonalised, storageMode, parseStorageMode, gbToSectors, sectorsToGb, isPrefix, versionNumber, SIGNIN_SCOPE,
+  isUnpersonalised, storageMode, parseStorageMode, gbToSectors, sectorsToGb, isPrefix, isPlayground, versionNumber, SIGNIN_SCOPE,
   describeKey, asciiText, parseKeyBytes, buildShareCode, shareCodeText, parseShareCode,
   toB64Text, asB64Field, asLabel, isAsciiLabel, bytesToB64, b64ByteLength, textByteLength,
   DESCR_BYTES, LABEL_CHARS,
@@ -867,8 +867,8 @@ test('wiping the module ends everything', async () => {
 
 // -- personalisation: a module out of the box, on a server of its own ----------------------
 
-const freshModule = async () => {
-  const server = await createServer({ approveAfter: 2, personalised: false });
+const freshModule = async (opts = {}) => {
+  const server = await createServer({ approveAfter: 2, personalised: false, ...opts });
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   const b = `http://127.0.0.1:${server.address().port}`;
   return { server, urls: { hem: `${b}/mock`, broker: `${b}/mockbroker` }, base: b };
@@ -963,6 +963,33 @@ test('a name of the owner\'s own waits for the e-mail click, and the module rebo
   } finally {
     fresh.server.close();
   }
+});
+
+test('a playground module keeps its name: nothing registered with the backend, no reboot', async () => {
+  const fresh = await freshModule({ playground: true });
+  try {
+    const s = new Session(fresh.urls);
+    await s.waitForDevice({ intervalMs: 10 });
+    await s.prepare();
+    assert.equal(s.state.playground, true);
+    assert.equal(s.state.online, true, 'the backend is there, and still not asked');
+    const steps = [];
+    s.addEventListener('change', () => { const st = s.state.setup?.step; if (st && steps.at(-1) !== st) steps.push(st); });
+    const result = await s.personalise({ ...FIELDS, prefix: 'ann-desk', custom: true }, { pollInterval: 10 });
+    assert.ok(!steps.includes('domain') && !steps.includes('tls') && !steps.includes('email'), 'no name, no certificate');
+    assert.equal(result.hostname, '127.0.0.1', 'the name it is reached at');
+    assert.equal(result.tls, null);
+    assert.equal(result.csr, null, 'no CSR asked for');
+    assert.equal(result.rebootRequired, false);
+  } finally {
+    fresh.server.close();
+  }
+});
+
+test('the playground is told by the firmware version', () => {
+  assert.equal(isPlayground({ fwv: 'Encedo nGINE FW v1.3.2-sim' }), true);
+  assert.equal(isPlayground({ fwv: 'Encedo nGINE FW v1.3.2' }), false);
+  assert.equal(isPlayground(null), false);
 });
 
 test('air-gapped, the module is personalised as my.ence.do with no certificate', async () => {

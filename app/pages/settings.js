@@ -135,7 +135,10 @@ function nameCard(session, config, view) {
         ['Device id', config.devid ?? '—'],
         ['Module id', h('span.mono', { style: 'font-size: 12.5px; word-break: break-all;' }, config.eid ?? '—')],
       ]),
-      h('div.card-body', { style: 'border-top: 1px solid var(--rule);' },
+      session.state.playground
+        ? h('div.card-body', { style: 'border-top: 1px solid var(--rule);' },
+            h('p.soft.measure', {}, 'A playground module keeps the name and certificate the playground gave it; nothing is registered under ence.do for it.'))
+        : h('div.card-body', { style: 'border-top: 1px solid var(--rule);' },
         h('p.soft.measure', {}, 'A name under ence.do comes with a certificate for it, so a browser reaches the module over https without a warning. Registering asks the backend to sign the module’s own certificate request against its attestation; the module then installs what comes back.'),
         h('div.form-grid', {},
           field('Name', prefix, online ? 'It becomes name.ence.do.' : 'The backend is unreachable, so nothing can be registered right now.'),
