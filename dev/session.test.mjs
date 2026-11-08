@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { createServer, MASTER_WORDS, PHONE_PIDS, NEW_FIRMWARE, NEW_MANAGER } from './serve.mjs';
 import {
   Session, parseStorage, formatBytes, describeError, describeScope, formatDate,
-  isUnpersonalised, storageMode, parseStorageMode, gbToSectors, sectorsToGb, isPrefix, isPlayground, versionNumber, SIGNIN_SCOPE,
+  isUnpersonalised, storageMode, parseStorageMode, gbToSectors, sectorsToGb, isPrefix, isPlayground, pairLink, versionNumber, SIGNIN_SCOPE,
   describeKey, asciiText, parseKeyBytes, buildShareCode, shareCodeText, parseShareCode,
   toB64Text, asB64Field, asLabel, isAsciiLabel, bytesToB64, b64ByteLength, textByteLength,
   DESCR_BYTES, LABEL_CHARS,
@@ -984,6 +984,15 @@ test('a playground module keeps its name: nothing registered with the backend, n
   } finally {
     fresh.server.close();
   }
+});
+
+test('the pairing link carries the exact QR text, base64url', () => {
+  const qr = JSON.stringify({ link: 'https://api.encedo.com/x?y=1', hash: 'ab+/cd==', user: 'Zoë', email: '', hostname: 'my.ence.do' });
+  const url = new URL(pairLink(qr));
+  assert.equal(url.protocol, 'encedo-auth:');
+  const d = url.searchParams.get('qr');
+  assert.match(d, /^[A-Za-z0-9_-]+$/, 'no +, / or = in the link');
+  assert.equal(Buffer.from(d, 'base64url').toString('utf8'), qr);
 });
 
 test('the playground is told by the firmware version', () => {

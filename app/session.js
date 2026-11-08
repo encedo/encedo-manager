@@ -835,6 +835,20 @@ export const gbToSectors = (gb) => Math.max(0, Math.round(Number(gb || 0))) * SE
 
 /** What a prefix under ence.do may look like: lower-case letters, digits, dashes inside. */
 /**
+ * The pairing data as a link the Authenticator app opens on the phone the
+ * Manager runs on, where there is nothing to scan the QR code with:
+ * encedo-auth://pair?qr=<base64url of the exact QR text>. The app reads the
+ * same JSON it would have scanned. Nothing in it is secret.
+ */
+export const AUTHENTICATOR_PAIR = 'encedo-auth://pair';
+export function pairLink(qrText) {
+  const bytes = new TextEncoder().encode(qrText);
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return `${AUTHENTICATOR_PAIR}?qr=${btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')}`;
+}
+
+/**
  * The device policy (firmware 1.3, DEV-447): set once in the personalisation,
  * read back in the config, never changed afterwards. Absent means off.
  */

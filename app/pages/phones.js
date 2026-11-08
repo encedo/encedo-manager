@@ -3,7 +3,7 @@
 // by the Encedo Mobile Authenticator, with the module checking the reply.
 
 import { h, pageHead, colgroup } from '../ui.js';
-import { formatDate } from '../session.js';
+import { formatDate, pairLink } from '../session.js';
 import { qrSvg } from '../qr.js';
 
 const STEPS = [
@@ -130,18 +130,23 @@ function pairingCard(pairing, view) {
 }
 
 /**
- * On the phone that is to be paired there is nothing to scan the code with: the
- * same text goes to the clipboard, and Authenticator takes it with Paste code.
+ * On the phone that is to be paired there is nothing to scan the code with:
+ * a touch screen gets a link that opens Authenticator with the same data, and
+ * everyone gets Copy link, for Paste code in the app.
  */
 function copyLink(text) {
-  const note = h('span.note', {}, 'On this phone? Copy it, then choose Paste code in Authenticator.');
+  const touch = globalThis.matchMedia?.('(pointer: coarse)').matches;
   const button = h('button.button.plain.small', { type: 'button', onclick: async () => {
     let ok = true;
     try { await navigator.clipboard.writeText(text); } catch { ok = false; }
     button.textContent = ok ? 'Copied' : 'Copying is blocked here';
     setTimeout(() => { button.textContent = 'Copy link'; }, 2500);
   } }, 'Copy link');
-  return h('div.stack-s', { style: 'align-items: center; text-align: center;' }, button, note);
+  return h('div.stack-s', { style: 'align-items: center; text-align: center;' },
+    h('div.row', { style: 'justify-content: center;' },
+      touch ? h('a.button.small', { href: pairLink(text) }, 'Open in Authenticator') : null,
+      button),
+    h('span.note', {}, touch ? 'On this phone? Open it in Authenticator, or copy it and choose Paste code there.' : 'On the phone itself? Copy it, then choose Paste code in Authenticator.'));
 }
 
 const step = (i, lead, rest) => h('div.step', {}, h('span.step-n', {}, String(i + 1).padStart(2, '0')), h('p', {}, h('b', {}, lead), rest));
