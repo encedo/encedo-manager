@@ -123,8 +123,25 @@ function pairingCard(pairing, view) {
             h('button.button.plain', { type: 'button', onclick: () => view.cancelPair() }, 'Cancel'),
             h('span.mono.muted', { style: 'font-size: 12px;' }, pairing.qrText ? 'Waiting for the phone' : 'Asking the module for a challenge…'))),
         pairing.qrText
-          ? h('figure.qr', {}, qr, h('figcaption', {}, 'One-time. It stops working when the timer runs out or you cancel.'))
+          ? h('div.stack-s', {},
+              h('figure.qr', {}, qr, h('figcaption', {}, 'One-time. It stops working when the timer runs out or you cancel.')),
+              copyLink(pairing.qrText))
           : null)));
+}
+
+/**
+ * On the phone that is to be paired there is nothing to scan the code with: the
+ * same text goes to the clipboard, and Authenticator takes it with Paste code.
+ */
+function copyLink(text) {
+  const note = h('span.note', {}, 'On this phone? Copy it, then choose Paste code in Authenticator.');
+  const button = h('button.button.plain.small', { type: 'button', onclick: async () => {
+    let ok = true;
+    try { await navigator.clipboard.writeText(text); } catch { ok = false; }
+    button.textContent = ok ? 'Copied' : 'Copying is blocked here';
+    setTimeout(() => { button.textContent = 'Copy link'; }, 2500);
+  } }, 'Copy link');
+  return h('div.stack-s', { style: 'align-items: center; text-align: center;' }, button, note);
 }
 
 const step = (i, lead, rest) => h('div.step', {}, h('span.step-n', {}, String(i + 1).padStart(2, '0')), h('p', {}, h('b', {}, lead), rest));

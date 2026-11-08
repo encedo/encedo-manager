@@ -1,6 +1,7 @@
 // Settings: who the module belongs to, what it trusts, what opens it, and the
 // two things that cannot be undone.
 
+import { POLICIES } from '../session.js';
 import { h, pageHead, field, select, statusGrid, copyControl } from '../ui.js';
 
 // Each of these is a choice about what the module takes on faith. The sentence
@@ -28,6 +29,7 @@ export function renderSettings(session, view) {
     view.notice ? h('p.notice', { role: 'status' }, view.notice) : null,
     ownerCard(config, view),
     trustCard(config, view),
+    policyCard(config),
     passwordCard(view),
     masterCard(session, view),
     nameCard(session, config, view),
@@ -82,6 +84,21 @@ function trustCard(config, view) {
           h('dt', {}, label, h('div', { style: 'margin-top: 10px; max-width: 160px;' }, control)),
           h('dd', {}, why)))),
       h('div.row', {}, h('button.button', { type: 'submit', disabled: busy || null }, busy ? 'Saving…' : 'Save'))));
+}
+
+// -- the device policy: set once, shown here ------------------------------------------
+
+function policyCard(config) {
+  const on = new Set(Array.isArray(config.policy) ? config.policy : []);
+  return h('div.card', {},
+    h('div.card-head', {}, h('span', {}, 'Key policy'), h('span.v', {}, `${POLICIES.filter(([k]) => on.has(k)).length} of ${POLICIES.length} on · set once`)),
+    h('div.card-body', {},
+      POLICIES.map(([key, label, why]) => h('div.stack-s', {},
+        h('div.row', { style: 'justify-content: space-between; gap: 12px;' },
+          h('b', { style: 'font-weight: 600;' }, label),
+          h(on.has(key) ? 'span.mono' : 'span.mono.muted', {}, on.has(key) ? 'Yes' : 'No')),
+        h('p.soft.measure', { style: 'font-size: 14px;' }, why))),
+      h('p.soft.measure', {}, 'The module took these at its personalisation and keeps them; changing one means wiping it and personalising it again.')));
 }
 
 // -- what opens it ----------------------------------------------------------------------

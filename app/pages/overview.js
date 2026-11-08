@@ -15,17 +15,18 @@ export function renderOverview(session) {
     ? disks.map((d) => `disk${d.index} ${d.state === 'locked' ? 'locked' : d.state === 'rw' ? 'unlocked, read-write' : 'unlocked, read-only'}`).join(' · ')
     : 'no drive reported';
   const phones = state.phones ? String(state.phones.length) : state.online ? '—' : 'unknown while offline';
-  const firmware = health.newfws ? [`${v.fwv}`, h('span.muted', {}, ` · ${health.newfws} available`)] : v.fwv ?? '?';
+  const newfws = state.playground ? null : health.newfws;   // a playground module takes no firmware
+  const firmware = newfws ? [`${v.fwv}`, h('span.muted', {}, ` · ${newfws} available`)] : v.fwv ?? '?';
 
   const title = exposed.length
     ? (exposed.length === 1 ? 'One drive is on the host.' : 'Both drives are on the host.')
     : 'The module is sealed and reachable.';
   const ledeParts = [];
-  if (health.newfws) ledeParts.push(`Firmware ${health.newfws} is available.`);
+  if (newfws) ledeParts.push(`Firmware ${newfws} is available.`);
   if (state.online === false) ledeParts.push('The Encedo backend is unreachable; the module works on its own.');
 
   const needs = [];
-  if (health.newfws) needs.push(['Firmware ' + health.newfws + ' is available', 'Installing reboots the module and locks both drives.', 'Software', href(ROUTES.find((r) => r.id === 'software')), '']);
+  if (newfws) needs.push(['Firmware ' + newfws + ' is available', 'Installing reboots the module and locks both drives.', 'Software', href(ROUTES.find((r) => r.id === 'software')), '']);
   for (const d of exposed) needs.push([`disk${d.index} is unlocked ${d.state === 'rw' ? 'read-write' : 'read-only'}`, 'Lock it when the host is done with it.', 'Secure drive', href(ROUTES.find((r) => r.id === 'drive')), 'exposed']);
 
   return [

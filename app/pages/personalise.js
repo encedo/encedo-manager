@@ -4,7 +4,7 @@
 
 import { h, mark, render, field, select, copyControl, statusGrid } from '../ui.js';
 import { VERSION, PRODUCT } from '../version.js';
-import { describeError, isPrefix, sectorsToGb, gbToSectors, parseStorage, formatBytes } from '../session.js';
+import { describeError, isPrefix, sectorsToGb, gbToSectors, parseStorage, formatBytes, POLICIES } from '../session.js';
 import { progressBody } from './software.js';
 
 const YES_NO = [['1', 'Yes'], ['0', 'No']];
@@ -71,7 +71,7 @@ function welcome(session, view) {
       h('div.row', {},
         h('button.button', { type: 'button', disabled: state.update ? true : null, onclick: () => view.start() }, 'Start'),
         h('span.mono.muted', { style: 'font-size: 12px;' }, online ? 'backend reachable' : state.online === false ? 'air-gapped' : ''))),
-    firmwareFirst(session, view));
+    state.playground ? null : firmwareFirst(session, view));   // a playground module takes no firmware
 }
 
 /**
@@ -130,6 +130,9 @@ function form(session, view) {
   const show = select(YES_NO, f.show ? '1' : '0', { onchange: (e) => { f.show = e.target.value === '1'; } });
   const rw = select([['0', 'Read-only'], ['1', 'Writable']], f.rw ? '1' : '0', { onchange: (e) => { f.rw = e.target.value === '1'; } });
   const xts = select([['0', 'CTR'], ['1', 'XTS']], f.xts ? '1' : '0', { onchange: (e) => { f.xts = e.target.value === '1'; } });
+  const policy = POLICIES.map(([key, label, hint]) => field(label, select(YES_NO, f.policy?.includes(key) ? '1' : '0', {
+    onchange: (e) => { const on = new Set(f.policy ?? []); if (e.target.value === '1') on.add(key); else on.delete(key); f.policy = [...on]; },
+  }), hint));
   const trust = TRUST.map(([key, label, hint]) => field(label, select(YES_NO, f[key] ? '1' : '0', { onchange: (e) => { f[key] = e.target.value === '1'; } }), hint));
 
   const submit = (ev) => { ev.preventDefault(); view.submit(); };
@@ -179,6 +182,11 @@ function form(session, view) {
           field('Secure drive cipher', xts, 'XTS is the disk standard; CTR is what earlier modules used.'))) : null,
 
       section('What it takes on faith', h('div.form-grid', {}, trust)),
+
+      section('Key policy',
+        h('div.stack-s', {},
+          h('p.soft', {}, 'Set once, here: no setting changes them after the personalisation. Off is the safe answer to all three.'),
+          h('div.form-grid', {}, policy))),
 
       h('div.row', {},
         h('button.button', { type: 'submit', disabled: view.busy || null }, 'Personalise the module'),

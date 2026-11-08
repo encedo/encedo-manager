@@ -25,6 +25,7 @@ export function createPersonaliseView({ session, paint, probeAgain, config, soft
         disk0Gb: Math.max(1, Math.min(totalGb - 1, Math.round(totalGb / 4) || 1)),
         show: true, rw: false, xts: false,
         trusted_ts: true, trusted_backend: true, allow_keysearch: false,
+        policy: [],
       };
       Object.assign(view, { step: 'form', error: null });
       paint();
@@ -68,6 +69,7 @@ export function createPersonaliseView({ session, paint, probeAgain, config, soft
         storage_disk0size: gbToSectors(f.disk0Gb),
         storage_mode: storageMode({ show: f.show, rw: f.rw, xts: f.xts }),
         trusted_ts: f.trusted_ts, trusted_backend: f.trusted_backend, allow_keysearch: f.allow_keysearch,
+        policy: f.policy ?? [],
       };
       view.printed = false;
       view.proof = null;

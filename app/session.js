@@ -579,6 +579,8 @@ export class Session extends EventTarget {
         cfg.storage_disk0size = fields.storage_disk0size ?? 8388608;
       }
       if (custom) cfg.gen_csr = true;
+      const policy = (fields.policy ?? []).filter((p) => POLICIES.some(([name]) => name === p));
+      if (policy.length) cfg.policy = policy;
       const init = await this.hem.initialize({ mnemonic: words }, fields.password, cfg);
       if (!init?.token) throw new HemError('The module accepted nothing', { code: 'init_failed' });
       const result = { words, token: init.token, instanceid: init.instanceid ?? null, hostname, genuine: init.genuine ?? null, csr: init.csr ?? null, tls: null, rebootRequired: !playground && hostname !== 'my.ence.do', config: null };
@@ -832,6 +834,16 @@ export const sectorsToGb = (sectors) => Math.floor(Number(sectors || 0) / SECTOR
 export const gbToSectors = (gb) => Math.max(0, Math.round(Number(gb || 0))) * SECTORS_PER_GB;
 
 /** What a prefix under ence.do may look like: lower-case letters, digits, dashes inside. */
+/**
+ * The device policy (firmware 1.3, DEV-447): set once in the personalisation,
+ * read back in the config, never changed afterwards. Absent means off.
+ */
+export const POLICIES = [
+  ['raw_ecdh_enabled', 'Allow raw ECDH', 'ECDH may hand back the raw shared secret, not only a key derived from it inside the module. Some protocols need it; the secret then leaves the module.'],
+  ['pubkey_in_search', 'Public keys in a key search', 'A key search may return the public half of each key it finds.'],
+  ['pubkey_in_list', 'Public keys in the key list', 'The key list may carry the public half of every key.'],
+];
+
 /**
  * A virtual module of the HEM Playground (playground.ence.do): its firmware
  * version ends in `-sim`. Its name, certificate and network are the

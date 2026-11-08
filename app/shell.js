@@ -14,7 +14,8 @@ export function renderShell(root, { session, config, route, content, modal = nul
   render(root,
     h('aside.sidebar', {},
       h('div.brand', {}, mark(36), h('div.name', {}, h('b', {}, 'Encedo HEM'), h('span', {}, 'Manager'))),
-      h('nav.nav', { 'aria-label': 'Sections' }, ROUTES.map((r) =>
+      // a playground module takes no firmware and its Manager is the playground's: no Software
+      h('nav.nav', { 'aria-label': 'Sections' }, ROUTES.filter((r) => !(state.playground && r.id === 'software')).map((r) =>
         h(`a${r.id === route.id ? '.active' : ''}`, { href: href(r), 'aria-current': r.id === route.id ? 'page' : null }, icon(r.id), h('span', {}, r.label)))),
       h('div.sidebar-foot', {},
         h('span.host', {}, state.config?.hostname || state.status?.hostname || host),
