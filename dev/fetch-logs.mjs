@@ -56,7 +56,7 @@ try {
     process.stdout.write('\n');
   } else {
     const password = process.env.HEM_PASSWORD ?? await askPassword('password ');
-    token = await hem.authorizePassword(password, 'logger:get', 900);
+    token = await hem.authorizePassword(password, 'logger:get', { expSeconds: 900 });
   }
 } catch (e) {
   console.error(`\nThe module refused: ${e instanceof HemError ? `${e.code} — ${e.message}` : e.message}`);

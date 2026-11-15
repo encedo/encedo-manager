@@ -50,7 +50,7 @@ console.log(JSON.stringify(probe.status, null, 2));
 if (args.includes('--config')) {
   try {
     const password = process.env.HEM_PASSWORD ?? await askPassword('password ');
-    const token = await hem.authorizePassword(password, 'system:config', 300);
+    const token = await hem.authorizePassword(password, 'system:config', { expSeconds: 300 });
     probe.config = await hem.getConfig(token);
     console.log('--- /api/system/config ---');
     console.log(JSON.stringify(probe.config, null, 2));
@@ -64,7 +64,7 @@ if (args.includes('--config')) {
 if (args.includes('--selftest')) {
   try {
     const password = process.env.HEM_PASSWORD ?? await askPassword('password ');
-    const token = await hem.authorizePassword(password, 'system:config', 300);
+    const token = await hem.authorizePassword(password, 'system:config', { expSeconds: 300 });
     console.log('--- /api/system/selftest (this takes a moment) ---');
     probe.selftest = await hem.selftest(token);
     console.log(JSON.stringify(probe.selftest, null, 2));

@@ -333,8 +333,9 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
       if (!up) return [404, { error: 'nothing uploaded' }];
       if (op.startsWith('check_')) {
         if (++up.checks < 3) return [202, null];
-        if (up.bad) return [400, { error: 'the image does not verify' }];
-        return [200, { verified: true, size: up.size, version: slot === 'fw' ? NEW_FIRMWARE : NEW_MANAGER }];
+        // As firmware 1.3: 201/202 while checking, 200 with no body when it passed, 406 when it did not.
+        if (up.bad) return [406, null];
+        return [200, null];
       }
       if (op.startsWith('install_')) {
         if (up.checks < 3 || up.bad) return [409, { error: 'not verified' }];

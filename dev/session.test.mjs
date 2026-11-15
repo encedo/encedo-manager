@@ -1102,7 +1102,7 @@ test('the firmware announced at check-in is downloaded, uploaded, checked by the
     assert.deepEqual(steps, ['download', 'upload', 'verify', 'install', 'done']);
     assert.equal(result.source, 'backend');
     assert.equal(result.size, 24 * 1024, 'the image the backend handed out');
-    assert.equal(result.result.verified, true, 'what the module said when it had checked it');
+    assert.equal(result.result, true, 'the module passed the image (200, no body)');
     assert.equal(s.state.phase, 'probing', 'the module is rebooting');
     assert.equal(s.state.mode, null);
 
@@ -1146,7 +1146,7 @@ test('a firmware file goes in without the backend, and one the module does not t
     await assert.rejects(s.updateFirmware({ version: 'v9' }), (e) => e.code === 'broker_error', 'nothing to download from');
 
     const bad = new Uint8Array(4096).fill(0x11); bad[0] = 0xff;
-    await assert.rejects(s.updateFirmware({ bytes: bad, pollInterval: 5 }), (e) => e.code === 'http_400');
+    await assert.rejects(s.updateFirmware({ bytes: bad, pollInterval: 5 }), (e) => e.code === 'http_406');
     assert.equal(s.state.update.step, 'failed');
     assert.equal(s.state.update.source, 'file');
     assert.ok(s.state.update.error);

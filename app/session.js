@@ -133,7 +133,7 @@ export class Session extends EventTarget {
    * issues are cached, so no scope is asked about twice.
    */
   async signIn(password, { remember = false } = {}) {
-    const token = await this.hem.authorizePassword(password, SIGNIN_SCOPE, SIGNIN_EXP, { remember });
+    const token = await this.hem.authorizePassword(password, SIGNIN_SCOPE, { expSeconds: SIGNIN_EXP, remember });
     this.#set({ remember });
     await this.#afterSignIn('password', token);
   }
@@ -199,7 +199,7 @@ export class Session extends EventTarget {
         // Answering it: the password, and whether to stop being asked.
         submit: (password, remember = false) => {
           this.#set({ asking: null });
-          this.hem.authorizePassword(password, scope, SIGNIN_EXP, { remember })
+          this.hem.authorizePassword(password, scope, { expSeconds: SIGNIN_EXP, remember })
             .then((token) => { if (remember) this.#set({ remember: true }); resolve(token); })
             .catch(reject);
         },
@@ -700,7 +700,7 @@ export class Session extends EventTarget {
    * scope, so what follows is authorised by the master secret without asking again.
    */
   async authorizeMaster(mnemonic) {
-    await this.hem.authorizeMaster(mnemonic, SIGNIN_SCOPE, SIGNIN_EXP);
+    await this.hem.authorizeMaster(mnemonic, SIGNIN_SCOPE, { expSeconds: SIGNIN_EXP });
     this.#set({ master: true, lastError: null });
   }
 
