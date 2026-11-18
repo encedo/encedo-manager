@@ -1,0 +1,282 @@
+<!DOCTYPE html> 
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>Encedo PPA</title>
+		<style>
+			html,body,div,span,img,fieldset,form,label{margin:0;padding:0;border:0;font-size:100%;vertical-align:top;outline:0}body{line-height:1}*, *:after, *:before { -webkit-box-sizing: border-box; box-sizing: border-box; -moz-box-sizing: border-box; }
+			*, *:after, *:before { -webkit-box-sizing: border-box; box-sizing: border-box; -moz-box-sizing: border-box; }
+			::-webkit-scrollbar { width: 5px; background: rgba(1,1,1,0.1); margin: 0px 0px 0px -6px; padding: 0px 2px; }
+			::-webkit-scrollbar-track { padding: 4px; }
+			::-webkit-scrollbar-thumb { background: #6E358C; }
+			::-webkit-scrollbar-thumb:window-inactive { background: rgba(1,1,1,0.1); }
+			html { font-family: 'Inter', sans-serif; font-size: 16px; min-height: 100vh; }
+			body { min-height: 100vh; background: linear-gradient(#eee, #fff); display: flex; align-items: center; justify-content: center; font-family: 'Inter', sans-serif; font-size: 16px; overflow-x: hidden; padding: 30px; }
+			form { max-width: 1000px; bacground: #fff; text-align: center; }
+			form label { display: block; padding: 0px; margin-bottom: 20px; }
+			form label span { display: block; font-size: 28px; padding: 20px; }
+			form fieldset { border: 0px solid #ccc; padding: 40px 50px 50px 50px; border-radius: 9px; font-weight: bold; margin: 20px; min-width: 510px; }
+			form fieldset { border-radius: 30px !important; box-shadow: -10px -1px 82px 43px rgb(0 0 0 / 11%); -webkit-box-shadow: -10px -1px 82px 43px rgb(0 0 0 / 11%); -moz-box-shadow: -10px -1px 82px 43px rgba(0,0,0,0.11); }
+			form input { display: block; padding: 20px 30px; border: 1px solid #ccc; border-radius: 25px; margin-top: 3px; width: 100%; font-family: 'Inter', sans-serif; min-width: 200px; text-align: center; font-size: 16px; }
+			form .buttonCTA { display: none; background: linear-gradient(-45deg, #6E358C, #2A225E, #6E358C); background-position: 0% 0%; background-size: 400% 400%; color: #fff; font-weight: bold; padding: 15px 35px; max-width: 100%; text-align: center; border: 0; outline: 0;  letter-spacing: +1px; border-radius: 25px; text-decoration: none; cursor: pointer; transition-duration: 0.7s; box-shadow: -10px -1px 82px 43px rgba(0,0,0,0.08); -webkit-box-shadow: -10px -1px 82px 43px rgba(0,0,0,0.08); -moz-box-shadow: -10px -1px 82px 43px rgba(0,0,0,0.08); animation: gradient 3s ease infinite !important; line-height: 1.6; font-size: 20px; font-weight: bold; min-width: 100px; }
+		</style>
+	</head>
+	<body itemscope="" itemtype="http://schema.org/WebPage">
+		<div classs="wrapper">
+			<form>
+				<img src="https://encedo.com/a/logo_mid.png" width="150" alt="Encedo">
+				<br><br>
+				<fieldset >
+					<label>
+						<span id="resultLabel">Waiting for Encedo HSM...</span>
+					</label>
+					<input type="button" name="submit" value="Enter" class="buttonCTA" id="submitButton">
+				</fieldset>
+			</form>
+		</div>
+		<script>
+		      
+      async function fetchWithTimeout(resource, options = {}) {
+        const { timeout = 3000 } = options;        
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
+        const response = await fetch(resource, {...options, signal: controller.signal});
+        clearTimeout(id);
+        return response;
+      }
+		
+      async function fetchJSON(request) {
+        try {
+          const response = await fetchWithTimeout(request);
+          const contentType = response.headers.get("content-type");
+          if (!contentType || !contentType.includes("application/json")) {
+            throw new TypeError("Oops, we haven't got JSON!");
+          }
+          if (response.headers.get("content-length") == 0) return [];  //empty response
+          const jsonData = await response.json();
+          //console.log("GET Success:", jsonData);
+          return jsonData;
+        } catch (error) {
+          //console.log("GET Error: why? " + error.name);
+          if (error.name === 'AbortError') return "Timeout";
+          if (error.name === 'TypeError') return "NetworkError";
+          return error.name;
+        }
+      }
+      
+      async function postJSON(request, data) {
+        try {
+          const response = await fetchWithTimeout(request, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(data),
+          });
+          if (response.headers.get("content-length") == 0) return [];  //empty response
+          const jsonData = await response.json();
+          //console.log("POST Success:", jsonData);
+          return jsonData;          
+        } catch (error) {
+          //console.log("POST Error: why? " + error.name);
+          if (error.name === 'AbortError') return "Timeout";
+          if (error.name === 'TypeError') return "NetworkError";
+          return error.name;
+        }
+      }
+  
+
+      function sync() {
+        window.syncing = true;
+        fetchJSON(protDev + urlDev + '/api/system/status').then((status) => {
+          if (status.uptime != undefined) {
+            window.encedo_status = status;
+            fetchJSON(protDev + urlDev + '/api/system/checkin').then((check) => {
+              if (check.check != undefined) {
+                postJSON('https://api.encedo.com/checkin', check).then((checked) => { 
+                  if (checked.checked != undefined) {
+                    postJSON(protDev + urlDev + '/api/system/checkin', checked).then((status) => {
+                      if (status.status != undefined) {
+                        window.encedo_checkin = status;
+                        window.synced = true;
+                      } else window.syncing = false;  
+                    });
+                  } else window.syncing = false;            
+                });
+              } else window.syncing = false;              
+            });
+          } else window.syncing = false;
+        });
+      }
+
+      function refreshTLS() {
+        window.checking = true;
+        fetchJSON(protDev + urlDev + '/api/system/status').then((status) => {
+          if (status.uptime != undefined) {
+            window.encedo_status = status;
+            //if (status.https === true) {
+            if ((status.https === true) || ( typeof status.https === 'undefined') ) {
+              console.log("HTTPS is available. Is running?"); 
+              fetchJSON('https://' + urlDev + '/api/system/status').then((status) => {
+                if (status === "NetworkError") {
+                  console.log("HTTPS connection failed!");  
+                  if (window.encedo_status.inited === false) {
+                    //not inited, download TLS
+                    fetchJSON(protDev + urlDev + '/api/system/config/attestation').then((ret) => {
+                      if (ret.genuine != undefined) {
+                        console.log("Refresh TLS certificate.");
+                        delete ret['crt'];                  
+                        postJSON('https://api.encedo.com/domain/register/my', ret).then((crt) => {
+                          if (crt.crt != undefined) { 
+                            postJSON(protDev + urlDev + '/api/system/config', {"tls": crt}).then((status) => {
+                              if (status != undefined) {
+                                window.encedo_config = status;
+                                console.log('x509 installed, reboot');
+                                fetchJSON(protDev + urlDev + '/api/system/reboot').then((status) => {
+                                  window.rebooted = true;
+                                });          
+                              } else window.checking = false;             
+                            });                  
+                          } else window.checking = false;
+                        });
+                      } else window.checking = false;
+                    });                          
+                  } else {
+                    //inited device, https not working
+                    if (window.encedo_checkin.newcrt != undefined) {
+                      // new cert installed automaticly, power-cycle
+                      window.powercycle = 'Remove and plug-in Encedo again';
+                    } else {
+                      //ups -wtf?
+                      window.powercycle = 'Upss, this is odd!';
+                    }
+                  }                  
+                } else {
+                  console.log("HTTPS connection OK.");
+                  window.checked = true;
+                }
+              });
+            } else {
+              //https server not running!
+              console.log("no https service"); 
+              if (window.encedo_status.inited === false) {
+                console.log("not initied"); 
+                //install TLS
+                fetchJSON(protDev + urlDev + '/api/system/config/attestation').then((ret) => {
+                  if (ret.genuine != undefined) {
+                    console.log("Download TLS certificate.");
+                    delete ret['csr'];
+                    delete ret['key'];
+                    postJSON('https://api.encedo.com/domain/register/my', ret).then((crt) => {
+                      if (crt.crt != undefined) { 
+                        postJSON(protDev + urlDev + '/api/system/config', {"tls": crt}).then((status) => {
+                          if (status != undefined) {
+                            window.encedo_config = status;
+                            console.log('x509 installed, reboot');
+                            fetchJSON(protDev + urlDev + '/api/system/reboot').then((status) => {
+                              window.rebooted = true;
+                            });          
+                          } else window.checking = false;             
+                        });                  
+                      } else window.checking = false;
+                    });
+                  } else window.checking = false;
+                });                                           
+              } else {
+                //inited device but https not working
+                if (window.encedo_checkin.newcrt != undefined) {
+                  // new cert installed automaticly, power-cycle
+                  window.powercycle = 'Remove and plug-in Encedo again';
+                } else {
+                  //ups -wtf?
+                  window.powercycle = 'Upss, this is odd!';
+                }
+              }
+              
+            }
+          } else window.checking = false;
+        });
+      }
+                  
+			document.getElementById('submitButton').onclick = function(urlDev, stat){
+        console.log("Reloading...");
+        window.location.reload();
+			};
+
+      function timeout() {
+        ticks++;
+        rerun = true;
+       
+        if (window.syncing) {
+          if (window.synced == true) {
+            if (window.checking != true) {
+               document.getElementById("resultLabel").innerHTML = 'Checking...';
+               refreshTLS();
+            } else {
+              if (window.checked == true) {
+                document.getElementById("resultLabel").innerHTML = 'All good :)';
+                rerun = false;
+                window.location.href = final_href;
+              } else
+              if (window.rebooted == true) {
+                document.getElementById("resultLabel").innerHTML = 'Refreshing certificate...';
+                rerun = false;
+                setTimeout( function() { 
+                  window.rebooted = false;
+                  window.checked = false;
+                  window.checking = false;
+                  window.synced = false;
+                  window.syncing = false;
+                  ticks = 0;
+                  document.getElementById("resultLabel").innerHTML = 'Waiting for Encedo HSM...';
+                  timeout();
+                }, 8000);                
+              } else 
+              if (window.powercycle != undefined) {
+                document.getElementById("resultLabel").innerHTML = window.powercycle;
+                document.getElementById('submitButton').style.display = "inline-block";
+                document.getElementById('submitButton').value = 'Restart';  
+                rerun = false;              
+              }
+            }           
+          }
+        } else { 
+          sync();
+        }
+
+        if (window.synced != true) {
+          if (ticks == 10) document.getElementById("resultLabel").innerHTML = 'Hmmm... unplug device';
+          if (ticks == 18) document.getElementById("resultLabel").innerHTML = 'OK, plug-in again';
+          if (ticks == 23) document.getElementById("resultLabel").innerHTML = 'Waiting...';
+          if (ticks == 40) document.getElementById("resultLabel").innerHTML = 'Hmmm... unplug device (2)';
+          if (ticks == 48) document.getElementById("resultLabel").innerHTML = 'OK, plug-in again (2)';
+          if (ticks == 53) document.getElementById("resultLabel").innerHTML = 'Waiting... (2)';
+        }
+        
+        if (ticks == 66) {
+           rerun = false;
+            document.getElementById("resultLabel").innerHTML = 'Encedo not detected!';
+            document.getElementById('submitButton').style.display = "inline-block";
+            document.getElementById('submitButton').value = 'Restart';  
+            rerun = false;              
+        }
+
+        if (rerun) setTimeout(timeout, 1000); 
+      }
+                   
+      // start app
+      let ticks = 0;      
+      window.syncing = false;
+      let urlDev = window.location.hostname;
+      let protDev = window.location.protocol + '//';
+      let final_href = protDev + urlDev;
+      if (window.location.hash.length > 1) {
+        str = window.location.hash;
+        element = str.substring(1);
+        final_href = protDev + urlDev + '/#' + element;
+      }
+      console.log(urlDev);
+      setTimeout(timeout, 500);        
+		</script>
+	</body>
+</html>

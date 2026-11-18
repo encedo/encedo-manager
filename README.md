@@ -84,7 +84,7 @@ node dev/fetch-logs.mjs --out ~/hem-logs         # archive its audit log, each f
 npm run build                    # -> dist/
 ```
 
-Four files — `index.html`, `app.js`, `style.css`, `favicon.svg` — and a `.gz`
+Five files — `index.html`, `launch.html` (the self-heal page from Manager v1, see `build.mjs`), `app.js`, `style.css`, `favicon.svg` — and a `.gz`
 twin of each, about 65 KB compressed. Rollup folds `app/main.js` and everything
 it imports, the SDK included, into the one `app.js`, which esbuild minifies
 with `style.css` (`--no-minify` keeps them readable for a stack trace). The module

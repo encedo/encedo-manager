@@ -1,4 +1,4 @@
-// Build the Manager for the module: dist/ with four files, each with a .gz
+// Build the Manager for the module: dist/ with five files, each with a .gz
 // twin. The PPA answers GET /x with x.gz and a Content-Encoding header when
 // the twin is there, and with x itself when it is not, so both are written.
 //
@@ -60,6 +60,10 @@ const html = (await fs.readFile(path.join(here, 'index.html'), 'utf8'))
 await fs.writeFile(path.join(out, 'index.html'), html);
 await fs.copyFile(path.join(here, 'app/style.css'), path.join(out, 'style.css'));
 await fs.copyFile(path.join(here, 'favicon.svg'), path.join(out, 'favicon.svg'));
+// launch.html - from Manager v1, unchanged: the start page the firmware writes on disk 0 after a format points at
+// http://<host>/launch.html; over plain http it runs the check-in (an expired certificate comes back as newcrt)
+// and, on a module that is not personalised, fetches a new TLS certificate - the module heals itself without TLS
+await fs.copyFile(path.join(here, 'launch.html'), path.join(out, 'launch.html'));
 
 // 2b. minified in place - esbuild without bundling, so app.js stays the ES module rollup wrote
 if (minify) {
@@ -75,7 +79,7 @@ if (minify) {
 
 // 3. the .gz twins, each read back to be sure it is the same bytes
 const rows = [];
-for (const name of ['index.html', 'app.js', 'style.css', 'favicon.svg']) {
+for (const name of ['index.html', 'launch.html', 'app.js', 'style.css', 'favicon.svg']) {
   const file = path.join(out, name);
   const bytes = await fs.readFile(file);
   const gz = gzipSync(bytes, { level: 9 });
