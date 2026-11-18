@@ -60,9 +60,9 @@ the base64url hash points at the release directory, which is what makes
 [ tar bytes ][ 32-byte Ed25519 public key ][ 64-byte signature ]
 ```
 
-Confirmed against the release in hand: the 32 bytes are the public key of the
-signing key, and they are the value the module reports as `uis` in
-`/api/system/version`.
+The 32 bytes are the public key of the signing key. `uis` in
+`/api/system/version` is **not** that key: it is the SHA-256 of the installed
+manifest - the version above (checked on a PPA, 2026-11-18).
 
 **What is signed** (settled 2026-11-18 against the firmware, `ed25519_verify_file`
 in `encedo_firmware/Firmware/src/main.c`, and against the release in hand): the

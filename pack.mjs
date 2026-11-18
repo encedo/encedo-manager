@@ -190,7 +190,7 @@ async function sign(tarPath) {
   const out = flag('out') ?? path.join(path.dirname(tarPath), 'webroot.tar');
   await fs.writeFile(out, Buffer.concat([tar, key, signature]));
   console.log(`signed ${path.relative(process.cwd(), out)}`);
-  console.log(`  signed by  ${key.toString('hex')}   <- the module reports it as uis (base64 ${key.toString('base64')})`);
+  console.log(`  signed by  ${key.toString('hex')}   (base64 ${key.toString('base64')})`);
   await verify(out, key);
 }
 
@@ -227,7 +227,7 @@ async function attach(tarPath) {
   const out = flag('out') ?? path.join(path.dirname(tarPath), 'webroot.tar');
   await fs.writeFile(out, Buffer.concat([tar, key, signature]));
   console.log(`signed ${path.relative(process.cwd(), out)}`);
-  console.log(`  signed by  ${key.toString('base64')}   <- the module reports this as uis`);
+  console.log(`  signed by  ${key.toString('base64')}`);
   console.log(`  over       ${digest.toString('hex')}`);
 }
 
@@ -237,7 +237,8 @@ async function attach(tarPath) {
  * What a module does before it installs: take the trailer off, hash what is
  * left, check the signature over that. The key in the trailer says who signed;
  * it is not a reason to trust them, so `--key` compares it with the one you
- * expect — the value the module reports as `uis`.
+ * expect - one of the publisher keys pinned in the firmware. (`uis` in
+ * /api/system/version is not the key: it is the SHA-256 of the manifest, the version.)
  */
 async function verify(file, expectedKey = null) {
   if (!file) die('which file? node pack.mjs verify <webroot.tar>');
