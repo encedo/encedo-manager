@@ -37,7 +37,10 @@ try {
 
 // 1. the script: one module out of the graph
 const bundle = path.join(out, 'app.js');
-const rollup = spawnSync('npx', ['--yes', ROLLUP, path.join(here, 'app/main.js'), '--format', 'es', '--file', bundle, '--silent'], { stdio: 'inherit' });
+// On Windows npx is npx.cmd, which Node starts only through a shell - and the shell needs the paths quoted.
+const win = process.platform === 'win32';
+const q = (arg) => (win ? `"${arg}"` : arg);
+const rollup = spawnSync('npx', ['--yes', ROLLUP, q(path.join(here, 'app/main.js')), '--format', 'es', '--file', q(bundle), '--silent'], { stdio: 'inherit', shell: win });
 if (rollup.status !== 0) { console.error('rollup failed'); process.exit(rollup.status ?? 1); }
 let js = await fs.readFile(bundle, 'utf8');
 // The SDK's Node transport imports node:* lazily, in a branch a browser never

@@ -1,21 +1,23 @@
-// Pack a release of the Manager the way the module expects it, and put the
-// release engineer's signature on it afterwards.
+// Pack a release of the Manager the way the module expects it, and sign it.
 //
 //   node pack.mjs                      build, then release/<HHMMSS_DDMMYYYY>/
 //   node pack.mjs --out release/x      somewhere of your choosing
-//   node pack.mjs attach <tar> --key <file> --signature <file>
+//   node pack.mjs sign <tar> --key-env <VAR> [--expect <pub>]   sign with the seed in $VAR (the CI)
+//   node pack.mjs digest <tar> --key <pub>                       what to sign by hand
+//   node pack.mjs attach <tar> --key <file> --signature <file>   append a signature made by hand
 //   node pack.mjs verify <webroot.tar> [--key <expected>]
 //
 // A release is a `webroot/` — what the module serves, every file with a `.gz`
 // twin beside it — a `manifest` of everything in it, and a tar of the lot.
 // docs/PACKAGING.md says what each piece is for and how the module reads it.
 //
-// The signature is made by hand, with a YubiKey, over the SHA-256 of the tar;
-// `attach` appends it and `verify` checks one. Nothing here ever holds a
-// private key.
+// The signature is Ed25519 over SHA-512(tar || public key) — what the firmware
+// checks (ed25519_verify_file: the whole file but the last 64 bytes, hashed,
+// then verified). The CI signs with the seed from a repository secret (`sign`);
+// `digest` + `attach` are for a signature made elsewhere, by hand.
 
 import { spawnSync } from 'node:child_process';
-import { createHash, verify as verifySignature, createPublicKey } from 'node:crypto';
+import { createHash, verify as verifySignature, sign as signMessage, createPublicKey, createPrivateKey } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -33,13 +35,17 @@ const flag = (name, fallback = null) => {
 const positional = argv.filter((a, i) => !a.startsWith('--') && !(i > 0 && argv[i - 1].startsWith('--')));
 
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest();
+/** What the signature covers: SHA-512 of the tar followed by the signer's public key (the firmware's ed25519_verify_file). */
+const signedDigest = (tar, key) => createHash('sha512').update(tar).update(key).digest();
 const b64url = (bytes) => bytes.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const kb = (n) => `${(n / 1024).toFixed(1).padStart(7)} KB`;
 const die = (message) => { console.error(message); process.exit(1); };
 
-const command = positional[0] === 'attach' || positional[0] === 'verify' ? positional[0] : 'pack';
+const command = ['attach', 'verify', 'sign', 'digest'].includes(positional[0]) ? positional[0] : 'pack';
 try {
   if (command === 'pack') await pack();
+  if (command === 'sign') await sign(positional[1]);
+  if (command === 'digest') await digestFor(positional[1]);
   if (command === 'attach') await attach(positional[1]);
   if (command === 'verify') await verify(positional[1]);
 } catch (e) {
@@ -76,9 +82,11 @@ async function pack() {
   //    has always been given.
   const names = (await fs.readdir(webroot)).sort();
   const tar = path.join(out, 'webroot_src.tar');
-  run('tar', ['-cf', tar, '--format=gnu', '--sort=name', '--mtime=@0', '--owner=0', '--group=0', '--numeric-owner', ...names], { cwd: webroot });
+  //    (On Windows the GNU tar of Git reads "C:..." as host:path - --force-local says it is a file.)
+  const local = process.platform === 'win32' ? ['--force-local'] : [];
+  run('tar', [...local, '-cf', tar, '--format=gnu', '--sort=name', '--mtime=@0', '--owner=0', '--group=0', '--numeric-owner', ...names], { cwd: webroot });
 
-  // 4. what the release engineer signs, and what the backend files it under
+  // 4. a fingerprint of the tar, and what the backend files the release under
   const tarBytes = await fs.readFile(tar);
   const digest = sha256(tarBytes);
   await fs.writeFile(`${tar}.sha256`, `${digest.toString('hex')} *${path.basename(tar)}\n`);
@@ -90,8 +98,9 @@ async function pack() {
   console.log(`  webroot_src.tar   ${kb(tarBytes.length)}`);
   console.log(`\n  version (base64)     ${version.toString('base64')}`);
   console.log(`  version (base64url)  ${b64url(version)}        <- download/dashboard/<this>`);
-  console.log(`  tar SHA-256          ${digest.toString('hex')}   <- sign this`);
-  console.log(`\nSign that digest, then: node pack.mjs attach ${path.relative(process.cwd(), tar)} --key <pub> --signature <sig>`);
+  console.log(`  tar SHA-256          ${digest.toString('hex')}`);
+  console.log(`\nSign it: node pack.mjs sign ${path.relative(process.cwd(), tar)} --key-env <VAR> --expect <pub>`);
+  console.log(`     or by hand: node pack.mjs digest ${path.relative(process.cwd(), tar)} --key <pub>, then attach`);
 }
 
 /**
@@ -144,13 +153,65 @@ function isSigned(bytes) {
   return bytes.length > TRAILER && bytes.length % 512 !== 0;
 }
 
+// -- sign ---------------------------------------------------------------------------------
+
+/**
+ * Sign in the CI: the 32-byte Ed25519 seed comes from an environment variable
+ * (a repository secret), as hex or base64, and never touches a file. `--expect`
+ * names the public key the seed must give — a wrong secret stops here, not on
+ * a module that refuses the bundle. The result goes through verify() before
+ * this returns.
+ */
+async function sign(tarPath) {
+  if (!tarPath) die('which tar? node pack.mjs sign <tar> --key-env <VAR> [--expect <pub>]');
+  const varName = flag('key-env');
+  if (!varName) die('--key-env <VAR>: the environment variable that holds the signing seed');
+  const secret = (process.env[varName] ?? '').trim();
+  if (!secret) die(`$${varName} is empty - is the secret set for this repository?`);
+  let seed = null;
+  for (const encoding of ['hex', 'base64']) {
+    if (encoding === 'hex' && !/^[0-9a-fA-F]{64}$/.test(secret)) continue;
+    const bytes = Buffer.from(secret, encoding);
+    if (bytes.length === KEY_BYTES) { seed = bytes; break; }
+  }
+  if (!seed) die(`$${varName} is not a 32-byte Ed25519 seed as hex or base64`);
+
+  const privateKey = createPrivateKey({ key: Buffer.concat([Buffer.from('302e020100300506032b657004220420', 'hex'), seed]), format: 'der', type: 'pkcs8' });
+  seed.fill(0);
+  const key = createPublicKey(privateKey).export({ format: 'der', type: 'spki' }).subarray(-KEY_BYTES);
+  if (flag('expect')) {
+    const want = await readBytes(flag('expect'), KEY_BYTES, 'expect');
+    if (!want.equals(key)) die(`$${varName} gives the key ${key.toString('hex')}, not the one --expect names`);
+  }
+
+  const tar = await fs.readFile(tarPath);
+  if (isSigned(tar)) die(`${tarPath} already carries a trailer — sign the unsigned tar`);
+  const signature = signMessage(null, signedDigest(tar, key), privateKey);
+  const out = flag('out') ?? path.join(path.dirname(tarPath), 'webroot.tar');
+  await fs.writeFile(out, Buffer.concat([tar, key, signature]));
+  console.log(`signed ${path.relative(process.cwd(), out)}`);
+  console.log(`  signed by  ${key.toString('hex')}   <- the module reports it as uis (base64 ${key.toString('base64')})`);
+  await verify(out, key);
+}
+
+// -- digest -------------------------------------------------------------------------------
+
+/** What to sign by hand: SHA-512(tar || public key) - the signer's key is part of the message. */
+async function digestFor(tarPath) {
+  if (!tarPath) die('which tar? node pack.mjs digest <tar> --key <pub>');
+  const tar = await fs.readFile(tarPath);
+  if (isSigned(tar)) die(`${tarPath} already carries a trailer — use the unsigned tar`);
+  const key = await readBytes(flag('key'), KEY_BYTES, 'key');
+  console.log(`  sign these 64 bytes (Ed25519, as the message): ${signedDigest(tar, key).toString('hex')}`);
+}
+
 // -- attach -------------------------------------------------------------------------------
 
 /**
  * Put the signature on the end: the 32-byte public key, then the 64-byte
- * signature of the tar's SHA-256. The result is checked before it is written,
- * so a wrong file or a signature over the wrong digest is caught here rather
- * than by a module that then refuses to install.
+ * signature of SHA-512(tar || public key). The result is checked before it is
+ * written, so a wrong file or a signature over the wrong digest is caught here
+ * rather than by a module that then refuses to install.
  */
 async function attach(tarPath) {
   if (!tarPath) die('which tar? node pack.mjs attach <tar> --key <file> --signature <file>');
@@ -159,9 +220,9 @@ async function attach(tarPath) {
   const key = await readBytes(flag('key'), KEY_BYTES, 'key');
   const signature = await readBytes(flag('signature') ?? flag('sig'), SIG_BYTES, 'signature');
 
-  const digest = sha256(tar);
+  const digest = signedDigest(tar, key);
   if (!ed25519Verify(key, signature, digest)) {
-    die(`that signature does not check out over the tar's SHA-256 (${digest.toString('hex')})`);
+    die(`that signature does not check out over SHA-512(tar || key) (${digest.toString('hex')})`);
   }
   const out = flag('out') ?? path.join(path.dirname(tarPath), 'webroot.tar');
   await fs.writeFile(out, Buffer.concat([tar, key, signature]));
@@ -178,25 +239,25 @@ async function attach(tarPath) {
  * it is not a reason to trust them, so `--key` compares it with the one you
  * expect — the value the module reports as `uis`.
  */
-async function verify(file) {
+async function verify(file, expectedKey = null) {
   if (!file) die('which file? node pack.mjs verify <webroot.tar>');
   const bytes = await fs.readFile(file);
   if (!isSigned(bytes)) die(`${file} is ${bytes.length} bytes — too short to carry a signature`);
   const body = bytes.subarray(0, bytes.length - TRAILER);
   const key = bytes.subarray(bytes.length - TRAILER, bytes.length - SIG_BYTES);
   const signature = bytes.subarray(bytes.length - SIG_BYTES);
-  const digest = sha256(body);
+  const digest = signedDigest(body, key);
 
   console.log(`${path.relative(process.cwd(), file)}`);
   console.log(`  tar        ${kb(body.length)}`);
-  console.log(`  SHA-256    ${digest.toString('hex')}`);
-  console.log(`  signed by  ${key.toString('base64')}`);
+  console.log(`  SHA-512    ${digest.toString('hex')}   (tar || key)`);
+  console.log(`  signed by  ${key.toString('hex')}`);
   const ok = ed25519Verify(key, signature, digest);
   console.log(`  signature  ${ok ? 'checks out over that digest' : 'DOES NOT check out'}`);
 
-  const expected = flag('key');
+  const expected = expectedKey ?? flag('key');
   if (expected) {
-    const want = await readBytes(expected, KEY_BYTES, 'key');
+    const want = Buffer.isBuffer(expected) ? expected : await readBytes(expected, KEY_BYTES, 'key');
     const same = want.equals(key);
     console.log(`  key        ${same ? 'is the one you expected' : 'IS NOT the one you expected'}`);
     if (!same) process.exitCode = 1;

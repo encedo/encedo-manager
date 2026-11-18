@@ -1,10 +1,13 @@
-# Builds the Manager and packs it the way the module takes it, then puts the
-# tar on the release beside the source archives GitHub attaches itself.
+# Builds the Manager, packs it the way the module takes it (webroot/ with .gz
+# twins, the manifest, the tar) and signs it, then puts webroot.tar on the
+# release beside the source archives GitHub attaches itself.
 #
-# The signature is not made here. A release engineer signs the tar's SHA-256
-# with a YubiKey and appends the trailer with `node pack.mjs attach`, then
-# uploads the resulting webroot.tar to the same release. docs/PACKAGING.md
-# explains why, and what the module checks.
+# Signing: Ed25519 over SHA-512(tar || public key), with the 96-byte trailer
+# public key || signature appended - what the firmware checks before it
+# installs. The seed comes from the repository secret UI_SIGNING_KEY (32 bytes
+# as hex); the repository variable UI_PUBLISHER_KEY (hex) is the public key it
+# must give, so a wrong secret stops the run here and not on a module.
+# docs/PACKAGING.md has the details.
 
 name: Release
 
@@ -22,11 +25,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # The SDK is a submodule of its own repository. While hem-sdk-js is
-          # private, the default token cannot read it: give this a token that
-          # can, or the build has nothing to bundle.
+          # The SDK is a submodule of its own repository (public; checkout
+          # turns its git@github.com: URL into https).
           submodules: recursive
-          # token: ${{ secrets.SDK_READ_TOKEN }}
 
       - uses: actions/setup-node@v4
         with:
@@ -38,6 +39,14 @@ jobs:
       - name: Pack
         run: node pack.mjs --out release | tee pack.log
 
+      - name: Sign
+        env:
+          UI_SIGNING_KEY: ${{ secrets.UI_SIGNING_KEY }}
+          UI_PUBLISHER_KEY: ${{ vars.UI_PUBLISHER_KEY }}
+        run: |
+          test -n "$UI_PUBLISHER_KEY" || { echo "set the repository variable UI_PUBLISHER_KEY (the public key, hex)"; exit 1; }
+          node pack.mjs sign release/webroot_src.tar --key-env UI_SIGNING_KEY --expect "$UI_PUBLISHER_KEY" | tee sign.log
+
       - name: Say what was built
         run: |
           {
@@ -45,13 +54,8 @@ jobs:
             echo
             echo '```'
             sed -n '/^packed/,$p' pack.log
-            echo '```'
             echo
-            echo 'The tar is unsigned. Sign its SHA-256 with the release key, then:'
-            echo
-            echo '```'
-            echo 'node pack.mjs attach webroot_src.tar --key <pub> --signature <sig>'
-            echo 'node pack.mjs verify webroot.tar --key <pub>'
+            cat sign.log
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -61,6 +65,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release upload "${{ github.event.release.tag_name }}" \
+            release/webroot.tar \
             release/webroot_src.tar \
             release/webroot_src.tar.sha256 \
             --clobber

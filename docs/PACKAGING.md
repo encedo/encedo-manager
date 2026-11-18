@@ -64,33 +64,52 @@ Confirmed against the release in hand: the 32 bytes are the public key of the
 signing key, and they are the value the module reports as `uis` in
 `/api/system/version`.
 
-**From 2026-09-11 the signature is made by hand**, by a release engineer with a
-YubiKey, the way firmware is signed — and it covers the **SHA-256 of the tar**,
-not the tar itself. So the pipeline stops at `webroot_src.tar` and hands over a
-digest; the engineer signs the digest and the trailer is appended.
+**What is signed** (settled 2026-11-18 against the firmware, `ed25519_verify_file`
+in `encedo_firmware/Firmware/src/main.c`, and against the release in hand): the
+module takes the whole file but the last 64 bytes - the tar **and the 32-byte
+public key** - hashes it with **SHA-512**, and checks the Ed25519 signature over
+those 64 bytes:
 
-Verifying one, then, is: take the last 96 bytes off, SHA-256 what is left,
-check the signature over that digest with the key in the trailer — and check
-that key against the one the module trusts. **The key in the trailer names the
-signer; it does not vouch for it.** Whatever verifies a bundle has to hold the
-expected public key of its own, or anybody can append a key of their own making
-along with a matching signature.
+```
+signature = Ed25519-sign( SHA-512( tar || public key ) )
+webroot.tar = tar || public key || signature
+```
 
-## Before the first release under the new scheme
+The old documents said "the SHA-256 of the tar"; that does not verify on the
+release in hand, and the module would refuse a bundle signed that way.
 
-Three things to settle with the firmware side, because the module's
-`check_ui` is what decides whether a bundle installs, and it is the firmware —
-not the signing tool — that defines the format:
+**From 2026-11-18 the CI signs it** (`.github/workflows/release.yml`, step
+Sign): `node pack.mjs sign webroot_src.tar --key-env UI_SIGNING_KEY --expect <pub>`.
 
-1. **Exactly which bytes are hashed.** The tar without the trailer, which is
-   the only thing that can work, but it should be written into the firmware
-   spec rather than inferred.
-2. **What `check_ui` expects today.** The signature on the release in hand does
-   not verify as Ed25519 over the plain tar body, nor over its SHA-256, so the
-   old `signer2` framed the message somehow before signing. If the firmware
-   checks that framing, moving to a plain signature over the digest is a
-   firmware change as well as a process change.
-3. **Where the trusted key lives** in the module, and how it is rotated.
+- Repository secret **`UI_SIGNING_KEY`**: the 32-byte Ed25519 seed, as 64 hex
+  characters - one of the web UI publisher keys pinned in the firmware
+  (`ui_publishers[]`, DEV-519).
+- Repository variable **`UI_PUBLISHER_KEY`**: its public key, 64 hex characters.
+  `sign` stops when the seed gives another key, so a wrong secret never reaches
+  a module.
+
+A signature made elsewhere, by hand: `node pack.mjs digest webroot_src.tar --key <pub>`
+prints the 64 bytes to sign, `node pack.mjs attach` appends the trailer.
+
+Verifying one, then, is: take the last 64 bytes off, SHA-512 what is left (tar
+and key), check the signature over that digest with the key in the trailer -
+and check that key against the one the module trusts. **The key in the trailer
+names the signer; it does not vouch for it.** Firmware with DEV-519 holds a list
+of pinned publisher keys; until it enforces them (`UI_PUBLISHER_PINNING`), any
+key with a matching signature is accepted.
+
+## What the module checks before it installs (`check_ui`)
+
+1. The signature, as above (and, once enforced, the key against the pinned list).
+2. The tar is unpacked into `/webroot.new`; every manifest line is a 64-hex
+   SHA-256, a space, `*`, and the path (`./name`), and every listed file must
+   hash to its line.
+3. From DEV-519: every regular file of the tar needs a manifest line - the tar
+   holds exactly one file more than the manifest has lines (the manifest
+   itself). A file the manifest does not list fails the check.
+
+Tar entries carry no `webroot/` prefix (`index.html`, `app.js.gz`, `manifest`):
+the module unpacks them into `/webroot.new/` as they are.
 
 ## What the Manager's build already does, and what it could take from the CI
 
