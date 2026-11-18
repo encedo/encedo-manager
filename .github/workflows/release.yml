@@ -23,13 +23,13 @@ jobs:
   webroot:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # The SDK is a submodule of its own repository (public; checkout
           # turns its git@github.com: URL into https).
           submodules: recursive
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
 
@@ -72,7 +72,7 @@ jobs:
 
       - name: Keep it for a manual run
         if: github.event_name != 'release'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: webroot
           path: release/
