@@ -85,9 +85,9 @@ npm run build                    # -> dist/
 ```
 
 Four files — `index.html`, `app.js`, `style.css`, `favicon.svg` — and a `.gz`
-twin of each, about 100 KB compressed. Rollup folds `app/main.js` and everything
-it imports, the SDK included, into the one `app.js`; nothing is minified, gzip
-does the work and a stack trace out of the module stays readable. The module
+twin of each, about 65 KB compressed. Rollup folds `app/main.js` and everything
+it imports, the SDK included, into the one `app.js`, which esbuild minifies
+with `style.css` (`--no-minify` keeps them readable for a stack trace). The module
 answers `GET /x` with `x.gz` and a `Content-Encoding` header when the twin is
 there and with `x` when it is not, so both go on it.
 

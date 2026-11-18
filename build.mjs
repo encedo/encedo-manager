@@ -2,12 +2,13 @@
 // twin. The PPA answers GET /x with x.gz and a Content-Encoding header when
 // the twin is there, and with x itself when it is not, so both are written.
 //
-//   node build.mjs               -> dist/
+//   node build.mjs                      -> dist/
+//   node build.mjs <dir> --no-minify    readable app.js / style.css, for a stack trace
 //
 // Rollup folds app/main.js and everything it imports — the SDK included — into
-// one ES module; nothing is minified, gzip does the work and a stack trace out
-// of the module stays readable. The sources are untouched: the dev server and
-// the tests keep running on the loose modules.
+// one ES module; esbuild then minifies it and style.css - less to store on the
+// module and to send, gzip on top. The sources are untouched: the dev server
+// and the tests keep running on the loose modules.
 
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs/promises';
@@ -18,9 +19,12 @@ import { fileURLToPath } from 'node:url';
 // Pinned, so a release built on a runner is the release built on a desk.
 // Bump it deliberately; nothing else here has a version to track.
 const ROLLUP = 'rollup@4.63.1';
+const ESBUILD = 'esbuild@0.28.2';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const out = path.resolve(process.argv[2] ?? path.join(here, 'dist'));
+const argv = process.argv.slice(2);
+const minify = !argv.includes('--no-minify');
+const out = path.resolve(argv.find((a) => !a.startsWith('--')) ?? path.join(here, 'dist'));
 await fs.rm(out, { recursive: true, force: true });
 await fs.mkdir(out, { recursive: true });
 
@@ -56,6 +60,18 @@ const html = (await fs.readFile(path.join(here, 'index.html'), 'utf8'))
 await fs.writeFile(path.join(out, 'index.html'), html);
 await fs.copyFile(path.join(here, 'app/style.css'), path.join(out, 'style.css'));
 await fs.copyFile(path.join(here, 'favicon.svg'), path.join(out, 'favicon.svg'));
+
+// 2b. minified in place - esbuild without bundling, so app.js stays the ES module rollup wrote
+if (minify) {
+  for (const name of ['app.js', 'style.css']) {
+    const file = path.join(out, name);
+    const args = ['--yes', ESBUILD, q(file), '--minify', `--outfile=${q(file)}`, '--allow-overwrite', '--log-level=warning'];
+    if (name.endsWith('.js')) args.push('--format=esm');
+    const r = spawnSync('npx', args, { stdio: 'inherit', shell: win });
+    if (r.status !== 0) { console.error(`esbuild failed on ${name}`); process.exit(r.status ?? 1); }
+  }
+  if (/^import .*node:/m.test(await fs.readFile(bundle, 'utf8'))) { console.error('the minified bundle imports a node: module statically'); process.exit(1); }
+}
 
 // 3. the .gz twins, each read back to be sure it is the same bytes
 const rows = [];
