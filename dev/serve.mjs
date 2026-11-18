@@ -499,8 +499,12 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
       if (scopeOf(req) !== 'keymgmt:upd') return [403, { error: 'scope' }];
       const k = state.keys.find((x) => x.kid === body.kid);
       if (!k) return [404, { error: 'no such key' }];
-      k.label = body.label ?? k.label;
-      k.descr = body.descr ?? '';                // absent removes it, as on the device
+      // as the firmware with DEV-519: what is not sent is kept, "" removes the description, neither field is 400,
+      // and a paired phone's entry takes a new label but no description (409)
+      if (body.label === undefined && body.descr === undefined) return [400, { error: 'nothing to change' }];
+      if (body.descr !== undefined && String(k.descr ?? '').startsWith('RVhUQUlE')) return [409, { error: 'pairing record' }];
+      if (body.label !== undefined) k.label = body.label;
+      if (body.descr !== undefined) k.descr = body.descr;
       k.updated = nowSecs();
       return [200, { updated: true }];
     }

@@ -410,6 +410,19 @@ test('a key pair is created inside the module, renamed and deleted', async () =>
   assert.equal(s.state.keys.some((k) => k.kid === kid), false);
 });
 
+test('a paired phone\'s keychain entry can be renamed; its description is not sent (firmware with DEV-519 refuses one: 409)', async () => {
+  const s = await signedIn();
+  await s.loadKeys();
+  const phone = s.state.keys.find((k) => k.phone);
+  assert.ok(phone, 'the mock has a paired phone in the keychain');
+  await s.renameKey(phone.kid, 'Phone renamed', phone.descrB64);
+  const after = s.state.keys.find((k) => k.kid === phone.kid);
+  assert.equal(after.label, 'Phone renamed');
+  assert.equal(after.descrB64, phone.descrB64, 'still paired');
+  assert.equal(after.phone, phone.phone);
+  await s.renameKey(phone.kid, phone.label, phone.descrB64);   // the mock keeps its state for the tests after this one
+});
+
 test('a NIST key is created with the use it was given, an imported key is public only', async () => {
   const s = await signedIn();
   await s.loadKeys();

@@ -347,9 +347,18 @@ export class Session extends EventTarget {
     return kid;
   }
 
-  /** Label and description are the only parts of a key that can change. */
+  /**
+   * Label and description are the only parts of a key that can change. The
+   * description goes to the module only when it changed: firmware with DEV-519
+   * keeps what is not sent, and refuses any description for a paired phone's
+   * entry (409) - its label can still change.
+   */
   async renameKey(kid, label, descr) {
-    await this.hem.updateKey(await this.token('keymgmt:upd'), kid, asLabel(label), descrBytes(descr));
+    const bytes = descrBytes(descr);
+    const before = this.state.keys?.find((k) => k.kid === kid)?.descrB64 ?? null;
+    const now = bytes?.length ? bytesToB64(bytes) : '';
+    const changed = before === null || now !== (before ?? '');
+    await this.hem.updateKey(await this.token('keymgmt:upd'), kid, asLabel(label), changed ? bytes : undefined);
     await this.loadKeys();
   }
 
