@@ -134,7 +134,8 @@ async function buildLogs(keys) {
     signer: signing.privateKey,
     key: Buffer.from(new Uint8Array(await crypto.subtle.exportKey('raw', signing.publicKey))).toString('base64'),
     nonce: Buffer.from(proof).toString('base64'),
-    nonce_signed: Buffer.from(new Uint8Array(await crypto.subtle.sign({ name: 'Ed25519' }, signing.privateKey, proof))).toString('base64'),
+    // firmware DEV-519: the signature is over the label 'encedo-logger-key:v1:' + the nonce
+    nonce_signed: Buffer.from(new Uint8Array(await crypto.subtle.sign({ name: 'Ed25519' }, signing.privateKey, Buffer.concat([Buffer.from('encedo-logger-key:v1:'), proof])))).toString('base64'),
   };
 }
 const listed = (keys) => keys.map(({ pubkey, ...rest }) => rest);   // the list endpoint has no pubkey in it
@@ -513,12 +514,12 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
     // ---- the audit log ------------------------------------------------------------------
     if (p.startsWith('/mock/api/logger/key')) {
       if (scopeOf(req) !== 'logger:get') return [403, { error: 'scope' }];
-      const asked = p.split('/')[5];              // /logger/key/<nonce base64url>: sign the caller's nonce
+      const asked = p.split('/')[5];              // /logger/key/<nonce base64url>: sign the label + the caller's nonce (firmware DEV-519)
       const { key, nonce, nonce_signed, signer } = state.logger;
       if (!asked) return [200, { key, nonce, nonce_signed }];
       const bytes = Buffer.from(asked, 'base64url');
       if (bytes.length < 32 || bytes.length > 64) return [400, { error: 'nonce' }];
-      const sig = new Uint8Array(await crypto.subtle.sign({ name: 'Ed25519' }, signer, bytes));
+      const sig = new Uint8Array(await crypto.subtle.sign({ name: 'Ed25519' }, signer, Buffer.concat([Buffer.from('encedo-logger-key:v1:'), bytes])));
       return [200, { key, nonce: bytes.toString('base64'), nonce_signed: Buffer.from(sig).toString('base64') }];
     }
     if (p.startsWith('/mock/api/logger/list')) {
