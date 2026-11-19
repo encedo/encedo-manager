@@ -2,7 +2,7 @@
 // `session.state` and re-render on the 'change' event; Node tests drive it
 // against a mock. Every network call goes through hem-sdk-js.
 
-import { HEM, HemError, verifyLog, verifyLoggerKey, generateMnemonic } from '../sdk/hem-sdk.browser.js';
+import { HEM, HemError, verifyLog, verifyLoggerKey, generateMnemonic, jwtParse } from '../sdk/hem-sdk.browser.js';
 
 export const SIGNIN_SCOPE = 'system:config';
 export const SIGNIN_EXP = 3600;
@@ -10,6 +10,7 @@ export const SIGNIN_EXP = 3600;
 export class Session extends EventTarget {
   #phoneRequest = null;      // the phone request in flight, so two never overlap
   #authRequest = null;       // the password question in flight, likewise
+  #masterToken = null;       // the token the 24 words made: the cache may hand out a password one for the same scope
 
   constructor({ hem, broker }, { HEMClass = HEM } = {}) {
     super();
@@ -697,9 +698,17 @@ export class Session extends EventTarget {
    * Change the everyday password. The module then answers to a key this browser
    * no longer holds, so the session ends here: the next sign-in uses the new one.
    * The 24 words are untouched.
+   *
+   * Signed in with the password, the module wants the current one as well, so a
+   * session left open cannot have its password changed. With the 24 words it does
+   * not - that is how a forgotten password is replaced.
    */
-  async changePassword(newPassword) {
-    await this.hem.setUserPassword(await this.token('system:config'), newPassword);
+  async changePassword(newPassword, currentPassword = null) {
+    const master = this.state.master ? this.#masterToken : null;
+    const exp = master ? (jwtParse(master)?.exp ?? 0) : 0;
+    const token = master && exp > Date.now() / 1000 + 10 ? master : await this.token('system:config');
+    await this.hem.setUserPassword(token, newPassword, token === master ? {} : { currentPassword });
+    this.#masterToken = null;
     this.hem.clearKeys();
     this.#set({ phase: 'reachable', mode: null, config: null, keys: null, logs: null, selftest: null, master: false });
   }
@@ -709,7 +718,7 @@ export class Session extends EventTarget {
    * scope, so what follows is authorised by the master secret without asking again.
    */
   async authorizeMaster(mnemonic) {
-    await this.hem.authorizeMaster(mnemonic, SIGNIN_SCOPE, { expSeconds: SIGNIN_EXP });
+    this.#masterToken = await this.hem.authorizeMaster(mnemonic, SIGNIN_SCOPE, { expSeconds: SIGNIN_EXP });
     this.#set({ master: true, lastError: null });
   }
 

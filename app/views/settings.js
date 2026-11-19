@@ -27,7 +27,12 @@ export function createSettingsView({ session, paint, probeAgain }) {
       return view.run(which, () => session.saveConfig(patch), 'Saved. The module answers with what it made of it.');
     },
 
-    changePassword(next, again) {
+    changePassword(next, again, current = null) {
+      if (!session.state.master && !current) {
+        view.error = 'Type the current password first.';
+        paint();
+        return Promise.resolve();
+      }
       if (next !== again) {
         view.error = 'The two passwords are not the same.';
         paint();
@@ -38,8 +43,15 @@ export function createSettingsView({ session, paint, probeAgain }) {
         paint();
         return Promise.resolve();
       }
-      return view.run('password', () => session.changePassword(next),
-        'The password is changed. Sign in again with the new one — the 24 words still work as they did.');
+      return view.run('password', async () => {
+        try {
+          await session.changePassword(next, current);
+        } catch (e) {
+          // The module answers a proof that does not check out with a 400 and keeps the password it had.
+          if (e?.code === 'http_400') throw new Error('The current password is not right. Nothing was changed.');
+          throw e;
+        }
+      }, 'The password is changed. Sign in again with the new one — the 24 words still work as they did.');
     },
 
     useMaster(words) {

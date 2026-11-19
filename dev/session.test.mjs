@@ -819,7 +819,10 @@ test('the settings the module keeps are read, changed and read back', async () =
 
 test('changing the password ends the session, and the new one opens the module', async () => {
   const s = await signedIn();
-  await s.changePassword('a new password');
+  // Signed in with the password, the current one is part of the proof (firmware DEV-519).
+  await assert.rejects(s.changePassword('a new password', 'not it'), (e) => e.code === 'http_400', 'a wrong current password changes nothing');
+  assert.equal(s.state.phase, 'signed-in');
+  await s.changePassword('a new password', 'demo');
   assert.equal(s.state.phase, 'reachable', 'this browser holds a key the module no longer answers to');
   assert.equal(s.state.config, null);
 
@@ -827,7 +830,7 @@ test('changing the password ends the session, and the new one opens the module',
   await s.signIn('a new password', { remember: true });
   assert.equal(s.state.phase, 'signed-in');
 
-  await s.changePassword('demo');           // the mock keychain is shared; put it back
+  await s.changePassword('demo', 'a new password');   // the mock keychain is shared; put it back
   await s.signIn('demo', { remember: true });
   assert.equal(s.state.phase, 'signed-in');
 });
@@ -863,6 +866,15 @@ test('the master passphrase authorises the settings, a wrong word does not', asy
   assert.equal(s.state.master, true);
   const saved = await s.saveConfig({ user: 'Ann' });     // and it authorises what follows
   assert.equal(saved.user, 'Ann');
+
+  // With the 24 words a forgotten password is replaced without the current one (firmware DEV-519).
+  await s.authorizeMaster(MASTER_WORDS);
+  await s.changePassword('forgotten and replaced');
+  await s.signIn('forgotten and replaced', { remember: true });
+  await s.authorizeMaster(MASTER_WORDS);
+  await s.changePassword('demo');                        // the mock keychain is shared; put it back
+  await s.signIn('demo', { remember: true });
+  await s.authorizeMaster(MASTER_WORDS);
 
   s.signOut();
   assert.equal(s.state.master, false, 'signing out drops the master token with the rest');

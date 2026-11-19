@@ -242,12 +242,20 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
 
   state.logger = await buildLogs(state.keys);
 
-  /** The device's side of a password change: HMAC the nonce under the shared secret. */
-  async function verifyUserKey({ userkey, userkey_nonce, userkey_hmac }) {
+  /**
+   * The device's side of a password change: HMAC the nonce under the shared secret.
+   * With a password token (sub U) the key is the new key's shared secret followed by
+   * the current one's - the firmware with DEV-519 wants proof of the current password.
+   */
+  async function verifyUserKey({ userkey, userkey_nonce, userkey_hmac }, role) {
     if (userkey_nonce !== state.configNonce) return false;
     try {
-      const userPub = await crypto.subtle.importKey('raw', fromB64(userkey), 'X25519', false, []);
-      const shared = await crypto.subtle.deriveBits({ name: 'X25519', public: userPub }, devKeys.privateKey, 256);
+      const ecdh = async (pubB64) => {
+        const pub = await crypto.subtle.importKey('raw', fromB64(pubB64), 'X25519', false, []);
+        return new Uint8Array(await crypto.subtle.deriveBits({ name: 'X25519', public: pub }, devKeys.privateKey, 256));
+      };
+      let shared = await ecdh(userkey);
+      if (role !== 'M') shared = new Uint8Array([...shared, ...await ecdh(expectedPub)]);
       const key = await crypto.subtle.importKey('raw', shared, { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']);
       return crypto.subtle.verify('HMAC', key, fromB64(userkey_hmac), fromB64(state.configNonce));
     } catch {
@@ -375,8 +383,9 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
       if (body.userkey) {
         // What a module does before it accepts a new password: check that
         // whoever sent this key can also do ECDH with it against the module.
-        const ok = await verifyUserKey(body);
-        if (!ok) return [401, { error: 'the proof does not check out' }];
+        const role = jwtPayload((req.headers.authorization ?? '').replace(/^Bearer /, ''))?.sub;
+        const ok = await verifyUserKey(body, role);
+        if (!ok) return [400, null];              // DEV-519: a wrong proof is 400, the password stays
         expectedPub = body.userkey;                 // that password now opens it
         return [200, { updated: true, userkey: true }];
       }
@@ -415,7 +424,7 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
     if (p === '/mock/api/auth/token' && method === 'POST') {
       const { ok, payload } = await verifyEjwt(body.auth);
       if (!ok) return [401, { error: 'authentication failed' }];
-      return [200, { token: jwt({ scope: payload.scope, exp: payload.exp, sub: payload.iss === masterPub ? 'master' : 'user' }) }];
+      return [200, { token: jwt({ scope: payload.scope, exp: payload.exp, sub: payload.iss === masterPub ? 'M' : 'U' }) }];
     }
     if (p === '/mock/api/auth/ext/request') {
       // The real authreq is a JWT with the scope sealed for each phone; the

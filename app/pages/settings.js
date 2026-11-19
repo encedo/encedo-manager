@@ -30,7 +30,7 @@ export function renderSettings(session, view) {
     ownerCard(config, view),
     trustCard(config, view),
     policyCard(config),
-    passwordCard(view),
+    passwordCard(session, view),
     masterCard(session, view),
     nameCard(session, config, view),
     wipeCard(view),
@@ -103,7 +103,11 @@ function policyCard(config) {
 
 // -- what opens it ----------------------------------------------------------------------
 
-function passwordCard(view) {
+function passwordCard(session, view) {
+  // Signed in with the password, the module also wants the current one (firmware DEV-519);
+  // with the 24 words it does not - that is how a forgotten password is replaced.
+  const master = session.state.master;
+  const current = master ? null : h('input', { type: 'password', autocomplete: 'current-password', required: true });
   const next = h('input', { type: 'password', autocomplete: 'new-password', required: true });
   const again = h('input', { type: 'password', autocomplete: 'new-password', required: true });
   const busy = view.busy === 'password';
@@ -111,13 +115,13 @@ function passwordCard(view) {
   return h('form.card', {
     onsubmit: (e) => {
       e.preventDefault();
-      view.changePassword(next.value, again.value);
+      view.changePassword(next.value, again.value, current ? current.value : null);
     },
   },
     h('div.card-head', {}, h('span', {}, 'Password'), h('span.v', {}, 'the everyday one')),
     h('div.card-body', {},
       h('p.soft.measure', {}, 'The password never leaves this page: what the module receives is the key the password derives to, and a proof that whoever sent it can use that key. Changing it ends this session — sign in again with the new one. The 24 words are not touched and still open the module if this is forgotten.'),
-      h('div.form-grid', {}, field('New password', next), field('Type it again', again)),
+      h('div.form-grid', {}, current ? field('Current password', current) : null, field('New password', next), field('Type it again', again)),
       h('div.row', {}, h('button.button', { type: 'submit', disabled: busy || null }, busy ? 'Changing…' : 'Change the password'))));
 }
 
