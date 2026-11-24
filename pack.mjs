@@ -6,6 +6,7 @@
 //   node pack.mjs digest <tar> --key <pub>                       what to sign by hand
 //   node pack.mjs attach <tar> --key <file> --signature <file>   append a signature made by hand
 //   node pack.mjs verify <webroot.tar> [--key <expected>]
+//   node pack.mjs latest <webroot.tar> --tag <tag> [--repo owner/name]  latest.json for the release
 //
 // A release is a `webroot/` — what the module serves, every file with a `.gz`
 // twin beside it — a `manifest` of everything in it, and a tar of the lot.
@@ -41,13 +42,14 @@ const b64url = (bytes) => bytes.toString('base64').replace(/\+/g, '-').replace(/
 const kb = (n) => `${(n / 1024).toFixed(1).padStart(7)} KB`;
 const die = (message) => { console.error(message); process.exit(1); };
 
-const command = ['attach', 'verify', 'sign', 'digest'].includes(positional[0]) ? positional[0] : 'pack';
+const command = ['attach', 'verify', 'sign', 'digest', 'latest'].includes(positional[0]) ? positional[0] : 'pack';
 try {
   if (command === 'pack') await pack();
   if (command === 'sign') await sign(positional[1]);
   if (command === 'digest') await digestFor(positional[1]);
   if (command === 'attach') await attach(positional[1]);
   if (command === 'verify') await verify(positional[1]);
+  if (command === 'latest') await latest(positional[1]);
 } catch (e) {
   die(e.message);
 }
@@ -266,6 +268,63 @@ async function verify(file, expectedKey = null) {
     console.log('  key        not checked against anything — pass --key to say whose signature you will accept');
   }
   if (!ok) process.exitCode = 1;
+}
+
+
+// -- latest -------------------------------------------------------------------------------
+
+/**
+ * latest.json beside a release: what a Manager reads to say "Update available"
+ * (written for the Manager; the module's own check-in still goes through the
+ * broker). `version` is the Manager's semver from app/version.js - the tag
+ * must name it, so a release can never announce a version it does not carry;
+ * `uis` is the SHA-256 of the manifest as base64, what /api/system/version
+ * reports once it is installed; `tar` is the signed webroot.tar on the release
+ * (sha256 hex as in webroot_src.tar.sha256, publisher = the key in its trailer).
+ *
+ *   node pack.mjs latest <webroot.tar> --tag <tag> [--repo owner/name] [--out <file>]
+ */
+async function latest(tarPath) {
+  if (!tarPath) die('which tar? node pack.mjs latest <webroot.tar> --tag <tag> [--repo owner/name] [--out <file>]');
+  const tag = flag('tag');
+  if (!tag) die('--tag <tag>: the release this describes');
+  const repo = flag('repo') ?? process.env.GITHUB_REPOSITORY;
+  if (!repo) die('--repo owner/name (or GITHUB_REPOSITORY)');
+
+  const source = await fs.readFile(path.join(HERE, 'app', 'version.js'), 'utf8');
+  const version = /export const VERSION = '([^']+)'/.exec(source)?.[1];
+  if (!version) die('app/version.js has no VERSION');
+  if (tag !== version && tag !== `v${version}`) die(`the tag ${tag} does not name the version in app/version.js (${version})`);
+
+  const bytes = await fs.readFile(tarPath);
+  if (!isSigned(bytes)) die(`${tarPath} carries no signature - latest.json points at the signed webroot.tar`);
+  const key = bytes.subarray(bytes.length - TRAILER, bytes.length - SIG_BYTES);
+  const signature = bytes.subarray(bytes.length - SIG_BYTES);
+  if (!ed25519Verify(key, signature, signedDigest(bytes.subarray(0, bytes.length - TRAILER), key))) {
+    die(`${tarPath}: the signature does not check out`);
+  }
+  const manifest = await fs.readFile(flag('manifest') ?? path.join(path.dirname(tarPath), 'webroot', 'manifest'));
+
+  const git = (args) => (spawnSync('git', args, { cwd: HERE, encoding: 'utf8' }).stdout ?? '').trim();
+  const doc = {
+    product: 'encedo-manager',
+    version,
+    uis: sha256(manifest).toString('base64'),
+    tag,
+    published: Math.floor(Date.now() / 1000),
+    commit: process.env.GITHUB_SHA || git(['rev-parse', 'HEAD']),
+    sdk: git(['-C', 'sdk', 'rev-parse', 'HEAD']),
+    tar: {
+      url: `https://github.com/${repo}/releases/download/${encodeURIComponent(tag)}/webroot.tar`,
+      size: bytes.length,
+      sha256: sha256(bytes).toString('hex'),
+      publisher: key.toString('base64'),
+    },
+  };
+  const out = flag('out') ?? path.join(path.dirname(tarPath), 'latest.json');
+  await fs.writeFile(out, JSON.stringify(doc, null, 2) + '\n');
+  console.log(`wrote ${path.relative(process.cwd(), out)}`);
+  console.log(JSON.stringify(doc, null, 2));
 }
 
 

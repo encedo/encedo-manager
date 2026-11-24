@@ -126,3 +126,40 @@ hand:
 - **`gzip -n9`, not the default.** Level 9 is free; `-n` keeps the name and the
   timestamp out of the header, without which two builds of identical content
   produce different twins, a different manifest and so a different version.
+
+## latest.json - what a Manager reads to offer an update
+
+A release (the `release` event of `.github/workflows/release.yml`) also gets
+`latest.json`, written by `node pack.mjs latest <webroot.tar> --tag <tag>`:
+
+```json
+{
+  "product": "encedo-manager",
+  "version": "2.0.0",
+  "uis": "<base64 SHA-256 of the manifest>",
+  "tag": "v2.0.0",
+  "published": 1795539669,
+  "commit": "<this repository's commit>",
+  "sdk": "<sdk/ commit>",
+  "tar": {
+    "url": "https://github.com/encedo/encedo-manager/releases/download/v2.0.0/webroot.tar",
+    "size": 307296,
+    "sha256": "<hex, as in webroot_src.tar.sha256>",
+    "publisher": "<base64 of the 32-byte key in the trailer>"
+  }
+}
+```
+
+- `version` is `VERSION` from `app/version.js`. The tag must be that version,
+  with or without a `v`, or the run stops: a release never announces a version
+  it does not carry. A Manager compares it with its own `VERSION`.
+- `uis` is the version above - what `/api/system/version` reports as `uis` once
+  this release is installed.
+- `published` is unix seconds; `tar.url` names the tag, not `latest`, so it
+  never moves. The newest file is always at
+  `https://github.com/encedo/encedo-manager/releases/latest/download/latest.json`.
+- `pack.mjs latest` refuses an unsigned tar and one whose signature does not
+  check out.
+- Not yet tried: whether a browser may read that file cross-origin (CORS on
+  GitHub's release downloads). Check with the first release before the Manager
+  relies on it.

@@ -1,6 +1,8 @@
 # Builds the Manager, packs it the way the module takes it (webroot/ with .gz
 # twins, the manifest, the tar) and signs it, then puts webroot.tar on the
 # release beside the source archives GitHub attaches itself.
+# On a release it also writes latest.json (pack.mjs latest): what a Manager
+# reads to offer "Update available" - the tag must name app/version.js.
 #
 # Signing: Ed25519 over SHA-512(tar || public key), with the 96-byte trailer
 # public key || signature appended - what the firmware checks before it
@@ -47,6 +49,13 @@ jobs:
           test -n "$UI_PUBLISHER_KEY" || { echo "set the repository variable UI_PUBLISHER_KEY (the public key, hex)"; exit 1; }
           node pack.mjs sign release/webroot_src.tar --key-env UI_SIGNING_KEY --expect "$UI_PUBLISHER_KEY" | tee sign.log
 
+      - name: latest.json
+        if: github.event_name == 'release'
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: node pack.mjs latest release/webroot.tar --tag "$TAG" | tee latest.log
+        shell: bash   # -eo pipefail: a refused tag fails the run, not only tee
+
       - name: Say what was built
         run: |
           {
@@ -56,6 +65,7 @@ jobs:
             sed -n '/^packed/,$p' pack.log
             echo
             cat sign.log
+            test -f latest.log && { echo; cat latest.log; }
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -66,6 +76,7 @@ jobs:
         run: |
           gh release upload "${{ github.event.release.tag_name }}" \
             release/webroot.tar \
+            release/latest.json \
             release/webroot_src.tar \
             release/webroot_src.tar.sha256 \
             --clobber
