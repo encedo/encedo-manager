@@ -13,6 +13,7 @@ import { filterKeys, sortKeys } from '../app/pages/keychain.js';
 import { pageOf } from '../app/table.js';
 import { parseLogFile, parseLogLine, logFileHeader, describeVerification } from '../app/logfile.js';
 import { resolveConfig, DEFAULT_HEM } from '../app/config.js';
+import { HemError } from '../sdk/hem-sdk.browser.js';
 import { proofOfPersonalisation, buildPdf } from '../app/pdf.js';
 
 let server, base;
@@ -37,6 +38,23 @@ test('config: served from a dev host the module defaults to my.ence.do, ?hem= ov
   const onDevice = { protocol: 'https:', hostname: 'my.ence.do', origin: 'https://my.ence.do', search: '' };
   assert.equal(resolveConfig(onDevice, storage).hem, 'https://my.ence.do');
   assert.equal(resolveConfig(onDevice, storage).servedFromDevice, true);
+});
+
+test('plain http: ?service=1 or a mock on this machine lets a password through, and says so; otherwise it is refused before anything is sent (DEV-532)', async () => {
+  const mem = new Map();
+  const storage = { get: (k) => mem.get(k) ?? null, set: (k, v) => mem.set(k, v), remove: (k) => mem.delete(k) };
+  const loc = { protocol: 'http:', hostname: '192.168.7.1', origin: 'http://192.168.7.1', search: '?service=1' };
+  assert.equal(resolveConfig(loc, storage).service, true);
+  assert.equal(resolveConfig({ ...loc, search: '' }, storage).service, false, 'not remembered');
+
+  const remote = { hem: 'http://192.168.7.1', broker: `${base}/mockbroker` };
+  const plain = new Session(remote);
+  assert.equal(plain.state.plainHttp, false);
+  await assert.rejects(plain.signIn('demo'), (e) => e.code === 'plain_http_login');
+  assert.match(describeError(new HemError('x', { code: 'plain_http_login' })), /\?service=1/);
+  assert.equal(new Session({ ...remote, service: true }).state.plainHttp, true, 'a service visit');
+  assert.equal(new Session({ hem: 'https://192.168.7.1', broker: remote.broker, service: true }).state.plainHttp, false, 'https needs nothing');
+  assert.equal(new Session(urls()).state.plainHttp, true, 'the mock on 127.0.0.1');
 });
 
 test('storage parsing follows the "<sectors>:<state>" format', () => {

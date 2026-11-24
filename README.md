@@ -23,6 +23,12 @@ Served from a laptop, the Manager talks to the module at `https://my.ence.do`
 remembered by the browser until `?hem=` clears it. Served by the module, it
 talks to its own origin and needs no query string at all.
 
+Over plain `http://` the Manager does not sign in or personalise: the SDK
+refuses it (`plain_http_login`). For a service visit - repairing a module's
+TLS - add `?service=1`; it is not remembered, and every screen then carries a
+"Service mode · plain http" band. A module on this machine (`localhost`,
+`127.0.0.1`: the mock) needs no flag and shows the same band.
+
 Without a module on the desk, the dev server also runs a mock of the device and
 the broker, and prints the address to open:
 

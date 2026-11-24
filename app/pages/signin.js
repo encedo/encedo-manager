@@ -1,6 +1,6 @@
 // Sign-in: waiting for the module, the password form, the phone request.
 
-import { h, mark, render } from '../ui.js';
+import { h, mark, render, plainHttpBanner } from '../ui.js';
 import { VERSION, PRODUCT } from '../version.js';
 import { describeError } from '../session.js';
 
@@ -10,6 +10,7 @@ export function renderSignIn(root, session, view) {
   const card = state.phase === 'probing' ? waiting(session, view) : form(session, view);
   render(root, h('div.signin', {},
     h('div.brand', {}, mark(40), h('div.masthead', {}, h('span', {}, h('b', {}, PRODUCT), `  ${VERSION}`))),
+    plainHttpBanner(state),   // DEV-532
     card));
 }
 

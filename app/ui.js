@@ -60,6 +60,18 @@ export function pill(kind, text) {
   return h(`span.pill${kind ? '.' + kind : ''}`, {}, h('i'), text);
 }
 
+/**
+ * DEV-532: the band every screen carries while a sign-in may go over plain
+ * http (a service visit, ?service=1, or a mock on this machine). Rust, because
+ * everything exchanged here is handed to the network as it is.
+ */
+export function plainHttpBanner(state) {
+  if (!state.plainHttp) return null;
+  return h('div.service-band', { role: 'status' },
+    h('b', {}, 'Service mode · plain http'),
+    h('span', {}, 'Nothing between this browser and the module is encrypted: the tokens and every answer can be read on the way, and a sign-in can be used to guess the password offline. Use it to repair the module’s TLS, then come back over https.'));
+}
+
 export function pageHead(eyebrow, title, lede) {
   return h('div.page-head', {}, h('p.eyebrow', {}, eyebrow), h('h1', {}, title), lede ? h('p', {}, lede) : null);
 }

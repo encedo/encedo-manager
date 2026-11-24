@@ -6,6 +6,9 @@
 //   ?hem=https://192.168.7.1          the module
 //   ?broker=http://localhost:8080/mockbroker   the broker (dev only)
 // A value given once is remembered in this browser; ?hem= (empty) forgets it.
+//   ?service=1   sign-in (password, 24 words) and personalisation over plain http
+//                (DEV-532): a service mode for repairing a module's TLS, never
+//                remembered - every visit that wants it asks for it again.
 
 export const DEFAULT_HEM = 'https://my.ence.do';
 export const DEFAULT_BROKER = 'https://api.encedo.com';
@@ -25,7 +28,13 @@ export function resolveConfig(loc = globalThis.location, storage = safeStorage()
   };
   const hem = pick('hem', () => servedFromDevice(loc) ? loc.origin : DEFAULT_HEM);
   const broker = pick('broker', () => DEFAULT_BROKER);
-  return { hem: hem.replace(/\/+$/, ''), broker: broker.replace(/\/+$/, ''), servedFromDevice: servedFromDevice(loc) };
+  const service = params.get('service') === '1';   // DEV-532: not remembered
+  return { hem: hem.replace(/\/+$/, ''), broker: broker.replace(/\/+$/, ''), servedFromDevice: servedFromDevice(loc), service };
+}
+
+/** A module URL on this machine: a mock or a dev server, where plain http is the only way. */
+export function isLoopback(url) {
+  try { return LOCAL_HOSTS.has(new URL(url).hostname); } catch { return false; }
 }
 
 export function servedFromDevice(loc = globalThis.location) {

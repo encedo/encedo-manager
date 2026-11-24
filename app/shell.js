@@ -2,7 +2,7 @@
 // the modal that covers them both while the module is waiting on a phone.
 
 import { ROUTES, href } from './router.js';
-import { h, mark, icon, render } from './ui.js';
+import { h, mark, icon, render, plainHttpBanner } from './ui.js';
 import { VERSION, PRODUCT } from './version.js';
 import { describeScope } from './session.js';
 
@@ -23,6 +23,7 @@ export function renderShell(root, { session, config, route, content, modal = nul
         h('span', {}, `${state.config?.user ?? 'signed in'} · `,
           h('a', { href: '#', onclick: (e) => { e.preventDefault(); session.signOut(); } }, 'Sign out')))),
     h('main.main', {},
+      plainHttpBanner(state),   // DEV-532
       h('div.masthead', {},
         h('span', {}, h('b', {}, PRODUCT), `  ${VERSION}`),
         h('span', {}, [

@@ -3,6 +3,7 @@
 // against a mock. Every network call goes through hem-sdk-js.
 
 import { HEM, HemError, verifyLog, verifyLoggerKey, generateMnemonic, jwtParse } from '../sdk/hem-sdk.browser.js';
+import { isLoopback } from './config.js';
 
 export const SIGNIN_SCOPE = 'system:config';
 export const SIGNIN_EXP = 3600;
@@ -12,11 +13,18 @@ export class Session extends EventTarget {
   #authRequest = null;       // the password question in flight, likewise
   #masterToken = null;       // the token the 24 words made: the cache may hand out a password one for the same scope
 
-  constructor({ hem, broker }, { HEMClass = HEM } = {}) {
+  constructor({ hem, broker, service = false }, { HEMClass = HEM } = {}) {
     super();
     this.urls = { hem, broker };
-    this.hem = new HEMClass(hem, { broker });
+    // DEV-532: the SDK does no sign-in (password, 24 words) and no personalisation over
+    // plain http unless told to. The Manager tells it to only for a service visit
+    // (?service=1, e.g. repairing the module's TLS) or a mock on this machine, and
+    // then says so on every screen. To do: a diagnostic screen when the module
+    // answers over http only (status.https false), instead of a bare error.
+    const plainHttp = /^http:\/\//i.test(hem) && (service === true || isLoopback(hem));
+    this.hem = new HEMClass(hem, { broker, allowPlainHttpLogin: plainHttp });
     this.state = {
+      plainHttp,               // DEV-532: a sign-in may go over plain http (service mode): every screen says so
       phase: 'probing',        // probing | reachable | unpersonalised | signed-in
       model: null,             // 'ppa' | 'epa', read off the version once the module answers
       playground: false,       // a virtual module of the HEM Playground (see isPlayground)
@@ -1174,6 +1182,7 @@ export function describeError(e) {
     case 'nothing_newer': return 'There is nothing newer to install.';
     case 'domain_failed': return 'The Encedo backend refused the name.';
     case 'mnemonic_invalid': return 'That is not a valid set of 24 words.';
+    case 'plain_http_login': return 'The module is reached over plain http, so the Manager does not sign in there. Open it over https, or add ?service=1 to the address for a service visit.';   // DEV-532
     default: return e.message;
   }
 }
