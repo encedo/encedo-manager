@@ -152,6 +152,7 @@ export class Session extends EventTarget {
     // DEV-535: a sign-in starts from nothing: a token of the module's previous
     // boot (a reboot, a power cycle this page did not see) would be refused.
     this.hem.clearKeys();
+    await this.#ensureClock();   // a module just started has no clock: the check-in sets it
     await this.hem.authorizePassword(password, SIGNIN_SCOPE, { expSeconds: SIGNIN_EXP, remember });
     this.#set({ remember });
     this.#afterSignIn('password');
@@ -159,6 +160,7 @@ export class Session extends EventTarget {
 
   async signInWithPhone({ signal = null, onPending = null, pollTimeout = 180_000 } = {}) {
     this.hem.clearKeys();   // DEV-535
+    await this.#ensureClock();
     await this.hem.authorizeRemote(SIGNIN_SCOPE, { pollInterval: 2000, pollTimeout, onPending, signal });
     this.#afterSignIn('phone');
   }
@@ -184,8 +186,26 @@ export class Session extends EventTarget {
    */
   async token(scope, opts = {}) {
     if (this.state.phase !== 'signed-in') throw new HemError('Not signed in', { code: 'not_signed_in' });
+    await this.#ensureClock();
     if (this.state.mode === 'password') return this.askPassword(scope);
     return this.askPhone(scope, opts);
+  }
+
+  /**
+   * A module that has not been told the time since it started refuses a token
+   * (403 - seen on a PPA after a reboot, 2026-11-25). /api/system/status says
+   * so: no `time` until the clock is set, and the check-in sets it. Asked
+   * before every new token (owner, 2026-11-25); a module that does not answer
+   * the status is left to the token request to say so.
+   */
+  async #ensureClock() {
+    let status;
+    try { status = await this.hem.getStatus({ timeoutMs: 5000 }); } catch (e) { if (!(e instanceof HemError)) throw e; return; }
+    this.#set({ status });
+    if (status?.time !== undefined) return;
+    if (!(await this.checkIn())) {
+      throw new HemError('The module clock is not set and the Encedo backend is unreachable', { code: 'clock_unset' });
+    }
   }
 
   /**
@@ -1273,6 +1293,7 @@ export function describeError(e) {
     case 'not_served_by_module': return 'Only the Manager a PPA serves itself is updated from here.';
     case 'domain_failed': return 'The Encedo backend refused the name.';
     case 'mnemonic_invalid': return 'That is not a valid set of 24 words.';
+    case 'clock_unset': return 'The module has not been told the time since it started, and the Encedo backend did not answer to set it. Connect it to the internet and try again.';
     case 'plain_http_login': return 'The module is reached over plain http, so the Manager does not sign in there. Open it over https, or add ?service=1 to the address for a service visit.';   // DEV-532
     default: return e.message;
   }

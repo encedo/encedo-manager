@@ -188,6 +188,7 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
     spk = b64(new Uint8Array(await crypto.subtle.exportKey('raw', devKeys.publicKey)));
     state.bootAt = Date.now();
     state.boot += 1;
+    state.clockSet = false;   // a module just started has no time until the check-in sets it
   };
   // The public key a correct password derives (PBKDF2-SHA256, 600k, salt = eid),
   // so a wrong one gets a 401. A password change replaces it.
@@ -206,6 +207,7 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
     polls: {},
     bootAt: Date.now() - (3 * 86400 + 5 * 3600 + 12 * 60) * 1000,   // DEV-535: uptime is real time since then
     boot: 1,                                  // DEV-535: a token carries it; one of another boot gets 401
+    clockSet: true,                           // false after a boot until the check-in: no time in the status, 403 for a token
     temp: 42,
     selftest: null,
     // A module out of the box: /status carries `inited` (any value) and nothing
@@ -325,8 +327,7 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
         ...(format ? { format } : {}),
         ctx: 0,
         uptime: Math.floor((Date.now() - state.bootAt) / 1000),
-        ts: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
-        time: Math.floor(Date.now() / 1000),
+        ...(state.clockSet ? { ts: new Date().toISOString().replace(/\.\d+Z$/, 'Z'), time: Math.floor(Date.now() / 1000) } : {}),
         storage: state.storage,
         temp: state.temp,
         fls_state: 0,
@@ -357,6 +358,7 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
     }
     if (p === '/mock/api/system/checkin' && method === 'GET') return [200, { check: 'mock-check' }];
     if (p === '/mock/api/system/checkin' && method === 'POST') {
+      state.clockSet = true;
       return [200, { status: 'ok', newfws: state.fwv === NEW_FIRMWARE ? null : NEW_FIRMWARE, newuis: state.uis === MANAGER_UIS ? null : MANAGER_UIS }];
     }
     // ---- software: upload, check in the background, install ----
@@ -453,6 +455,7 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
         ...(cfg.gen_csr ? { csr: 'CSR-MOCK' } : {}),
       }];
     }
+    if (p === '/mock/api/auth/token' && !state.clockSet) return [403, { error: 'the clock is not set' }];   // as on a PPA after a reboot
     if (p === '/mock/api/auth/token' && method === 'GET') return [200, { eid, spk, jti: 'jti-' + Date.now() }];
     if (p === '/mock/api/auth/token' && method === 'POST') {
       const { ok, payload } = await verifyEjwt(body.auth);
