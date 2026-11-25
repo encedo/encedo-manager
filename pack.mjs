@@ -7,6 +7,7 @@
 //   node pack.mjs attach <tar> --key <file> --signature <file>   append a signature made by hand
 //   node pack.mjs verify <webroot.tar> [--key <expected>]
 //   node pack.mjs latest <webroot.tar> --tag <tag> [--repo owner/name]  latest.json for the release
+//   node pack.mjs site <dir> --base <url> --latest <tag> --out <dir>    the GitHub Pages site of all releases
 //
 // A release is a `webroot/` — what the module serves, every file with a `.gz`
 // twin beside it — a `manifest` of everything in it, and a tar of the lot.
@@ -42,7 +43,7 @@ const b64url = (bytes) => bytes.toString('base64').replace(/\+/g, '-').replace(/
 const kb = (n) => `${(n / 1024).toFixed(1).padStart(7)} KB`;
 const die = (message) => { console.error(message); process.exit(1); };
 
-const command = ['attach', 'verify', 'sign', 'digest', 'latest'].includes(positional[0]) ? positional[0] : 'pack';
+const command = ['attach', 'verify', 'sign', 'digest', 'latest', 'site'].includes(positional[0]) ? positional[0] : 'pack';
 try {
   if (command === 'pack') await pack();
   if (command === 'sign') await sign(positional[1]);
@@ -50,6 +51,7 @@ try {
   if (command === 'attach') await attach(positional[1]);
   if (command === 'verify') await verify(positional[1]);
   if (command === 'latest') await latest(positional[1]);
+  if (command === 'site') await site(positional[1]);
 } catch (e) {
   die(e.message);
 }
@@ -314,6 +316,10 @@ async function latest(tarPath) {
     published: Math.floor(Date.now() / 1000),
     commit: process.env.GITHUB_SHA || git(['rev-parse', 'HEAD']),
     sdk: git(['-C', 'sdk', 'rev-parse', 'HEAD']),
+    // the Actions run that built and signed it (absent outside the CI)
+    run: process.env.GITHUB_RUN_ID
+      ? `${process.env.GITHUB_SERVER_URL ?? 'https://github.com'}/${repo}/actions/runs/${process.env.GITHUB_RUN_ID}`
+      : undefined,
     tar: {
       url: `https://github.com/${repo}/releases/download/${encodeURIComponent(tag)}/webroot.tar`,
       size: bytes.length,
@@ -327,6 +333,118 @@ async function latest(tarPath) {
   console.log(JSON.stringify(doc, null, 2));
 }
 
+
+// -- site ---------------------------------------------------------------------------------
+
+/**
+ * The GitHub Pages site (release.yml, job pages): GitHub's release downloads
+ * send no Access-Control-Allow-Origin, so a Manager cannot fetch them; Pages
+ * sends `*`. The workflow downloads every release that carries latest.json
+ * into <dir>/<tag>/ (latest.json, webroot.tar, release.json from
+ * `gh release view --json tagName,name,body,url,publishedAt`), and this checks
+ * each one and lays the site out:
+ *
+ *   <out>/<tag>/webroot.tar    the release's signed tar, unchanged
+ *   <out>/<tag>/latest.json    its latest.json, tar.url on Pages, release = its page
+ *   <out>/latest.json          the one of the release GitHub marks Latest
+ *   <out>/index.html           every release, newest first, its notes and links
+ *
+ * A tar that is not the one its latest.json describes, or whose signature does
+ * not check out with the publisher it names, stops the run: nothing that does
+ * not match is published.
+ *
+ *   node pack.mjs site <dir> --base <pages url> --latest <tag> --out <dir>
+ */
+async function site(dir) {
+  const base = flag('base')?.replace(/\/+$/, '');
+  const latestTag = flag('latest');
+  const outDir = flag('out');
+  if (!dir || !base || !latestTag || !outDir) die('node pack.mjs site <dir> --base <pages url> --latest <tag> --out <dir>');
+
+  await fs.rm(outDir, { recursive: true, force: true });
+  const entries = [];
+  for (const tag of (await fs.readdir(dir)).sort()) {
+    const from = path.join(dir, tag);
+    const doc = JSON.parse(await fs.readFile(path.join(from, 'latest.json'), 'utf8'));
+    const release = JSON.parse(await fs.readFile(path.join(from, 'release.json'), 'utf8'));
+    const tar = await fs.readFile(path.join(from, 'webroot.tar'));
+    if (doc.tag !== tag || release.tagName !== tag) die(`${tag}: latest.json or release.json names another tag`);
+    if (tar.length !== doc.tar?.size || sha256(tar).toString('hex') !== doc.tar.sha256) {
+      die(`${tag}: webroot.tar is not the one latest.json describes`);
+    }
+    if (!isSigned(tar)) die(`${tag}: webroot.tar carries no signature`);
+    const key = tar.subarray(tar.length - TRAILER, tar.length - SIG_BYTES);
+    if (key.toString('base64') !== doc.tar.publisher
+        || !ed25519Verify(key, tar.subarray(tar.length - SIG_BYTES), signedDigest(tar.subarray(0, tar.length - TRAILER), key))) {
+      die(`${tag}: the signature does not check out with the publisher latest.json names`);
+    }
+
+    const to = path.join(outDir, tag);
+    await fs.mkdir(to, { recursive: true });
+    await fs.writeFile(path.join(to, 'webroot.tar'), tar);
+    const page = { ...doc, release: release.url, tar: { ...doc.tar, url: `${base}/${encodeURIComponent(tag)}/webroot.tar` } };
+    await fs.writeFile(path.join(to, 'latest.json'), JSON.stringify(page, null, 2) + '\n');
+    entries.push({ doc: page, release });
+  }
+
+  const newest = entries.find((e) => e.doc.tag === latestTag);
+  if (!newest) die(`--latest ${latestTag}: no release with latest.json by that tag`);
+  await fs.writeFile(path.join(outDir, 'latest.json'), JSON.stringify(newest.doc, null, 2) + '\n');
+  entries.sort((a, b) => b.doc.published - a.doc.published);
+  await fs.writeFile(path.join(outDir, 'index.html'), siteIndex(entries, latestTag, base));
+
+  console.log(`site: ${entries.length} release(s), latest ${latestTag}, ${base}/latest.json`);
+  for (const { doc } of entries) console.log(`  ${doc.tag}  ${doc.version}  ${doc.tar.sha256}`);
+}
+
+/** The site's front page: plain HTML, the release notes as text (no Markdown renderer to carry). */
+function siteIndex(entries, latestTag, base) {
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+  const repoUrl = (url) => url.replace(/\/releases\/tag\/.*$/, '');
+  const sections = entries.map(({ doc, release }) => {
+    const date = new Date(doc.published * 1000).toISOString().slice(0, 10);
+    const tag = encodeURIComponent(doc.tag);
+    const links = [
+      ['Release', release.url],
+      ['webroot.tar', `${tag}/webroot.tar`],
+      ['latest.json', `${tag}/latest.json`],
+      ['source tar', `${repoUrl(release.url)}/releases/download/${tag}/webroot_src.tar`],
+      [`commit ${String(doc.commit).slice(0, 8)}`, `${repoUrl(release.url)}/commit/${doc.commit}`],
+      ...(doc.run ? [['build', doc.run]] : []),
+    ].map(([text, href]) => `<a href="${esc(href)}">${esc(text)}</a>`).join(' · ');
+    return `<section>
+<h2>${esc(release.name || doc.tag)}${doc.tag === latestTag ? ' <span class="latest">Latest</span>' : ''}</h2>
+<p class="meta">version ${esc(doc.version)} · ${date} · ${(doc.tar.size / 1024).toFixed(1)} KB</p>
+<p class="meta">uis <code>${esc(doc.uis)}</code><br>sha256 <code>${esc(doc.tar.sha256)}</code><br>publisher <code>${esc(doc.tar.publisher)}</code></p>
+${release.body?.trim() ? `<pre>${esc(release.body.trim())}</pre>\n` : ''}<p>${links}</p>
+</section>`;
+  }).join('\n');
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Encedo Manager releases</title>
+<style>
+:root { color-scheme: light dark; --fg: #1a1a1a; --bg: #fff; --muted: #666; --line: #ddd; --accent: #07804f; }
+@media (prefers-color-scheme: dark) { :root { --fg: #e8e8e8; --bg: #111; --muted: #999; --line: #333; --accent: #3c9; } }
+body { font: 16px/1.5 system-ui, sans-serif; color: var(--fg); background: var(--bg); max-width: 50rem; margin: 0 auto; padding: 1.5rem 16px; }
+section { border-top: 1px solid var(--line); padding: 1rem 0; }
+h2 { margin: 0 0 .25rem; font-size: 1.25rem; }
+.latest { font-size: .75rem; color: var(--accent); border: 1px solid var(--accent); border-radius: 1rem; padding: 0 .5rem; vertical-align: middle; }
+.meta { color: var(--muted); font-size: .875rem; margin: .25rem 0; overflow-wrap: anywhere; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
+a { color: var(--accent); }
+</style>
+</head>
+<body>
+<h1>Encedo Manager releases</h1>
+<p>What a Manager checks for an update: <a href="latest.json">${esc(base)}/latest.json</a>. Every tar is signed; a Manager checks its size, sha256 and the publisher's signature before it installs it.</p>
+${sections}
+</body>
+</html>
+`;
+}
 
 // -- odds and ends ------------------------------------------------------------------------
 

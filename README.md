@@ -125,10 +125,13 @@ node pack.mjs verify release/*/webroot.tar --key <pub>
 ```
 
 [`.github/workflows/release.yml`](.github/workflows/release.yml) does the
-build and the pack on a published release and attaches the unsigned tar and
-its digest; the signed `webroot.tar` is uploaded to the same release
-afterwards. [`docs/PACKAGING.md`](docs/PACKAGING.md) has the format, what the
-module checks, and what is still to settle with the firmware side.
+build, the pack and the signature on a published release, attaches
+`webroot.tar` and `latest.json` to it, and rebuilds the GitHub Pages site
+(<https://encedo.github.io/encedo-manager/>) from every release: where a
+Manager reads `latest.json` and fetches the tar, since GitHub's release
+downloads cannot be read cross-origin. [`docs/PACKAGING.md`](docs/PACKAGING.md)
+has the format, what the module checks, and what is still to settle with the
+firmware side.
 
 ## Layout
 

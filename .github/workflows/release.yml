@@ -3,6 +3,9 @@
 # release beside the source archives GitHub attaches itself.
 # On a release it also writes latest.json (pack.mjs latest): what a Manager
 # reads to offer "Update available" - the tag must name app/version.js.
+# Then (job pages, also on a manual run) it rebuilds the GitHub Pages site
+# from every release: latest.json and webroot.tar where a browser may fetch
+# them cross-origin, which GitHub's release downloads do not allow.
 #
 # Signing: Ed25519 over SHA-512(tar || public key), with the 96-byte trailer
 # public key || signature appended - what the firmware checks before it
@@ -88,3 +91,63 @@ jobs:
           name: webroot
           path: release/
           retention-days: 30
+
+  pages:
+    # Every release's latest.json and webroot.tar on GitHub Pages, where a
+    # Manager may fetch them (release downloads send no CORS header, Pages
+    # sends *). The releases are the only source: the whole site is rebuilt
+    # from them each run, so a release edited or deleted shows on the next
+    # one. pack.mjs site checks every tar against its latest.json and its
+    # signature first. Settings > Pages > Source: GitHub Actions.
+    needs: webroot
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7      # pack.mjs only: no submodules
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - id: pages
+        uses: actions/configure-pages@v6
+
+      - name: Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          gh release list --exclude-drafts --exclude-pre-releases --limit 1000 \
+            --json tagName,isLatest > releases.json
+          for tag in $(jq -r '.[].tagName' releases.json); do
+            # only the releases made since latest.json exists (2.0.0 on)
+            has=$(gh release view "$tag" --json assets --jq 'any(.assets[]; .name == "latest.json")')
+            [ "$has" = true ] || continue
+            gh release download "$tag" -p latest.json -p webroot.tar -D "releases/$tag"
+            gh release view "$tag" --json tagName,name,body,url,publishedAt > "releases/$tag/release.json"
+          done
+          echo "LATEST=$(jq -r '.[] | select(.isLatest) | .tagName' releases.json)" >> "$GITHUB_ENV"
+
+      - name: Site
+        shell: bash   # -eo pipefail: a refused release fails the run, not only tee
+        run: |
+          node pack.mjs site releases --base "${{ steps.pages.outputs.base_url }}" \
+            --latest "$LATEST" --out site | tee site.log
+          { echo '## Pages'; echo; echo '```'; cat site.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+      - id: deploy
+        uses: actions/deploy-pages@v5

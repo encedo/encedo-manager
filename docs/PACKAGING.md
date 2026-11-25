@@ -146,7 +146,8 @@ A release (the `release` event of `.github/workflows/release.yml`) also gets
     "size": 307296,
     "sha256": "<hex, as in webroot_src.tar.sha256>",
     "publisher": "<base64 of the 32-byte key in the trailer>"
-  }
+  },
+  "run": "https://github.com/encedo/encedo-manager/actions/runs/<id>"
 }
 ```
 
@@ -156,10 +157,43 @@ A release (the `release` event of `.github/workflows/release.yml`) also gets
 - `uis` is the version above - what `/api/system/version` reports as `uis` once
   this release is installed.
 - `published` is unix seconds; `tar.url` names the tag, not `latest`, so it
-  never moves. The newest file is always at
-  `https://github.com/encedo/encedo-manager/releases/latest/download/latest.json`.
+  never moves.
+- `run` is the Actions run that built and signed the release (from the
+  release after 2.0.0; 2.0.0 has none).
 - `pack.mjs latest` refuses an unsigned tar and one whose signature does not
   check out.
-- Not yet tried: whether a browser may read that file cross-origin (CORS on
-  GitHub's release downloads). Check with the first release before the Manager
-  relies on it.
+
+### Where a Manager reads it: GitHub Pages
+
+A browser cannot read GitHub's release downloads cross-origin: neither
+`github.com/.../releases/download/...` nor the `release-assets.githubusercontent.com`
+it redirects to sends `Access-Control-Allow-Origin` (tried with 2.0.0,
+2026-11-25). GitHub Pages sends `Access-Control-Allow-Origin: *`, so the
+release workflow (job `pages`, after `webroot`, on a release and on a manual
+run) publishes there:
+
+| Path | What it is |
+| --- | --- |
+| `https://encedo.github.io/encedo-manager/latest.json` | the release GitHub marks *Latest* - what a Manager reads |
+| `.../<tag>/latest.json` | that release's latest.json |
+| `.../<tag>/webroot.tar` | that release's signed tar, unchanged |
+| `.../index.html` | every release, newest first: its notes, links, digests |
+
+- The releases are the only source. Each run downloads every release that
+  carries `latest.json` (drafts and pre-releases left out) and
+  `node pack.mjs site` rebuilds the whole site, so a release edited, deleted
+  or newly marked *Latest* shows after the next run (a manual *Run workflow*
+  does it without a release).
+- In the Pages copies `tar.url` points at the tar on Pages and `release` at
+  the release's page; the rest is the release's own latest.json unchanged.
+  The copy attached to the release keeps the release download URL.
+- `pack.mjs site` checks every tar first - its size and sha256 against its
+  latest.json, its signature with the `publisher` named there - and a
+  mismatch stops the run before anything is published.
+- Pages serves with `Cache-Control: max-age=600`: a new release may take up
+  to ten minutes to show.
+- Set up once: *Settings > Pages > Source: GitHub Actions*. The `github-pages`
+  environment must let tags deploy (the release event runs on the tag): *No
+  restriction*, or a tag rule `*` beside `main`.
+- Hosting is transport only: a Manager trusts a tar because its sha256, size
+  and signature match, never because of where it came from.
