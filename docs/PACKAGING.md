@@ -192,6 +192,9 @@ run) publishes there:
   mismatch stops the run before anything is published.
 - Pages serves with `Cache-Control: max-age=600`: a new release may take up
   to ten minutes to show.
+- `deploy-pages` sometimes does not find the artifact just uploaded ("No
+  artifacts named github-pages", GitHub side); the job tries once more a
+  minute later. Still failing: *Re-run failed jobs*.
 - Set up once: *Settings > Pages > Source: GitHub Actions*. The `github-pages`
   environment must let tags deploy (the release event runs on the tag): *No
   restriction*, or a tag rule `*` beside `main`.
