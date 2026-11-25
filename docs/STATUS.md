@@ -81,3 +81,26 @@ A live run on a module: a release on it, the software update, a personalisation
 from the box, and a key of each 25519 type since `mode` stopped being sent.
 Then EPA, which starts with `cname` in the SDK, then renaming a phone. Trusted
 Apps and the auxiliary pages are writing, not building: they wait on copy.
+
+### To do: a module without TLS (diagnostic screen)
+
+Noted 2026-11-25, not designed yet. Today a module that answers over plain http
+only gives a bare error, or the "Service mode · plain http" band with
+`?service=1` (DEV-532).
+
+- **The signal.** `GET /api/system/status` carries `https` only on a plain-http
+  connection: `true` when the module's HTTPS server runs, `false` when it does
+  not (no TLS key or certificate yet, or it failed to start) - firmware API
+  reference, `/api/system/status`. No token needed.
+- **What the screen should do.** On `https: false`, before any sign-in: say that
+  the module has no working TLS and why that matters (a password sent over
+  http can be read on the way), and show the way out - a service visit with
+  `?service=1` to repair it (a name under ence.do and its certificate, Settings),
+  then back over https. On `https: true` over http: point to the https address
+  instead.
+- **Decided already.** No "https page + http module" hint in general (owner,
+  2026-11-24: the playground is all https; on a PPA either works).
+- **Open.** Which repair steps the Manager can run itself in service mode
+  (domain registration, certificate) and which need the backend; the wording
+  (design/STYLE.md); a smoke step with the mock answering `https: false`.
+
