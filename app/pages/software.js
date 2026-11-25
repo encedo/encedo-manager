@@ -1,11 +1,11 @@
-// Software: what the module runs, what the backend has newer, and the way an
-// update goes in — download, upload, the module's own check, install. Firmware
-// reboots the module; the Manager reloads this page. Air-gapped, a firmware
-// file obtained elsewhere goes in the same way; the module checks the signature
-// either way.
+// Software: what the module runs, what is newer, and the way an update goes
+// in — download, upload, the module's own check, install. Firmware comes from
+// the backend and reboots the module; the Manager comes from its release site
+// (DEV-534) and reloads this page. Air-gapped, a firmware file obtained
+// elsewhere goes in the same way; the module checks the signature either way.
 
 import { h, pageHead, statusGrid } from '../ui.js';
-import { formatBytes, versionNumber } from '../session.js';
+import { formatBytes, formatDate, versionNumber } from '../session.js';
 import { VERSION } from '../version.js';
 
 const STEPS = {
@@ -16,7 +16,7 @@ const STEPS = {
     ['install', 'Install and reboot.', ' Both drives lock. The module is away for about 40 seconds.'],
   ],
   manager: [
-    ['download', 'Download', ' from the backend.'],
+    ['download', 'Download', ' from the release site, checked against its digest and the publisher key.'],
     ['upload', 'Upload to the module', ' over the USB network.'],
     ['verify', 'Verify', ' the bundle on the module.'],
     ['install', 'Install and reload.', ' The module keeps running; this page comes back in the new version.'],
@@ -27,26 +27,27 @@ export function renderSoftware(session, view) {
   const { state } = session;
   const health = state.health ?? {};
   const version = state.version ?? {};
-  const newer = { firmware: health.newfws || null, manager: health.newuis || null };
+  const offer = session.managerOffer();   // DEV-534
+  const newer = { firmware: health.newfws || null, manager: offer.state === 'offer' ? offer.latest.version : null };
 
-  const title = state.online === false ? 'The backend is unreachable, so nothing was checked.'
-    : newer.firmware && newer.manager ? `Firmware ${versionNumber(newer.firmware)} and Manager ${versionNumber(newer.manager)} are ready to install.`
+  const title = newer.firmware && newer.manager ? `Firmware ${versionNumber(newer.firmware)} and Manager ${newer.manager} are ready to install.`
     : newer.firmware ? `Firmware ${versionNumber(newer.firmware)} is ready to install.`
-    : newer.manager ? `Manager ${versionNumber(newer.manager)} is ready to install.`
+    : newer.manager ? `Manager ${newer.manager} is ready to install.`
+    : state.online === false ? 'The backend is unreachable, so the firmware was not checked.'
     : 'Everything is up to date.';
 
   return [
-    pageHead('Software', title, 'Updates come from the Encedo backend when the module checks in, signed for this module. Installing firmware reboots it and locks both drives; installing the Manager reloads this page.'),
+    pageHead('Software', title, 'Firmware comes from the Encedo backend when the module checks in, signed for this module; the Manager comes from its release site. Installing firmware reboots the module and locks both drives; installing the Manager reloads this page.'),
     view.error ? h('p.error', { role: 'alert' }, view.error) : null,
     view.notice ? h('p.notice', { role: 'status' }, view.notice) : null,
-    versionsCard(session, view, newer),
+    versionsCard(session, view, newer, offer),
     updateCard(session, view, 'firmware', newer.firmware, version.fwv),
-    updateCard(session, view, 'manager', newer.manager, VERSION),
+    managerCard(session, view, offer),
     fileCard(session, view),
   ];
 }
 
-function versionsCard(session, view, newer) {
+function versionsCard(session, view, newer, offer) {
   const { state } = session;
   const v = state.version ?? {};
   const when = state.checkedInAt ? new Date(state.checkedInAt).toISOString().slice(0, 19).replace('T', ' ') : null;
@@ -56,7 +57,7 @@ function versionsCard(session, view, newer) {
       ['Firmware available', newer.firmware ? versionNumber(newer.firmware) : state.online ? 'none newer' : '—', newer.firmware ? '' : 'pending'],
       ['Bootloader', v.blv ?? '—'],
       ['Manager installed', VERSION],
-      ['Manager available', newer.manager ? versionNumber(newer.manager) : state.online ? 'none newer' : '—', newer.manager ? '' : 'pending'],
+      ['Manager available', newer.manager ?? (offer.state === 'reload' ? `${offer.latest.version}, installed` : offer.state === 'current' ? 'none newer' : '—'), newer.manager ? '' : 'pending'],
       ['Last check-in', when ?? (state.online === false ? 'the backend did not answer' : 'not yet')],
     ]),
     h('div.card-body', { style: 'border-top: 1px solid var(--rule);' },
@@ -65,7 +66,57 @@ function versionsCard(session, view, newer) {
         h('span.soft', { style: 'font-size: 14px;' }, 'The module asks the backend what is newer than what it runs, and sets its clock while it is at it.'))));
 }
 
-/** One kind of update: the offer, or the update in flight. */
+/**
+ * The Manager (DEV-534): offered from the release site, and only by the
+ * Manager a PPA serves itself. What the backend says (newuis) is a second
+ * opinion, shown and never installed.
+ */
+function managerCard(session, view, offer) {
+  const { state } = session;
+  const update = state.update?.kind === 'manager' ? state.update : null;
+  const latest = offer.latest;
+  const head = (v) => h('div.card-head', {}, h('span', {}, 'Manager'), h('span.v', {}, v));
+  if (update) return h('div.card', {}, head(stepLabel(update)), progressBody(update, view));
+
+  const busyElsewhere = Boolean(state.update) && !['done', 'failed'].includes(state.update.step);
+  const backendNote = offer.backend === 'other'
+    ? h('p.soft.measure', {}, 'The backend names a different build of the Manager than the release site does. Only what the release site publishes is installed from here.')
+    : offer.backend === 'newer'
+      ? h('p.soft.measure', {}, 'The backend says a newer Manager exists. It can be installed once the release site answers.')
+      : null;
+  const notes = latest?.release ? h('a', { href: latest.release, target: '_blank', rel: 'noopener noreferrer' }, `What is new in ${latest.version}`) : null;
+
+  switch (offer.state) {
+    case 'offer':
+      return h('div.card', {}, head(`${latest.version} available`),
+        h('div.card-body', {},
+          h('p.soft.measure', {}, `This page is Manager ${VERSION}; ${latest.version} was released ${formatDate(latest.published)}. It comes from the release site and is checked against its digest and the publisher key before it goes to the module, which checks the signature itself. The module keeps running while it is installed, and this page reloads into the new version.`),
+          backendNote,
+          h('div.row', {},
+            h('button.button', { type: 'button', disabled: busyElsewhere || null, onclick: () => view.install('manager', latest) }, `Install Manager ${latest.version}`),
+            notes)));
+    case 'reload':
+      return h('div.card', {}, head(`${latest.version} installed`),
+        h('div.card-body', {},
+          h('p.soft.measure', {}, `The module already serves Manager ${latest.version}; this page is ${VERSION}, loaded before it was installed.`),
+          h('div.row', {}, h('button.button', { type: 'button', onclick: () => view.reload() }, 'Reload this page'))));
+    case 'current':
+      return h('div.card', {}, head('up to date'),
+        h('div.card-body', {}, h('p.soft', {}, 'This is the latest Manager on the release site.'), backendNote));
+    case 'unreachable':
+      return h('div.card', {}, head('not checked'),
+        h('div.card-body', {}, h('p.soft.measure', {}, 'The release site did not answer, so the Manager was not checked. Nothing else on this page needs it.'), backendNote));
+    default:
+      return h('div.card', {}, head('not from here'),
+        h('div.card-body', {}, h('p.soft.measure', {}, state.model === 'epa'
+          ? 'An EPA keeps no Manager of its own. This page is updated where it is hosted.'
+          : state.playground
+            ? 'A playground module runs the playground\'s Manager. It is updated there.'
+            : 'This page was not served by the module, so it is updated where it is hosted. Open the Manager from the module itself to update the one it serves.')));
+  }
+}
+
+/** The firmware: the offer, or the update in flight. */
 function updateCard(session, view, kind, available, installed) {
   const { state } = session;
   const update = state.update?.kind === kind ? state.update : null;
@@ -82,9 +133,7 @@ function updateCard(session, view, kind, available, installed) {
     h('div.card-body', {},
       available
         ? [
-            h('p.soft.measure', {}, kind === 'firmware'
-              ? `The module runs ${versionNumber(installed)}; the backend has ${versionNumber(available)}, signed for this module. Installing reboots it: sessions end, both drives lock, and it is unreachable for about 40 seconds. Nothing in the keychain changes.`
-              : `This page is Manager ${installed}; the backend has ${versionNumber(available)}. The module keeps running while it is installed, and this page reloads into the new version.`),
+            h('p.soft.measure', {}, `The module runs ${versionNumber(installed)}; the backend has ${versionNumber(available)}, signed for this module. Installing reboots it: sessions end, both drives lock, and it is unreachable for about 40 seconds. Nothing in the keychain changes.`),
             h('div.row', {},
               h('button.button', { type: 'button', disabled: busyElsewhere || state.online !== true || null, onclick: () => view.install(kind, available) }, `Install ${label} ${versionNumber(available)}`)),
           ]
@@ -100,7 +149,7 @@ const stepLabel = (u) => ({
 
 /** The update in flight: the steps, the bar while uploading, cancel, and what went wrong. */
 export function progressBody(update, view) {
-  const steps = STEPS[update.kind].filter(([id]) => update.source === 'backend' || id !== 'download');
+  const steps = STEPS[update.kind].filter(([id]) => update.source !== 'file' || id !== 'download');
   const order = steps.map(([id]) => id);
   const current = update.step === 'done' ? order.length : update.step === 'failed' ? -1 : order.indexOf(update.step);
   const pct = update.total ? Math.min(100, Math.round((update.loaded / update.total) * 100)) : 0;

@@ -144,7 +144,7 @@ A release (the `release` event of `.github/workflows/release.yml`) also gets
   "tar": {
     "url": "https://github.com/encedo/encedo-manager/releases/download/v2.0.0/webroot.tar",
     "size": 307296,
-    "sha256": "<hex, as in webroot_src.tar.sha256>",
+    "sha256": "<hex SHA-256 of webroot.tar, the signed tar>",
     "publisher": "<base64 of the 32-byte key in the trailer>"
   },
   "run": "https://github.com/encedo/encedo-manager/actions/runs/<id>"
@@ -197,3 +197,34 @@ run) publishes there:
   restriction*, or a tag rule `*` beside `main`.
 - Hosting is transport only: a Manager trusts a tar because its sha256, size
   and signature match, never because of where it came from.
+
+### What the Manager does with it (DEV-534)
+
+`app/release.js`, used by the session:
+
+- **Who offers it.** Only the Manager a PPA serves itself: the module it talks
+  to is the origin it was loaded from (`servedByModule` in `app/config.js`),
+  the module answered, it is not a playground module and not an EPA (which
+  keeps no Manager). A page hosted elsewhere - manager.playground.ence.do -
+  never offers one; it is updated where it is hosted.
+- **When.** `latest.json` is read once a page load, after the module answered
+  (no cookies, 5 s at most), and again on *Check again*. A site that does not
+  answer is a state the Software page shows, nothing more.
+- **What it offers.** `version` newer than `VERSION` (semver, build metadata
+  ignored): *Install*. When the module's `uis` (`/api/system/version`) already
+  is `latest.uis`, the module serves the new one and this page is the old one:
+  *Reload*.
+- **Before the upload.** The tar is fetched from the URL in latest.json, which
+  must be on the release site, and goes to the module only when its size and
+  SHA-256 match latest.json and the key in its trailer is both the `publisher`
+  named there and one of `UI_PUBLISHERS` pinned in `app/release.js`. The
+  signature is the module's to check (`check_ui`).
+- **The backend's word.** `newuis` from the check-in names a build by its uis.
+  The Manager shows it as a second opinion - "the backend names a different
+  build", or, with the release site down, "a newer Manager exists" - and never
+  installs from it. DEV-534 has the backend side: set `newuis` from the same
+  latest.json.
+- **The dev server** mocks the release site under `/mockpages`
+  (`&releases=http://localhost:8080/mockpages`, honoured only for a module on
+  this machine); its tar carries the real publisher key and a signature of
+  zeros, which the mock module does not check.

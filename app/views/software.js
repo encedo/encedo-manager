@@ -20,14 +20,16 @@ export function createSoftwareView({ session, paint, probeAgain }) {
     async checkIn() {
       Object.assign(view, { busy: 'checkin', error: null, notice: null });
       paint();
-      const health = await session.checkIn();
+      const [health] = await Promise.all([session.checkIn(), session.checkRelease({ force: true })]);   // DEV-534: the release site too
       view.notice = health ? 'Checked in.' : null;
       view.error = health ? null : 'The Encedo backend did not answer.';
       view.busy = null;
       paint();
     },
 
-    install(kind, version) { return view.run(kind, { version }); },
+    /** Firmware by the version the check-in named; the Manager by its latest.json (DEV-534). */
+    install(kind, what) { return kind === 'manager' ? view.run(kind, { release: what }) : view.run(kind, { version: what }); },
+    reload() { location.reload(); },
 
     pickFile(file) { Object.assign(view, { file, error: null, notice: null }); paint(); },
     dropFile() { view.file = null; paint(); },
@@ -39,7 +41,7 @@ export function createSoftwareView({ session, paint, probeAgain }) {
       return view.run('firmware', { bytes });
     },
 
-    async run(kind, { version = null, bytes = null }) {
+    async run(kind, { version = null, release = null, bytes = null }) {
       const ctl = new AbortController();
       Object.assign(view, { ctl, error: null, notice: null });
       paint();
@@ -48,7 +50,7 @@ export function createSoftwareView({ session, paint, probeAgain }) {
           await session.updateFirmware({ version, bytes, signal: ctl.signal });
           probeAgain();                       // the module reboots; this page waits for it
         } else {
-          await session.updateManager({ version, bytes, signal: ctl.signal });
+          await session.updateManager({ release, bytes, signal: ctl.signal });
           setTimeout(() => location.reload(), 2500);
         }
       } catch (e) {
@@ -72,7 +74,7 @@ export function createSoftwareView({ session, paint, probeAgain }) {
     if (update.result) return 'install';
     if (update.loaded && update.loaded >= update.total && update.total) return 'verify';
     if (update.size) return 'upload';
-    return update.source === 'backend' ? 'download' : 'upload';
+    return update.source === 'file' ? 'upload' : 'download';
   }
   return view;
 }

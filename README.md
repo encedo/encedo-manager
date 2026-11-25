@@ -9,8 +9,10 @@ development.
 
 Keys are derived in the browser and the module only ever sees a signed
 challenge. Everything works air-gapped; the Encedo backend is needed for
-phone sign-in, pairing, a name under `ence.do` and software downloads, and the
-pages say so when it cannot be reached.
+phone sign-in, pairing, a name under `ence.do` and firmware downloads, and the
+pages say so when it cannot be reached. Served by a PPA, the Manager also asks
+its release site (GitHub Pages) once a page load whether a newer Manager exists:
+one request, without cookies, that tells GitHub this browser's address.
 
 ## Run it
 
@@ -33,12 +35,13 @@ Without a module on the desk, the dev server also runs a mock of the device and
 the broker, and prints the address to open:
 
 ```
-http://localhost:8080/?hem=http://localhost:8080/mock&broker=http://localhost:8080/mockbroker
+http://localhost:8080/?hem=http://localhost:8080/mock&broker=http://localhost:8080/mockbroker&releases=http://localhost:8080/mockpages
 ```
 
 The password is `demo`, and the mock's 24 master words are printed at start-up,
 so the words can be tried as an authorisation too. It has two drives, fourteen
-keys, one paired phone, and a firmware and a Manager update announced. A phone
+keys, one paired phone, a firmware update announced by the backend, and a
+Manager release on a mock of its release site. A phone
 request approves itself after a couple of polls, so the "confirm on your phone"
 modal and the per-scope questions behave as they do on hardware. **Wiping it
 from Settings leaves a module out of the box**, which is the way to walk through

@@ -16,7 +16,7 @@ const SIGNATURES = [
   ['fws', 'Firmware signature'],
   ['blk', 'Bootloader signing key'],
   ['bls', 'Bootloader signature'],
-  ['uis', 'Manager signature'],
+  ['uis', 'Manager manifest hash'],   // SHA-256 of the installed Manager's manifest: its version, not a signature (docs/PACKAGING.md)
 ];
 // Status fields this page already puts somewhere of its own.
 const STATUS_KNOWN = new Set(['hostname', 'uptime', 'ts', 'time', 'temp', 'fls_state', 'storage', 'https']);

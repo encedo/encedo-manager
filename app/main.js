@@ -104,6 +104,7 @@ function probeAgain() {
     try {
       await session.waitForDevice({ signal: probeCtl.signal });
       await session.prepare();
+      session.checkRelease();   // DEV-534: once a page load, not waited for; it never throws
     } catch (e) {
       if (e?.code !== 'aborted') console.error('[manager] could not reach the module', e);
     }

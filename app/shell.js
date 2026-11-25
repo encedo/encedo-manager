@@ -10,6 +10,10 @@ export function renderShell(root, { session, config, route, content, modal = nul
   const { state } = session;
   const v = state.version ?? {};
   const host = session.urls.hem.replace(/^https?:\/\//, '');
+  // DEV-534: a newer Manager on the release site, said on every screen
+  const offer = session.managerOffer();
+  const managerNote = offer.state === 'offer' ? `Manager ${offer.latest.version} available`
+    : offer.state === 'reload' ? `Manager ${offer.latest.version} installed: reload this page` : null;
   root.className = 'app';
   render(root,
     h('aside.sidebar', {},
@@ -19,7 +23,7 @@ export function renderShell(root, { session, config, route, content, modal = nul
         h(`a${r.id === route.id ? '.active' : ''}`, { href: href(r), 'aria-current': r.id === route.id ? 'page' : null }, icon(r.id), h('span', {}, r.label)))),
       h('div.sidebar-foot', {},
         h('span.host', {}, state.config?.hostname || state.status?.hostname || host),
-        h('span', {}, `${host} · ${config.servedFromDevice ? 'served by the module' : 'dev server'}`),
+        h('span', {}, `${host} · ${config.where}`),   // DEV-534: a page hosted elsewhere is not 'served by the module'
         h('span', {}, `${state.config?.user ?? 'signed in'} · `,
           h('a', { href: '#', onclick: (e) => { e.preventDefault(); session.signOut(); } }, 'Sign out')))),
     h('main.main', {},
@@ -31,7 +35,8 @@ export function renderShell(root, { session, config, route, content, modal = nul
           v.conf ?? v.hwv,
           state.online ? 'backend reachable' : state.online === false ? 'air-gapped' : null,
           state.mode === 'phone' ? 'signed in with the phone' : null,
-        ].filter(Boolean).join(' · '))),
+        ].filter(Boolean).join(' · '),
+        managerNote ? [' · ', h('a', { href: '#/software', id: 'manager-update' }, managerNote)] : null)),
       content),
     modal);
 }

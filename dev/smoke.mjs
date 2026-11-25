@@ -22,7 +22,7 @@ const server = await createServer({ approveAfter: 2 });
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
 const base = `http://127.0.0.1:${server.address().port}`;
 // MANAGER_PATH=/dist/ runs the same smoke against the built bundle.
-const url = `${base}${process.env.MANAGER_PATH ?? '/'}?hem=${base}/mock&broker=${base}/mockbroker`;
+const url = `${base}${process.env.MANAGER_PATH ?? '/'}?hem=${base}/mock&broker=${base}/mockbroker&releases=${base}/mockpages`;
 
 const profile = await fs.mkdtemp(path.join(outDir, '.chrome-'));
 const chrome = spawn(chromium, ['--headless=new', '--disable-gpu', '--no-sandbox', `--user-data-dir=${profile}`, `--remote-debugging-port=${DEBUG_PORT}`, '--window-size=1440,900', '--hide-scrollbars', 'about:blank'], { stdio: 'ignore' });
@@ -527,7 +527,19 @@ await evaluate(`location.hash = '#/'; document.querySelector('#remember').checke
 if (!(await waitFor(`document.querySelector('h1')?.textContent === 'The module is sealed and reachable.'`))) await fail('could not sign in after the update');
 if (await evaluate(`document.body.textContent.includes('v2.5.0+mock available')`)) await fail('the overview still offers the firmware that is installed');
 
+// 13. the Manager from its release site (DEV-534): offered in the masthead,
+//     installed, the page reloads - and then knows the module already has it
+await evaluate(`location.hash = '#/software'; true`);
+if (!(await waitFor(`document.querySelector('#manager-update')?.textContent === 'Manager 2.1.0+mock available'`))) await fail('the masthead does not offer the Manager');
+await evaluate(`[...document.querySelectorAll('button')].find(b => b.textContent === 'Install Manager 2.1.0+mock').click(); true`);
+if (!(await waitFor(`document.body.textContent.includes('This page reloads in a moment')`, 15000))) await fail('the Manager was not installed');
+await shot('smoke-software-manager.png');
+if (!(await waitFor(`!!document.querySelector('#password')`, 15000))) await fail('the page did not reload after the Manager install');
+await evaluate(`location.hash = '#/'; document.querySelector('#remember').checked = true; document.querySelector('#password').value = 'first-light'; document.querySelector('form').requestSubmit(); true`);
+if (!(await waitFor(`document.querySelector('h1')?.textContent === 'The module is sealed and reachable.'`))) await fail('could not sign in after the Manager install');
+if (!(await waitFor(`document.querySelector('#manager-update')?.textContent === 'Manager 2.1.0+mock installed: reload this page'`))) await fail('the page does not see that the module serves the new Manager');
+
 const bad = logs.filter((l) => /EXCEPTION|error/i.test(l));
 if (bad.length) { console.log('console:', bad.join('\n')); await fail('page logged errors'); }
-console.log('OK: sign-in, overview, drive, keychain (paging/sorting/search/detail/share QR/import/create/edit/delete), operation log (index/verify/entries/check all), paired phones (list/pair via QR/unpair/do it anyway on a broker 4xx), hardware (health check/tokens/reboot guard/temperature), settings (owner/trust/master words/domain/wipe guard/password change), sign-out, phone sign-in with per-scope requests, wipe and personalise from the box, software (versions/firmware install/reboot)');
+console.log('OK: sign-in, overview, drive, keychain (paging/sorting/search/detail/share QR/import/create/edit/delete), operation log (index/verify/entries/check all), paired phones (list/pair via QR/unpair/do it anyway on a broker 4xx), hardware (health check/tokens/reboot guard/temperature), settings (owner/trust/master words/domain/wipe guard/password change), sign-out, phone sign-in with per-scope requests, wipe and personalise from the box, software (versions/firmware install/reboot/Manager from the release site)');
 await cleanup();

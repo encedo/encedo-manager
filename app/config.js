@@ -9,6 +9,11 @@
 //   ?service=1   sign-in (password, 24 words) and personalisation over plain http
 //                (DEV-532): a service mode for repairing a module's TLS, never
 //                remembered - every visit that wants it asks for it again.
+//   ?releases=http://localhost:8080/mockpages   where the Manager's own releases are
+//                (DEV-534): honoured for a module on this machine (the mock) only,
+//                never remembered.
+
+import { RELEASES } from './release.js';
 
 export const DEFAULT_HEM = 'https://my.ence.do';
 export const DEFAULT_BROKER = 'https://api.encedo.com';
@@ -29,7 +34,21 @@ export function resolveConfig(loc = globalThis.location, storage = safeStorage()
   const hem = pick('hem', () => servedFromDevice(loc) ? loc.origin : DEFAULT_HEM);
   const broker = pick('broker', () => DEFAULT_BROKER);
   const service = params.get('service') === '1';   // DEV-532: not remembered
-  return { hem: hem.replace(/\/+$/, ''), broker: broker.replace(/\/+$/, ''), servedFromDevice: servedFromDevice(loc), service };
+  const url = hem.replace(/\/+$/, '');
+  // DEV-534: the module this page talks to is the one that served it - the
+  // only place a Manager update is offered. A page hosted elsewhere
+  // (manager.playground.ence.do, a laptop) talks to a module it did not come from.
+  const servedByModule = sameOrigin(url, loc);
+  const releases = (isLoopback(url) && params.get('releases')?.trim()) || RELEASES;
+  const where = LOCAL_HOSTS.has(loc?.hostname) ? 'dev server' : servedByModule ? 'served by the module' : 'hosted';
+  return {
+    hem: url, broker: broker.replace(/\/+$/, ''), servedFromDevice: servedFromDevice(loc), service,
+    servedByModule, releases: releases.replace(/\/+$/, ''), where,
+  };
+}
+
+function sameOrigin(url, loc) {
+  try { return Boolean(loc?.origin) && new URL(url).origin === loc.origin; } catch { return false; }
 }
 
 /** A module URL on this machine: a mock or a dev server, where plain http is the only way. */

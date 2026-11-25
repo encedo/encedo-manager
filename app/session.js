@@ -4,6 +4,8 @@
 
 import { HEM, HemError, verifyLog, verifyLoggerKey, generateMnemonic, jwtParse } from '../sdk/hem-sdk.browser.js';
 import { isLoopback } from './config.js';
+import { RELEASES, UI_PUBLISHERS, fetchLatest, checkBundle, managerOffer } from './release.js';
+import { VERSION } from './version.js';
 
 export const SIGNIN_SCOPE = 'system:config';
 export const SIGNIN_EXP = 3600;
@@ -12,10 +14,12 @@ export class Session extends EventTarget {
   #phoneRequest = null;      // the phone request in flight, so two never overlap
   #authRequest = null;       // the password question in flight, likewise
   #masterToken = null;       // the token the 24 words made: the cache may hand out a password one for the same scope
+  #releases;                 // DEV-534: where the Manager's own releases are, and how to read them
 
-  constructor({ hem, broker, service = false }, { HEMClass = HEM } = {}) {
+  constructor({ hem, broker, service = false, servedByModule = false, releases = RELEASES }, { HEMClass = HEM, fetchImpl = (...a) => globalThis.fetch(...a), publishers = UI_PUBLISHERS } = {}) {
     super();
     this.urls = { hem, broker };
+    this.#releases = { url: releases, servedByModule, fetchImpl, publishers };
     // DEV-532: the SDK does no sign-in (password, 24 words) and no personalisation over
     // plain http unless told to. The Manager tells it to only for a service visit
     // (?service=1, e.g. repairing the module's TLS) or a mock on this machine, and
@@ -47,6 +51,7 @@ export class Session extends EventTarget {
       setup: null,             // personalisation in progress: { step, status, fields, result, error }
       checkedInAt: null,       // when the broker last answered the check-in
       update: null,            // a software update in flight: { kind, source, version, step, loaded, total, size, result, error }
+      release: null,           // DEV-534: { latest, error, checkedAt } once the Manager's release site was asked
     };
   }
 
@@ -486,27 +491,36 @@ export class Session extends EventTarget {
     return this.#runUpdate('firmware', { version, bytes, signal, pollInterval });
   }
 
-  /** Update the Manager the module serves. Same steps; afterwards the page reloads itself. */
-  updateManager({ version = null, bytes = null, signal = null, pollInterval = 4000 } = {}) {
-    return this.#runUpdate('manager', { version, bytes, signal, pollInterval });
+  /**
+   * Update the Manager the module serves, with `release` (latest.json as
+   * managerOffer() gives it) from the release site - DEV-534: no longer from
+   * the backend - or with `bytes`. Same steps; afterwards the page reloads itself.
+   */
+  updateManager({ release = null, bytes = null, signal = null, pollInterval = 4000 } = {}) {
+    return this.#runUpdate('manager', { release, bytes, signal, pollInterval });
   }
 
-  async #runUpdate(kind, { version, bytes, signal, pollInterval }) {
+  async #runUpdate(kind, { version = null, release = null, bytes, signal, pollInterval }) {
     if (this.state.update && !['done', 'failed'].includes(this.state.update.step)) {
       throw new HemError('Another update is in progress', { code: 'update_busy' });
     }
-    const source = bytes ? 'file' : 'backend';
+    const source = bytes ? 'file' : kind === 'manager' ? 'pages' : 'backend';
     if (source === 'backend' && !this.state.online) throw new HemError('The Encedo backend is unreachable', { code: 'broker_error' });
     if (source === 'backend' && !version) throw new HemError('Nothing newer to install', { code: 'nothing_newer' });
+    if (source === 'pages' && !this.offersManagerUpdate) throw new HemError('Only the Manager a PPA serves itself is updated here', { code: 'not_served_by_module' });
+    if (source === 'pages' && !release) throw new HemError('Nothing newer to install', { code: 'nothing_newer' });
+    if (release) version = release.version;
     const step = (patch) => this.#set({ update: { ...this.state.update, ...patch } });
-    this.#set({ update: { kind, source, version, step: source === 'backend' ? 'download' : 'upload', loaded: 0, total: bytes?.length ?? 0, size: bytes?.length ?? 0, result: null, error: null } });
+    this.#set({ update: { kind, source, version, step: source === 'file' ? 'upload' : 'download', loaded: 0, total: bytes?.length ?? 0, size: bytes?.length ?? 0, result: null, error: null } });
     try {
       // An unpersonalised module takes an upgrade without a token — that is how
       // a module that shipped with old firmware gets current before its first use.
       const token = this.state.phase === 'signed-in' ? await this.token('system:upgrade') : null;
       let image = bytes;
-      if (source === 'backend') {
-        image = await this.hem.broker.download(kind === 'firmware' ? 'firmware' : 'dashboard', version, { signal });
+      if (source !== 'file') {
+        image = source === 'pages'
+          ? await this.#downloadRelease(release, signal)
+          : await this.hem.broker.download('firmware', version, { signal });
         step({ step: 'upload', size: image.length, total: image.length });
       }
       const onProgress = (loaded, total) => step({ loaded, total });
@@ -536,6 +550,64 @@ export class Session extends EventTarget {
 
   /** Forget a finished or failed update, so the page shows the buttons again. */
   clearUpdate() { this.#set({ update: null }); }
+
+  // -- the Manager's own releases (DEV-534) ------------------------------------------
+
+  /**
+   * A Manager update is offered only by the Manager a PPA serves itself: not
+   * by a page hosted elsewhere (manager.playground.ence.do is updated by its
+   * admin), not to a playground module, not on an EPA, which keeps no Manager.
+   */
+  get offersManagerUpdate() {
+    const { version, playground, model } = this.state;
+    return this.#releases.servedByModule && Boolean(version) && !playground && model === 'ppa';
+  }
+
+  /**
+   * Ask the release site what the latest Manager is - once a page load, or
+   * again when `force`d. Never throws: a site that does not answer is a state
+   * the page shows, as the backend's is.
+   */
+  async checkRelease({ force = false, timeoutMs = 5000 } = {}) {
+    if (!this.offersManagerUpdate) return null;
+    if (this.state.release && !force) return this.state.release;
+    let release;
+    try {
+      const latest = await fetchLatest(this.#releases.url, { fetchImpl: this.#releases.fetchImpl, timeoutMs });
+      release = { latest, error: null, checkedAt: Date.now() };
+    } catch (e) {
+      release = { latest: null, error: e?.message ?? String(e), checkedAt: Date.now() };
+    }
+    this.#set({ release });
+    return release;
+  }
+
+  /** What to say about the Manager: see managerOffer() in release.js. */
+  managerOffer() {
+    return managerOffer({
+      eligible: this.offersManagerUpdate,
+      release: this.state.release,
+      newuis: this.state.health?.newuis || null,
+      installedUis: this.state.version?.uis || null,
+      version: VERSION,
+    });
+  }
+
+  /** The tar latest.json names, from the release site, checked before it goes anywhere. */
+  async #downloadRelease(latest, signal) {
+    let bytes;
+    try {
+      const res = await this.#releases.fetchImpl(latest.tar.url, { credentials: 'omit', signal });
+      if (!res.ok) throw new Error(`the release site answered ${res.status}`);
+      bytes = new Uint8Array(await res.arrayBuffer());
+    } catch (e) {
+      if (signal?.aborted) throw new HemError('Cancelled', { code: 'aborted' });
+      throw new HemError(e?.message ?? String(e), { code: 'release_site' });
+    }
+    const wrong = await checkBundle(bytes, latest, this.#releases.publishers);
+    if (wrong) throw new HemError(wrong, { code: 'bundle_refused' });
+    return bytes;
+  }
 
   // -- personalisation -----------------------------------------------------------
 
@@ -1180,6 +1252,9 @@ export function describeError(e) {
     case 'init_failed': return 'The module did not accept the personalisation.';
     case 'update_busy': return 'Another update is in progress.';
     case 'nothing_newer': return 'There is nothing newer to install.';
+    case 'release_site': return `The Manager's release site did not hand over the release: ${e.message}.`;   // DEV-534
+    case 'bundle_refused': return `The release was not sent to the module: ${e.message}.`;
+    case 'not_served_by_module': return 'Only the Manager a PPA serves itself is updated from here.';
     case 'domain_failed': return 'The Encedo backend refused the name.';
     case 'mnemonic_invalid': return 'That is not a valid set of 24 words.';
     case 'plain_http_login': return 'The module is reached over plain http, so the Manager does not sign in there. Open it over https, or add ?service=1 to the address for a service visit.';   // DEV-532

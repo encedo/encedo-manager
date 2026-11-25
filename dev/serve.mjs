@@ -4,7 +4,7 @@
 //   node dev/serve.mjs [port]
 //
 //   http://localhost:8080/                                     → the real module at https://my.ence.do
-//   http://localhost:8080/?hem=http://localhost:8080/mock&broker=http://localhost:8080/mockbroker
+//   http://localhost:8080/?hem=http://localhost:8080/mock&broker=http://localhost:8080/mockbroker&releases=http://localhost:8080/mockpages
 //                                                              → the mock (password: demo)
 //
 // The mock speaks the wire format the SDK expects, verifies the eJWT the
@@ -15,6 +15,8 @@ import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
+import { UI_PUBLISHERS } from '../app/release.js';
 import { mnemonicToEntropy } from '../sdk/hem-sdk.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -44,7 +46,28 @@ const b64urlText = (text) => Buffer.from(text, 'utf8').toString('base64url');
 const FIRMWARE = 'Encedo nGINE FW v1.3.0';
 /** What the mock backend announces at check-in, and what the module runs once installed. */
 export const NEW_FIRMWARE = 'v2.5.0+mock';
-export const NEW_MANAGER = 'v2.1.0+mock';
+export const NEW_MANAGER = '2.1.0+mock';
+/**
+ * DEV-534: the Manager's release site, mocked under /mockpages - latest.json
+ * and the webroot.tar of NEW_MANAGER. The trailer carries the real publisher
+ * key (a public key) and a signature of zeros: the mock module does not check
+ * it, and the Manager leaves the signature to the module. newuis and uis are
+ * base64 SHA-256 of a manifest, as on a PPA, never a version string.
+ */
+const sha256 = (data) => createHash('sha256').update(data).digest();
+export const MANAGER_TAR = (() => {
+  const body = Buffer.alloc(12 * 1024, 0x5a);
+  body.write(`ENCEDO MANAGER ${NEW_MANAGER}`, 0, 'latin1');
+  return Buffer.concat([body, Buffer.from(UI_PUBLISHERS[0], 'base64'), Buffer.alloc(64)]);
+})();
+export const MANAGER_UIS = sha256(`mock manifest ${NEW_MANAGER}`).toString('base64');
+export const INSTALLED_UIS = 'qnu0b8DquUik4+5iXgB+8oFWR9/96jgEeLy9pM5y0KY=';
+const managerLatest = (base) => ({
+  product: 'encedo-manager', version: NEW_MANAGER, uis: MANAGER_UIS, tag: NEW_MANAGER,
+  published: secs('2026-11-20T10:00:00Z'), commit: '0'.repeat(40),
+  tar: { url: `${base}/mockpages/release/webroot.tar`, size: MANAGER_TAR.length, sha256: sha256(MANAGER_TAR).toString('hex'), publisher: UI_PUBLISHERS[0] },
+  release: `${base}/mockpages/`,
+});
 /** The mock module's master secret. A fixture, so the settings page can be driven. */
 export const MASTER_WORDS = 'chat march maximum extra maple panda chapter mammal slogan fun actual know hungry catalog grape cherry bubble zone august salad dilemma avoid trigger cotton';
 
@@ -187,7 +210,7 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
     // answers 202 twice before it says yes, the way a real module verifies in
     // the background; an image whose first byte is 0xff does not verify.
     fwv: FIRMWARE,
-    managerInstalled: false,
+    uis: INSTALLED_UIS,           // the installed Manager: base64 SHA-256 of its manifest
     upgrade: { fw: null, ui: null },          // { size, checks }
     pendingHostname: null,
     configNonce: b64(crypto.getRandomValues(new Uint8Array(32))),
@@ -278,7 +301,7 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
       blv: 'Encedo Secure Bootloader v2.0.1',
       blk: 'qS5cxes2jANu+Jd6vMSedHE6fKGzO1aEwnTACrCwd/k=',
       bls: 'wutHuWWYlNualnZz6/uZu6VGBGBf2OtAIbn7VR1inq0pa8yAtoXzCXQoNZnk6qXXiD1s4SR7Dl32+J6Tvw0jhw==',
-      uis: 'qnu0b8DquUik4+5iXgB+8oFWR9/96jgEeLy9pM5y0KY=',
+      uis: state.uis,   // the installed Manager: INSTALLED_UIS, then MANAGER_UIS once that is installed
     }];
     // The fields a real PPA answers with — no hostname (that is in the config),
     // a whole-degree temperature, and `ctx`, whose meaning the firmware knows.
@@ -324,7 +347,7 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
     }
     if (p === '/mock/api/system/checkin' && method === 'GET') return [200, { check: 'mock-check' }];
     if (p === '/mock/api/system/checkin' && method === 'POST') {
-      return [200, { status: 'ok', newfws: state.fwv === NEW_FIRMWARE ? null : NEW_FIRMWARE, newuis: state.managerInstalled ? null : NEW_MANAGER }];
+      return [200, { status: 'ok', newfws: state.fwv === NEW_FIRMWARE ? null : NEW_FIRMWARE, newuis: state.uis === MANAGER_UIS ? null : MANAGER_UIS }];
     }
     // ---- software: upload, check in the background, install ----
     if (p.startsWith('/mock/api/system/upgrade/')) {
@@ -356,7 +379,7 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
           state.uptime = 0;
           return [200, { installing: true, reboot: true }];
         }
-        state.managerInstalled = true;
+        state.uis = MANAGER_UIS;
         return [200, { installing: true }];
       }
     }
@@ -626,6 +649,9 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
       state.pendingHostname = `${tail}.ence.do`;
       return [200, { emp: 'EMP', key: 'KEY', crt: 'CRT', prefix: tail }];
     }
+    // ---- the Manager's release site (DEV-534) ----
+    if (p === '/mockpages/latest.json') return [200, managerLatest(`http://${req.headers.host}`)];
+    if (p === '/mockpages/release/webroot.tar') return [200, MANAGER_TAR, 'application/x-tar'];
     if (p.startsWith('/mock')) return [404, { error: 'not mocked: ' + method + ' ' + p }];
     return null;
   };
@@ -685,7 +711,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   server.listen(port, '127.0.0.1', () => {
     console.log(`Encedo HEM Manager dev server`);
     console.log(`  real module:  http://localhost:${port}/`);
-    console.log(`  mock module:  http://localhost:${port}/?hem=http://localhost:${port}/mock&broker=http://localhost:${port}/mockbroker   (password: demo)`);
+    console.log(`  mock module:  http://localhost:${port}/?hem=http://localhost:${port}/mock&broker=http://localhost:${port}/mockbroker&releases=http://localhost:${port}/mockpages   (password: demo)`);
     console.log(`  master words: ${MASTER_WORDS}`);
   });
 }

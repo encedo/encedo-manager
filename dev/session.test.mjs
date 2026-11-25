@@ -1,7 +1,9 @@
 // The session logic against the mock module and broker. Run: node --test dev/
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { createServer, MASTER_WORDS, PHONE_PIDS, NEW_FIRMWARE, NEW_MANAGER } from './serve.mjs';
+import { createHash } from 'node:crypto';
+import { createServer, MASTER_WORDS, PHONE_PIDS, NEW_FIRMWARE, NEW_MANAGER, MANAGER_TAR, MANAGER_UIS, INSTALLED_UIS } from './serve.mjs';
+import { compareVersions, readLatest, checkBundle, managerOffer, UI_PUBLISHERS, RELEASES } from '../app/release.js';
 import {
   Session, parseStorage, formatBytes, describeError, describeScope, formatDate,
   isUnpersonalised, storageMode, parseStorageMode, gbToSectors, sectorsToGb, isPrefix, isPlayground, pairLink, versionNumber, SIGNIN_SCOPE,
@@ -38,6 +40,25 @@ test('config: served from a dev host the module defaults to my.ence.do, ?hem= ov
   const onDevice = { protocol: 'https:', hostname: 'my.ence.do', origin: 'https://my.ence.do', search: '' };
   assert.equal(resolveConfig(onDevice, storage).hem, 'https://my.ence.do');
   assert.equal(resolveConfig(onDevice, storage).servedFromDevice, true);
+});
+
+test('config: only a page the module served is "served by the module"; ?releases= only for a module on this machine (DEV-534)', () => {
+  const none = { get: () => null, set: () => {}, remove: () => {} };
+  const onDevice = resolveConfig({ protocol: 'https:', hostname: 'my.ence.do', origin: 'https://my.ence.do', search: '' }, none);
+  assert.equal(onDevice.servedByModule, true);
+  assert.equal(onDevice.where, 'served by the module');
+  assert.equal(onDevice.releases, RELEASES);
+
+  const hostedLoc = { protocol: 'https:', hostname: 'manager.playground.ence.do', origin: 'https://manager.playground.ence.do' };
+  const hosted = resolveConfig({ ...hostedLoc, search: '?hem=https://ann.playground.ence.do' }, none);
+  assert.equal(hosted.servedByModule, false, 'a page hosted elsewhere talks to a module it did not come from');
+  assert.equal(hosted.where, 'hosted');
+  assert.equal(resolveConfig({ ...hostedLoc, search: '?hem=https://ann.playground.ence.do&releases=https://evil.example' }, none).releases, RELEASES, 'not for a remote module');
+
+  const dev = resolveConfig({ protocol: 'http:', hostname: 'localhost', origin: 'http://localhost:8080', search: '?hem=http://localhost:8080/mock&releases=http://localhost:8080/mockpages/' }, none);
+  assert.equal(dev.servedByModule, true, 'the mock on the dev server stands in for a module');
+  assert.equal(dev.where, 'dev server');
+  assert.equal(dev.releases, 'http://localhost:8080/mockpages');
 });
 
 test('plain http: ?service=1 or a mock on this machine lets a password through, and says so; otherwise it is refused before anything is sent (DEV-532)', async () => {
@@ -1161,22 +1182,139 @@ test('the firmware announced at check-in is downloaded, uploaded, checked by the
   }
 });
 
-test('the Manager is updated the same way, and the module keeps running', async () => {
+test('the Manager comes from its release site, checked before it goes to the module, which keeps running (DEV-534)', async () => {
   const own = await ownModule();
   try {
-    const s = new Session(own.urls);
+    const s = new Session({ ...own.urls, servedByModule: true, releases: `${own.base}/mockpages` });
     await s.waitForDevice({ intervalMs: 10 });
     await s.prepare();
-    assert.equal(s.state.health.newuis, NEW_MANAGER);
+    assert.equal(s.state.health.newuis, MANAGER_UIS, 'the backend names the build by its uis, not by a version');
+    assert.equal(s.state.version.uis, INSTALLED_UIS);
+    assert.equal(s.managerOffer().state, 'none', 'the release site not asked yet: nothing to say');
+    await s.checkRelease();
+    const offer = s.managerOffer();
+    assert.equal(offer.state, 'offer');
+    assert.equal(offer.latest.version, NEW_MANAGER);
+    assert.equal(offer.backend, null, 'both channels name the same build');
+
     await s.signIn('demo', { remember: true });
-    const result = await s.updateManager({ version: NEW_MANAGER, pollInterval: 5 });
-    assert.equal(result.step, 'done');
-    assert.equal(result.size, 12 * 1024);
+    const steps = [];
+    s.addEventListener('change', () => { const st = s.state.update?.step; if (st && steps.at(-1) !== st) steps.push(st); });
+    const result = await s.updateManager({ release: offer.latest, pollInterval: 5 });
+    assert.deepEqual(steps, ['download', 'upload', 'verify', 'install', 'done']);
+    assert.equal(result.source, 'pages');
+    assert.equal(result.version, NEW_MANAGER);
+    assert.equal(result.size, MANAGER_TAR.length);
     assert.equal(s.state.phase, 'signed-in', 'no reboot for the Manager');
+
+    await s.probe();
+    assert.equal(s.state.version.uis, MANAGER_UIS, 'the module serves the new one');
+    assert.equal(s.managerOffer().state, 'reload', 'and this page is the old one');
     assert.equal((await s.checkIn()).newuis, null, 'checked in again: nothing newer');
   } finally {
     own.server.close();
   }
+});
+
+test('a Manager update is offered only by the Manager a PPA serves itself (DEV-534)', async () => {
+  const own = await ownModule();
+  const play = await ownModule({ playground: true });
+  try {
+    const releases = `${own.base}/mockpages`;
+    const hosted = new Session({ ...own.urls, releases });           // e.g. manager.playground.ence.do
+    await hosted.waitForDevice({ intervalMs: 10 });
+    await hosted.prepare();
+    assert.equal(hosted.offersManagerUpdate, false);
+    assert.equal(await hosted.checkRelease(), null, 'the release site is not even asked');
+    assert.equal(hosted.managerOffer().state, 'none');
+    await hosted.signIn('demo', { remember: true });
+    await assert.rejects(hosted.updateManager({ release: { version: '9.0.0' } }), (e) => e.code === 'not_served_by_module');
+
+    const playground = new Session({ ...play.urls, servedByModule: true, releases });
+    await playground.waitForDevice({ intervalMs: 10 });
+    assert.equal(playground.state.playground, true);
+    assert.equal(playground.offersManagerUpdate, false, 'a playground module runs the playground\'s Manager');
+
+    const ppa = new Session({ ...own.urls, servedByModule: true, releases });
+    await ppa.waitForDevice({ intervalMs: 10 });
+    assert.equal(ppa.offersManagerUpdate, true);
+    ppa.state.model = 'epa';
+    assert.equal(ppa.offersManagerUpdate, false, 'an EPA keeps no Manager');
+  } finally {
+    own.server.close();
+    play.server.close();
+  }
+});
+
+test('the release site unreachable: nothing offered, the backend\'s word shown without a button (DEV-534)', async () => {
+  const own = await ownModule();
+  try {
+    const s = new Session({ ...own.urls, servedByModule: true, releases: 'http://127.0.0.1:9/nopages' });
+    await s.waitForDevice({ intervalMs: 10 });
+    await s.prepare();
+    const release = await s.checkRelease({ timeoutMs: 500 });
+    assert.equal(release.latest, null);
+    assert.ok(release.error);
+    assert.deepEqual(s.managerOffer(), { state: 'unreachable', latest: null, backend: 'newer', error: release.error });
+  } finally {
+    own.server.close();
+  }
+});
+
+test('what the two channels add up to (DEV-534)', () => {
+  const latest = { version: '2.1.0', uis: 'A'.repeat(43) + '=' };
+  const base = { eligible: true, release: { latest }, newuis: null, installedUis: 'B'.repeat(43) + '=', version: '2.0.0' };
+  assert.equal(managerOffer({ ...base, eligible: false }).state, 'none');
+  assert.equal(managerOffer({ ...base, release: null }).state, 'none', 'not asked');
+  assert.deepEqual(managerOffer(base), { state: 'offer', latest, backend: null });
+  assert.equal(managerOffer({ ...base, newuis: latest.uis }).backend, null, 'the backend agrees');
+  assert.deepEqual(managerOffer({ ...base, newuis: 'C'.repeat(43) + '=' }), { state: 'offer', latest, backend: 'other' });
+  assert.deepEqual(managerOffer({ ...base, version: '2.1.0', newuis: 'C'.repeat(43) + '=' }), { state: 'current', latest, backend: 'other' });
+  assert.equal(managerOffer({ ...base, version: '2.2.0' }).state, 'current', 'a build newer than the latest release');
+  assert.equal(managerOffer({ ...base, installedUis: latest.uis }).state, 'reload');
+  assert.deepEqual(managerOffer({ ...base, release: { latest: null, error: 'x' } }), { state: 'unreachable', latest: null, backend: null, error: 'x' });
+});
+
+test('versions compare as semver: numbers as numbers, a pre-release below its release, build metadata ignored', () => {
+  assert.equal(compareVersions('2.1.0', '2.0.0'), 1);
+  assert.equal(compareVersions('2.0.10', '2.0.9'), 1);
+  assert.equal(compareVersions('v2.0.0', '2.0.0'), 0);
+  assert.equal(compareVersions('2.1.0+mock', '2.1.0'), 0);
+  assert.equal(compareVersions('2.1.0-rc.1', '2.1.0'), -1);
+  assert.equal(compareVersions('2.1.0-rc.2', '2.1.0-rc.10'), -1);
+  assert.equal(compareVersions('2.1.0-rc.1', '2.1.0-beta'), 1);
+  assert.equal(compareVersions('2.1', '2.0.0'), null);
+  assert.equal(compareVersions('', '2.0.0'), null);
+});
+
+test('latest.json is read strictly, and the tar must come from the same site (DEV-534)', () => {
+  const site = 'https://encedo.github.io/encedo-manager';
+  const doc = {
+    product: 'encedo-manager', version: '2.0.0', uis: '975oaLhegskhqXG4Lspt4idHIpHRvjx4AAQgM0b08Xc=', tag: '2.0.0', published: 1795561153,
+    tar: { url: `${site}/2.0.0/webroot.tar`, size: 307296, sha256: '8041f0e2ecf2e9e0d93e7168baaf536d97c2f90175d8828a7fdb17b25d417058', publisher: UI_PUBLISHERS[0] },
+    release: 'https://github.com/encedo/encedo-manager/releases/tag/2.0.0',
+  };
+  assert.equal(readLatest(doc, site).tar.size, 307296);
+  assert.throws(() => readLatest({ ...doc, product: 'other' }, site));
+  assert.throws(() => readLatest({ ...doc, version: 'latest' }, site));
+  assert.throws(() => readLatest({ ...doc, uis: 'not-base64' }, site));
+  assert.throws(() => readLatest({ ...doc, tar: { ...doc.tar, url: 'https://evil.example/webroot.tar' } }, site), /another site/);
+});
+
+test('a tar goes to the module only when it is the one latest.json describes, under a known key (DEV-534)', async () => {
+  const hex = (bytes) => createHash('sha256').update(bytes).digest('hex');
+  const latestFor = (tar, publisher) => ({ tar: { size: tar.length, sha256: hex(tar), publisher } });
+  const good = new Uint8Array(MANAGER_TAR);
+  assert.equal(await checkBundle(good, latestFor(good, UI_PUBLISHERS[0])), null);
+
+  const tampered = good.slice(); tampered[100] ^= 1;
+  assert.match(await checkBundle(tampered, latestFor(good, UI_PUBLISHERS[0])), /SHA-256/);
+  assert.match(await checkBundle(good.subarray(1), latestFor(good, UI_PUBLISHERS[0])), /bytes/);
+
+  const foreign = good.slice(); foreign.fill(7, foreign.length - 96, foreign.length - 64);
+  const foreignKey = Buffer.alloc(32, 7).toString('base64');
+  assert.match(await checkBundle(foreign, latestFor(foreign, UI_PUBLISHERS[0])), /another key than latest.json names/);
+  assert.match(await checkBundle(foreign, latestFor(foreign, foreignKey)), /does not know/, 'latest.json cannot vouch for a key itself');
 });
 
 test('a firmware file goes in without the backend, and one the module does not trust fails at the check', async () => {
@@ -1194,7 +1332,7 @@ test('a firmware file goes in without the backend, and one the module does not t
     assert.equal(s.state.update.source, 'file');
     assert.ok(s.state.update.error);
     assert.equal(s.state.phase, 'signed-in', 'nothing was installed, nothing rebooted');
-    await assert.rejects(s.updateManager({ version: NEW_MANAGER }), (e) => e.code === 'broker_error');
+    await assert.rejects(s.updateManager({ release: { version: NEW_MANAGER } }), (e) => e.code === 'not_served_by_module');
 
     s.clearUpdate();
     const good = new Uint8Array(4096).fill(0x22);
@@ -1218,7 +1356,7 @@ test('an update can be cancelled while the module is still checking, and only on
     const ctl = new AbortController();
     const going = s.updateFirmware({ version: NEW_FIRMWARE, signal: ctl.signal, pollInterval: 50 });
     await new Promise((r) => setTimeout(r, 5));
-    await assert.rejects(s.updateManager({ version: NEW_MANAGER }), (e) => e.code === 'update_busy');
+    await assert.rejects(s.updateManager({ release: { version: NEW_MANAGER } }), (e) => e.code === 'update_busy');
     while (s.state.update?.step !== 'verify') await new Promise((r) => setTimeout(r, 5));
     ctl.abort();
     await assert.rejects(going, (e) => e.code === 'aborted');
