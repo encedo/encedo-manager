@@ -1403,8 +1403,13 @@ test('a reboot this page did not cause (a power cycle): a picked token is renewe
     await other.signIn('demo', { remember: true });
     await other.reboot();
 
-    // The sign-in token is of the old boot: the module refuses it, the SDK gets a new one.
-    assert.equal((await s.refreshConfig()).user, 'Ann');
+    // The sign-in token is of the old boot: the module refuses it; the password
+    // remembered for that boot is gone too (a new spk), so the page asks for it.
+    const reading = s.refreshConfig();
+    while (!s.state.asking) await new Promise((r) => setTimeout(r, 5));
+    assert.equal(s.state.asking.kind, 'password');
+    s.state.asking.submit('demo', true);
+    assert.equal((await reading).user, 'Ann');
     // The status poll sees the uptime start again: back to the sign-in.
     await s.pollStatus();
     assert.equal(s.state.phase, 'reachable');

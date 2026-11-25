@@ -180,8 +180,15 @@ export const PHONE_PIDS = { pixel: 'UElELW1vY2stMQ==', iphone: 'UElELW1vY2stMg==
 const phoneDescr = (pid) => [...Buffer.from('EXTAID', 'utf8'), ...Buffer.from(pid, 'base64')];
 
 export async function createMock({ password = 'demo', eid = 'mock-eid-0001', approveAfter = 3, personalised = true, playground = false } = {}) {
-  const devKeys = await crypto.subtle.generateKey({ name: 'X25519' }, true, ['deriveBits']);
-  const spk = b64(new Uint8Array(await crypto.subtle.exportKey('raw', devKeys.publicKey)));
+  // DEV-535: the device key (spk) is made at power-up: a reboot makes a new one.
+  let devKeys = await crypto.subtle.generateKey({ name: 'X25519' }, true, ['deriveBits']);
+  let spk = b64(new Uint8Array(await crypto.subtle.exportKey('raw', devKeys.publicKey)));
+  const newBoot = async () => {
+    devKeys = await crypto.subtle.generateKey({ name: 'X25519' }, true, ['deriveBits']);
+    spk = b64(new Uint8Array(await crypto.subtle.exportKey('raw', devKeys.publicKey)));
+    state.bootAt = Date.now();
+    state.boot += 1;
+  };
   // The public key a correct password derives (PBKDF2-SHA256, 600k, salt = eid),
   // so a wrong one gets a 401. A password change replaces it.
   let expectedPub = await derivePub(password, eid);
@@ -345,8 +352,7 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
     if (p === '/mock/api/system/reboot') {
       if (!scopeOf(req)) return [403, { error: 'scope' }];
       state.storage = state.storage.map((entry) => entry.split(':')[0] + ':-');   // a reboot locks the drives
-      state.bootAt = Date.now();
-      state.boot += 1;
+      await newBoot();
       return [200, { rebooting: true }];
     }
     if (p === '/mock/api/system/checkin' && method === 'GET') return [200, { check: 'mock-check' }];
@@ -380,8 +386,7 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
           // The module reboots into the new firmware: drives lock, uptime restarts.
           state.fwv = NEW_FIRMWARE;
           state.storage = state.storage.map((entry) => entry.split(':')[0] + ':-');
-          state.bootAt = Date.now();
-          state.boot += 1;
+          await newBoot();
           return [200, { installing: true, reboot: true }];
         }
         state.uis = MANAGER_UIS;
