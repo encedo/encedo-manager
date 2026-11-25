@@ -391,14 +391,16 @@ async function site(dir) {
   if (!newest) die(`--latest ${latestTag}: no release with latest.json by that tag`);
   await fs.writeFile(path.join(outDir, 'latest.json'), JSON.stringify(newest.doc, null, 2) + '\n');
   entries.sort((a, b) => b.doc.published - a.doc.published);
-  await fs.writeFile(path.join(outDir, 'index.html'), siteIndex(entries, latestTag, base));
+  const product = /export const PRODUCT = '([^']+)'/.exec(await fs.readFile(path.join(HERE, 'app', 'version.js'), 'utf8'))?.[1];
+  if (!product) die('app/version.js has no PRODUCT');
+  await fs.writeFile(path.join(outDir, 'index.html'), siteIndex(entries, latestTag, base, product));
 
   console.log(`site: ${entries.length} release(s), latest ${latestTag}, ${base}/latest.json`);
   for (const { doc } of entries) console.log(`  ${doc.tag}  ${doc.version}  ${doc.tar.sha256}`);
 }
 
 /** The site's front page: plain HTML, the release notes as text (no Markdown renderer to carry). */
-function siteIndex(entries, latestTag, base) {
+function siteIndex(entries, latestTag, base, product) {
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
   const repoUrl = (url) => url.replace(/\/releases\/tag\/.*$/, '');
   const sections = entries.map(({ doc, release }) => {
@@ -424,7 +426,7 @@ ${release.body?.trim() ? `<pre>${esc(release.body.trim())}</pre>\n` : ''}<p>${li
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Encedo Manager releases</title>
+<title>${esc(product)}</title>
 <style>
 :root { color-scheme: light dark; --fg: #1a1a1a; --bg: #fff; --muted: #666; --line: #ddd; --accent: #07804f; }
 @media (prefers-color-scheme: dark) { :root { --fg: #e8e8e8; --bg: #111; --muted: #999; --line: #333; --accent: #3c9; } }
@@ -438,7 +440,7 @@ a { color: var(--accent); }
 </style>
 </head>
 <body>
-<h1>Encedo Manager releases</h1>
+<h1>${esc(product)}</h1>
 <p>What a Manager checks for an update: <a href="latest.json">${esc(base)}/latest.json</a>. Every tar is signed; a Manager checks its size, sha256 and the publisher's signature before it installs it.</p>
 ${sections}
 </body>
