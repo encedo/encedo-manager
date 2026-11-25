@@ -1,6 +1,6 @@
 {
   "name": "encedo-manager",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "private": true,
   "type": "module",
   "description": "The web Manager built into the Encedo PPA: static ES modules on hem-sdk-js, served by the module itself",

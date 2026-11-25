@@ -76,15 +76,23 @@ function forgetPageState() {
   signIn.reset();
 }
 
+/** The password question on screen: nothing repaints under it while it is typed into. */
+let shownPasswordQuestion = null;
+
 function paint() {
   const route = currentRoute();
-  const { phase } = session.state;
+  const { phase, asking } = session.state;
+  // Every repaint builds the page anew, and a new password field is an empty one
+  // with no focus: while the question is open nothing redraws it (2026-11-25,
+  // PPA - the status poll and the 1 s timer cleared the field as it was typed).
+  if (phase === 'signed-in' && asking?.kind === 'password' && asking === shownPasswordQuestion) return;
+  shownPasswordQuestion = phase === 'signed-in' && asking?.kind === 'password' ? asking : null;
   if (lastPhase === 'signed-in' && phase !== 'signed-in') forgetPageState();
   lastPhase = phase;
 
   hardware.watch(route.id === 'hardware' && phase === 'signed-in');
   phones.watch(route.id === 'phones' && Boolean(phones.pairing?.qrText));
-  watchAsking(Boolean(session.state.asking) && phase === 'signed-in');
+  watchAsking(asking?.kind === 'phone' && phase === 'signed-in');   // the phone's seconds tick down; a password does not
 
   if (phase === 'unpersonalised') return renderPersonalise(root, session, personalise);
   if (phase !== 'signed-in') return renderSignIn(root, session, signIn);

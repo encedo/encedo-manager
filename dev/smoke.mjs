@@ -431,6 +431,10 @@ await evaluate(`document.querySelector('#password').value = 'demo2'; document.qu
 if (!(await waitFor(`document.querySelector('h1')?.textContent === 'The module is sealed and reachable.'`))) await fail('unticked sign-in did not get in');
 await evaluate(`location.hash = '#/keychain'; true`);
 if (!(await waitFor(`document.querySelector('.veil h1')?.textContent === 'Allow this?'`))) await fail('the keychain did not ask for the password');
+// typed into, the field stays: nothing repaints under the question (2026-11-25 on a PPA it was cleared every second)
+await evaluate(`window.__pw = document.querySelector('#scope-password'); window.__pw.value = 'typing'; true`);
+await new Promise((r) => setTimeout(r, 2500));
+if (!(await evaluate(`document.querySelector('#scope-password') === window.__pw && window.__pw.value === 'typing'`))) await fail('the password question was redrawn while it was typed into');
 if (!(await evaluate(`document.body.textContent.includes('list the keys')`))) await fail('the question does not say what it is for');
 await shot('smoke-password-scope.png');
 await evaluate(`document.querySelector('#scope-password').value = 'wrong'; document.querySelector('.veil form').requestSubmit(); true`);
