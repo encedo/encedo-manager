@@ -15,7 +15,7 @@ tried on hardware yet.
 
 | Screen | What it does |
 | --- | --- |
-| Sign-in | Password; the phone whenever the backend answers, first when a phone is paired; the 24 words as an alternative; air-gapped notice. DEV-535: a sign-in is the token alone (the configuration is read when Settings shows, the phones when the Phones page does); calls name no scope, the SDK picks the token and asks through the session; the status every 15 s (a reboot the page did not cause sends it back to the sign-in), the check-in every 5 minutes |
+| Sign-in | Password; the phone whenever the backend answers, first when a phone is paired; the 24 words as an alternative; air-gapped notice. DEV-535: a sign-in is the token alone (the configuration is read when Settings shows, the phones when the Phones page does); calls name no scope, the SDK picks the token and asks through the session; the status every 15 s, the check-in every 5 minutes; a reboot is told by the module's spk in the SDK, which asks for the password again |
 | Overview | Module, firmware and update flag, backend, drives, paired phones, uptime, "needs you" |
 | Secure drive | Unlock read-only or read-write, lock |
 | Keychain | Sorted, searched, paged; a key opens under its own row: public half, description as bytes, rename, delete, share code with QR or by e-mail; create, import, read a pasted share code |

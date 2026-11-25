@@ -288,23 +288,16 @@ export class Session extends EventTarget {
   }
 
   /**
-   * The status, asked every few seconds while signed in (owner, 2026-11-25).
-   * It also tells a reboot this page did not cause - a power cycle: an uptime
-   * shorter than the last one. Every token and the remembered password are of
-   * the old boot then, and the drives are locked: back to the sign-in. A module
-   * that does not answer leaves things as they are.
+   * The status, asked every few seconds while signed in (owner, 2026-11-25):
+   * what the pages show - drives, temperature, failure state. A reboot is not
+   * judged from it: the SDK tells one by the module's spk (DEV-535) and asks
+   * for the password again at the next operation. A module that does not
+   * answer leaves things as they are.
    */
   async pollStatus() {
-    const before = this.state.status?.uptime;
     let status;
     try { status = await this.hem.getStatus({ timeoutMs: 5000 }); } catch (e) { if (!(e instanceof HemError)) throw e; return null; }
-    const rebooted = Number.isFinite(before) && Number.isFinite(status?.uptime) && status.uptime < before;
-    if (rebooted && this.state.phase === 'signed-in') {
-      this.hem.clearKeys();
-      this.#set({ status, phase: 'reachable', mode: null, config: null, phones: null, keys: null, logs: null, selftest: null, master: false, remember: false, asking: null });
-    } else {
-      this.#set({ status });
-    }
+    this.#set({ status });
     return status;
   }
 

@@ -111,9 +111,9 @@ function probeAgain() {
   })();
 }
 
-// The module's status every 15 s while signed in (a reboot it did not cause
-// sends this page back to the sign-in), and the check-in every 5 minutes while
-// it answers (owner, 2026-11-25).
+// The module's status every 15 s while signed in, and the check-in every 5
+// minutes while it answers (owner, 2026-11-25). A reboot is the SDK's to tell
+// (the module's spk, DEV-535), not the status's.
 const STATUS_EVERY_MS = 15_000;
 const CHECKIN_EVERY_MS = 5 * 60_000;
 setInterval(() => { if (session.state.phase === 'signed-in') session.pollStatus(); }, STATUS_EVERY_MS);

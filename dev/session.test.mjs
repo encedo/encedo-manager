@@ -1390,7 +1390,7 @@ test('a module out of the box takes a firmware update without a token', async ()
   }
 });
 
-test('a reboot this page did not cause (a power cycle): a picked token is renewed, the status poll sends the page to the sign-in, and the sign-in works (DEV-535)', async () => {
+test('a reboot this page did not cause (a power cycle): the refused token is renewed after the password is asked again, and a new sign-in works (DEV-535)', async () => {
   const own = await ownModule();
   try {
     const s = new Session(own.urls);
@@ -1410,11 +1410,13 @@ test('a reboot this page did not cause (a power cycle): a picked token is renewe
     assert.equal(s.state.asking.kind, 'password');
     s.state.asking.submit('demo', true);
     assert.equal((await reading).user, 'Ann');
-    // The status poll sees the uptime start again: back to the sign-in.
+    // The status poll only shows what the module says - a reboot is told by the spk, not by it.
     await s.pollStatus();
-    assert.equal(s.state.phase, 'reachable');
-    assert.equal(s.state.config, null);
-    // 2026-11-25 on a PPA: this sign-in was refused with 401 (a cached token of the old boot).
+    assert.equal(s.state.phase, 'signed-in');
+    // 2026-11-25 on a PPA: a sign-in after a reboot was refused with 401 (a cached token of the old boot).
+    await other.waitForDevice({ intervalMs: 10 });
+    await other.signIn('demo', { remember: true });
+    await other.reboot();                         // again; this page still holds tokens of the old boot
     await s.signIn('demo', { remember: true });
     assert.equal(s.state.phase, 'signed-in');
     assert.equal((await s.refreshConfig()).user, 'Ann');
