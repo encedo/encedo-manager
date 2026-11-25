@@ -116,7 +116,7 @@ test('waitForDevice can be cancelled', async () => {
   await assert.rejects(s.waitForDevice({ intervalMs: 10, timeoutMs: 200, signal: ctl.signal }), (e) => e.code === 'aborted');
 });
 
-test('a wrong password is refused, the right one signs in and lists the paired phone', async () => {
+test('a wrong password is refused, the right one signs in - and reads nothing else until a page asks (DEV-535)', async () => {
   const s = new Session(urls());
   await s.waitForDevice({ intervalMs: 10 });
   await s.prepare();
@@ -125,8 +125,10 @@ test('a wrong password is refused, the right one signs in and lists the paired p
   await s.signIn('demo', { remember: true });
   assert.equal(s.state.phase, 'signed-in');
   assert.equal(s.state.mode, 'password');
-  assert.equal(s.state.config.user, 'Ann');
-  assert.deepEqual(s.state.phones.map((p) => p.pid), [PHONE_PIDS.pixel]);
+  assert.equal(s.state.config, null, 'the configuration is read by Settings, not by the sign-in');
+  assert.equal(s.state.phones, null, 'the phones by the Phones page');
+  assert.equal((await s.refreshConfig()).user, 'Ann');
+  assert.deepEqual((await s.refreshPhones()).map((p) => p.pid), [PHONE_PIDS.pixel]);
 });
 
 test('signing out asks the broker again whether a phone is paired', async () => {
@@ -187,7 +189,7 @@ test('without "remember", every scope asks for the password, and the tick stops 
   await s.prepare();
   await s.signIn('demo');                       // unticked, as the form starts
   assert.equal(s.state.remember, false);
-  assert.equal(s.state.config.user, 'Ann', 'signing in itself needed nothing more');
+  assert.equal((await s.refreshConfig()).user, 'Ann', 'the sign-in token serves the configuration: nothing asked');
 
   // The scope the sign-in took a token for costs nothing: it is cached.
   assert.ok(await s.token(SIGNIN_SCOPE));
@@ -583,6 +585,7 @@ test('the phones are read out of the keychain and checked against the broker', a
   await s.signIn('demo', { remember: true });
   assert.deepEqual(s.pairedPhones(), [], 'nothing before the keychain is read');
   await s.loadKeys();
+  await s.refreshPhones();                      // the Phones page asks the broker when it shows
   const phones = s.pairedPhones();
   assert.deepEqual(phones.map((p) => [p.label, p.pid, p.inKeychain, p.atBroker]), [
     ["Ann's Pixel", PHONE_PIDS.pixel, true, true],
@@ -839,6 +842,7 @@ test('a reboot locks the drives and leaves the browser signed out', async () => 
 
 test('the settings the module keeps are read, changed and read back', async () => {
   const s = await signedIn();
+  await s.refreshConfig();                      // what the Settings page does when it shows
   assert.equal(s.state.config.user, 'Ann');
   assert.equal(s.state.config.origin, '*');
   assert.equal(s.state.config.trusted_backend, true);
@@ -995,6 +999,7 @@ test('a module out of the box is told by its status, and the words plus the pass
     assert.equal(s.state.status.inited, undefined);
     await assert.rejects(s.signIn('demo'), (e) => e.code === 'http_401', 'the old mock password is nobody');
     await s.signIn('first-light', { remember: true });
+    await s.refreshConfig();
     assert.equal(s.state.config.user, 'Ann');
     assert.equal(s.state.config.storage_mode, 0x51);
     assert.equal(s.state.config.trusted_backend, false);
@@ -1380,6 +1385,34 @@ test('a module out of the box takes a firmware update without a token', async ()
     await s.prepare();
     assert.equal(s.state.phase, 'unpersonalised', 'still out of the box');
     assert.equal(s.state.version.fwv, NEW_FIRMWARE, 'on the new firmware');
+  } finally {
+    own.server.close();
+  }
+});
+
+test('a reboot this page did not cause (a power cycle): a picked token is renewed, the status poll sends the page to the sign-in, and the sign-in works (DEV-535)', async () => {
+  const own = await ownModule();
+  try {
+    const s = new Session(own.urls);
+    await s.waitForDevice({ intervalMs: 10 });
+    await s.prepare();
+    await s.signIn('demo', { remember: true });
+    await s.refreshStatus();
+    const other = new Session(own.urls);          // reboots the module behind this page's back
+    await other.waitForDevice({ intervalMs: 10 });
+    await other.signIn('demo', { remember: true });
+    await other.reboot();
+
+    // The sign-in token is of the old boot: the module refuses it, the SDK gets a new one.
+    assert.equal((await s.refreshConfig()).user, 'Ann');
+    // The status poll sees the uptime start again: back to the sign-in.
+    await s.pollStatus();
+    assert.equal(s.state.phase, 'reachable');
+    assert.equal(s.state.config, null);
+    // 2026-11-25 on a PPA: this sign-in was refused with 401 (a cached token of the old boot).
+    await s.signIn('demo', { remember: true });
+    assert.equal(s.state.phase, 'signed-in');
+    assert.equal((await s.refreshConfig()).user, 'Ann');
   } finally {
     own.server.close();
   }

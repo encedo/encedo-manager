@@ -99,6 +99,15 @@ export function createSettingsView({ session, paint, probeAgain }) {
       }, 'The module is wiped. It comes back waiting to be personalised.');
     },
 
+    /** The configuration is read when this page shows, not at sign-in (DEV-535). */
+    ensure() {
+      if (session.state.config || view.busy || view.error) return;
+      view.busy = 'load';
+      queueMicrotask(() => session.refreshConfig()
+        .catch((e) => { view.error = describeError(e); })
+        .finally(() => { view.busy = null; paint(); }));
+    },
+
     reset() {
       Object.assign(view, { busy: null, error: null, notice: null, confirmWipe: false, domainCheck: null });
     },

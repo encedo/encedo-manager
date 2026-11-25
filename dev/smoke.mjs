@@ -296,7 +296,8 @@ if (!(await evaluate(`document.body.textContent.includes('still being written')`
 //     a new one paired through the QR code; then one unpaired
 await evaluate(`location.hash = '#/phones'; true`);
 if (!(await waitFor(`document.querySelector('h1')?.textContent === 'Two phones can answer for you.'`))) await fail('the phones did not render');
-if (!(await evaluate(`document.body.textContent.includes('Keychain only')`))) await fail('the phone the broker does not know is not marked');
+// the broker's list comes when the page shows (DEV-535)
+if (!(await waitFor(`document.body.textContent.includes('Keychain only')`))) await fail('the phone the broker does not know is not marked');
 await evaluate(`[...document.querySelectorAll('button')].find(b => b.textContent === 'Pair a phone').click(); true`);
 if (!(await waitFor(`!!document.querySelector('figure.qr svg')`))) await fail('the pairing QR did not appear');
 if (!(await evaluate(`/\\d+ s left/.test(document.querySelector('.card-head .v')?.textContent ?? '') || [...document.querySelectorAll('.card-head .v')].some(v => /\\d+ s left/.test(v.textContent))`))) await fail('the pairing timer is not shown');
@@ -509,7 +510,10 @@ await evaluate(`[...document.querySelectorAll('button')].find(b => b.textContent
 if (!(await waitFor(`!!document.querySelector('#password')`, 15000))) await fail('the sign-in did not come back after personalising');
 await evaluate(`location.hash = '#/'; document.querySelector('#remember').checked = true; document.querySelector('#password').value = 'first-light'; document.querySelector('form').requestSubmit(); true`);
 if (!(await waitFor(`document.querySelector('h1')?.textContent === 'The module is sealed and reachable.'`))) await fail('the new password does not open the module');
-if (!(await evaluate(`document.body.textContent.includes('Ann')`))) await fail('the owner is not the one who personalised it');
+// the owner is in the configuration, read when Settings shows (DEV-535: not at sign-in)
+await evaluate(`location.hash = '#/settings'; true`);
+if (!(await waitFor(`document.querySelector('h1')?.textContent.startsWith('Ann')`))) await fail('the owner is not the one who personalised it');
+await evaluate(`location.hash = '#/'; true`);
 
 // 12. software: what runs and what is newer, then the firmware installed — the
 //     module reboots, the page waits for it and comes back on the new version

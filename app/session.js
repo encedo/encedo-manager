@@ -26,7 +26,9 @@ export class Session extends EventTarget {
     // then says so on every screen. To do: a diagnostic screen when the module
     // answers over http only (status.https false), instead of a bare error.
     const plainHttp = /^http:\/\//i.test(hem) && (service === true || isLoopback(hem));
-    this.hem = new HEMClass(hem, { broker, allowPlainHttpLogin: plainHttp });
+    // DEV-535: a call without a token gets one from the SDK - cached, the remembered
+    // password, or this session's token(scope): the password or the phone, asked here.
+    this.hem = new HEMClass(hem, { broker, allowPlainHttpLogin: plainHttp, authorize: (scope) => this.token(scope) });
     this.state = {
       plainHttp,               // DEV-532: a sign-in may go over plain http (service mode): every screen says so
       phase: 'probing',        // probing | reachable | unpersonalised | signed-in
@@ -147,23 +149,27 @@ export class Session extends EventTarget {
    * issues are cached, so no scope is asked about twice.
    */
   async signIn(password, { remember = false } = {}) {
-    const token = await this.hem.authorizePassword(password, SIGNIN_SCOPE, { expSeconds: SIGNIN_EXP, remember });
+    // DEV-535: a sign-in starts from nothing: a token of the module's previous
+    // boot (a reboot, a power cycle this page did not see) would be refused.
+    this.hem.clearKeys();
+    await this.hem.authorizePassword(password, SIGNIN_SCOPE, { expSeconds: SIGNIN_EXP, remember });
     this.#set({ remember });
-    await this.#afterSignIn('password', token);
+    this.#afterSignIn('password');
   }
 
   async signInWithPhone({ signal = null, onPending = null, pollTimeout = 180_000 } = {}) {
-    const token = await this.hem.authorizeRemote(SIGNIN_SCOPE, { pollInterval: 2000, pollTimeout, onPending, signal });
-    await this.#afterSignIn('phone', token);
+    this.hem.clearKeys();   // DEV-535
+    await this.hem.authorizeRemote(SIGNIN_SCOPE, { pollInterval: 2000, pollTimeout, onPending, signal });
+    this.#afterSignIn('phone');
   }
 
-  async #afterSignIn(mode, token) {
-    const config = await this.hem.getConfig(token);
-    let phones = null;
-    if (this.state.online) {
-      try { phones = await this.hem.listExtAuth(token); } catch (e) { if (!(e instanceof HemError)) throw e; }
-    }
-    this.#set({ phase: 'signed-in', mode, config, phones, lastError: null });
+  /**
+   * Signed in: the token is the proof, the module accepted the password or the
+   * phone. Nothing else is read here (owner, 2026-11-25): the configuration
+   * when Settings shows it, the phones when the Phones page does.
+   */
+  #afterSignIn(mode) {
+    this.#set({ phase: 'signed-in', mode, config: null, phones: null, lastError: null });
   }
 
   signOut() {
@@ -281,6 +287,27 @@ export class Session extends EventTarget {
     return status;
   }
 
+  /**
+   * The status, asked every few seconds while signed in (owner, 2026-11-25).
+   * It also tells a reboot this page did not cause - a power cycle: an uptime
+   * shorter than the last one. Every token and the remembered password are of
+   * the old boot then, and the drives are locked: back to the sign-in. A module
+   * that does not answer leaves things as they are.
+   */
+  async pollStatus() {
+    const before = this.state.status?.uptime;
+    let status;
+    try { status = await this.hem.getStatus({ timeoutMs: 5000 }); } catch (e) { if (!(e instanceof HemError)) throw e; return null; }
+    const rebooted = Number.isFinite(before) && Number.isFinite(status?.uptime) && status.uptime < before;
+    if (rebooted && this.state.phase === 'signed-in') {
+      this.hem.clearKeys();
+      this.#set({ status, phase: 'reachable', mode: null, config: null, phones: null, keys: null, logs: null, selftest: null, master: false, remember: false, asking: null });
+    } else {
+      this.#set({ status });
+    }
+    return status;
+  }
+
   /** Disks from getStatus(): [{ index, bytes, state }] with state locked | ro | rw. */
   disks() { return parseStorage(this.state.status); }
 
@@ -305,12 +332,11 @@ export class Session extends EventTarget {
    * is not listed.
    */
   async loadKeys() {
-    const token = await this.token('keymgmt:list');
-    let page = await this.hem.listKeys(token);
+    let page = await this.hem.listKeys();
     const list = [...page.list];
     let next = page.offset + page.listed;
     while (next < page.total && page.listed) {
-      page = await this.hem.listKeys(token, { offset: next });
+      page = await this.hem.listKeys(undefined, { offset: next });
       list.push(...page.list);
       next = page.offset + page.listed;
     }
@@ -326,9 +352,8 @@ export class Session extends EventTarget {
    * a failure.
    */
   async findKeys(pattern) {
-    const token = await this.token('keymgmt:search');
     try {
-      return (await this.hem.searchKeys(token, pattern)).list.map(describeKey);
+      return (await this.hem.searchKeys(undefined, pattern)).list.map(describeKey);
     } catch (e) {
       if (e instanceof HemError && e.code === 'http_404') return [];
       throw e;
@@ -337,7 +362,7 @@ export class Session extends EventTarget {
 
   /** Type and public key of one entry; the list carries no key bytes. */
   async keyPublic(kid) {
-    const key = await this.hem.getKeyPublicInfo(await this.token('keymgmt:get'), kid);
+    const key = await this.hem.getKeyPublicInfo(undefined, kid);
     const pub = key.pubkey ?? key.der;
     return { kid, type: [...key.flags, key.type].join(','), pubkey: pub ? bytesToB64(pub) : '', updated: key.updated };
   }
@@ -348,7 +373,7 @@ export class Session extends EventTarget {
    * a caller that has text to put there encodes it with toB64Text() first.
    */
   async createKey({ label, type, mode = null, descr = '' }) {
-    const { kid } = await this.hem.createKeyPair(await this.token('keymgmt:gen'), asLabel(label), type, { descr: descrBytes(descr), mode });
+    const { kid } = await this.hem.createKeyPair(undefined, asLabel(label), type, { descr: descrBytes(descr), mode });
     await this.loadKeys();
     return kid;
   }
@@ -356,7 +381,7 @@ export class Session extends EventTarget {
   /** Import someone else's public key, pasted as base64 or hex. */
   async importKey({ label, type, mode = null, pubkey, descr = '' }) {
     const bytes = parseKeyBytes(pubkey);
-    const { kid } = await this.hem.importPublicKey(await this.token('keymgmt:imp'), asLabel(label), type, bytes, { descr: descrBytes(descr), mode });
+    const { kid } = await this.hem.importPublicKey(undefined, asLabel(label), type, bytes, { descr: descrBytes(descr), mode });
     await this.loadKeys();
     return kid;
   }
@@ -372,12 +397,12 @@ export class Session extends EventTarget {
     const before = this.state.keys?.find((k) => k.kid === kid)?.descrB64 ?? null;
     const now = bytes?.length ? bytesToB64(bytes) : '';
     const changed = before === null || now !== (before ?? '');
-    await this.hem.updateKey(await this.token('keymgmt:upd'), kid, asLabel(label), changed ? bytes : undefined);
+    await this.hem.updateKey(undefined, kid, asLabel(label), changed ? bytes : undefined);
     await this.loadKeys();
   }
 
   async removeKey(kid) {
-    await this.hem.deleteKey(await this.token('keymgmt:del'), kid);
+    await this.hem.deleteKey(undefined, kid);
     await this.loadKeys();
   }
 
@@ -424,7 +449,7 @@ export class Session extends EventTarget {
   /** Ask the broker again which phones it routes to. Needs the backend. */
   async refreshPhones() {
     if (!this.state.online) return this.state.phones;
-    const phones = await this.hem.listExtAuth(await this.token('system:config'));
+    const phones = await this.hem.listExtAuth();
     this.#set({ phones, paired: phones.length > 0, lastError: null });
     return phones;
   }
@@ -439,8 +464,7 @@ export class Session extends EventTarget {
    */
   async pairPhone({ onQrCode = null, onPending = null, signal = null, pollInterval = 2000, pollTimeout = 60_000 } = {}) {
     if (!this.state.online) throw new HemError('The Encedo backend is unreachable', { code: 'broker_error' });
-    const token = await this.token('system:config');
-    const result = await this.hem.registerExtAuth(token, { onQrCode, onPending, signal, pollInterval, pollTimeout });
+    const result = await this.hem.registerExtAuth(undefined, { onQrCode, onPending, signal, pollInterval, pollTimeout });
     await this.loadKeys();
     await this.refreshPhones().catch((e) => { if (!(e instanceof HemError)) throw e; });
     return result;
@@ -456,7 +480,7 @@ export class Session extends EventTarget {
     const done = { broker: false, key: false };
     if (pid && this.state.online && !skipBroker) {
       try {
-        await this.hem.deleteExtAuth(await this.token('system:config'), pid);
+        await this.hem.deleteExtAuth(undefined, pid);
         done.broker = true;
       } catch (e) {
         // The broker refusing (4xx: unknown pid, a subscription already gone)
@@ -469,7 +493,7 @@ export class Session extends EventTarget {
       }
     }
     if (kid) {
-      await this.hem.deleteKey(await this.token('keymgmt:del'), kid);
+      await this.hem.deleteKey(undefined, kid);
       done.key = true;
     }
     if (this.state.keys) await this.loadKeys();
@@ -515,7 +539,7 @@ export class Session extends EventTarget {
     try {
       // An unpersonalised module takes an upgrade without a token — that is how
       // a module that shipped with old firmware gets current before its first use.
-      const token = this.state.phase === 'signed-in' ? await this.token('system:upgrade') : null;
+      const token = this.state.phase === 'signed-in' ? undefined : null;   // DEV-535: undefined = the SDK picks it
       let image = bytes;
       if (source !== 'file') {
         image = source === 'pages'
@@ -763,14 +787,14 @@ export class Session extends EventTarget {
 
   /** Read the configuration again — after saving, or after unlocking it. */
   async refreshConfig() {
-    const config = await this.hem.getConfig(await this.token('system:config'));
+    const config = await this.hem.getConfig();
     this.#set({ config, lastError: null });
     return config;
   }
 
   /** Write only what changed, and read back what the module made of it. */
   async saveConfig(patch) {
-    await this.hem.setConfig(await this.token('system:config'), patch);
+    await this.hem.setConfig(undefined, patch);
     return this.refreshConfig();
   }
 
@@ -786,7 +810,7 @@ export class Session extends EventTarget {
   async changePassword(newPassword, currentPassword = null) {
     const master = this.state.master ? this.#masterToken : null;
     const exp = master ? (jwtParse(master)?.exp ?? 0) : 0;
-    const token = master && exp > Date.now() / 1000 + 10 ? master : await this.token('system:config');
+    const token = master && exp > Date.now() / 1000 + 10 ? master : undefined;   // the 24 words' token, or the SDK's pick
     await this.hem.setUserPassword(token, newPassword, token === master ? {} : { currentPassword });
     this.#masterToken = null;
     this.hem.clearKeys();
@@ -805,7 +829,7 @@ export class Session extends EventTarget {
   /** Register a name for this module under ence.do. Needs the backend. */
   async registerDomain(prefix) {
     if (!this.state.online) throw new HemError('The Encedo backend is unreachable', { code: 'broker_error' });
-    const tls = await this.hem.registerDomain(await this.token('system:config'), prefix, { pollInterval: 1000 });
+    const tls = await this.hem.registerDomain(undefined, prefix, { pollInterval: 1000 });
     await this.refreshConfig().catch(() => {});
     return tls;
   }
@@ -818,7 +842,7 @@ export class Session extends EventTarget {
    * left the factory, so this session is over the moment the module accepts it.
    */
   async wipeout() {
-    await this.hem.setConfig(await this.token('system:config'), { wipeout: true });
+    await this.hem.setConfig(undefined, { wipeout: true });
     this.hem.clearKeys();
     this.#set({ phase: 'probing', attempts: 0, mode: null, config: null, status: null, keys: null, logs: null, selftest: null, master: false });
   }
@@ -831,7 +855,7 @@ export class Session extends EventTarget {
    * runs; the answer is a set of counters, 0 meaning nothing wrong.
    */
   async selftest() {
-    const result = await this.hem.selftest(await this.token('system:config'));
+    const result = await this.hem.selftest();
     await this.refreshStatus().catch(() => {});      // fls_state may have moved
     this.#set({ selftest: result });
     return result;
@@ -839,7 +863,8 @@ export class Session extends EventTarget {
 
   /** Reboot the module. Everything unlocked locks, and this browser loses it. */
   async reboot() {
-    const answer = await this.hem.reboot(await this.token('system:config'));
+    const answer = await this.hem.reboot();
+    this.hem.clearKeys();   // DEV-535: every token and the remembered password die with this boot
     this.#set({ phase: 'probing', attempts: 0, status: null, keys: null, logs: null });
     return answer;
   }
@@ -858,17 +883,16 @@ export class Session extends EventTarget {
    * still being written - but names it `current`; it goes last in `ids`.
    */
   async loadLogs() {
-    const token = await this.token('logger:get');
     const nonce = crypto.getRandomValues(new Uint8Array(32));
-    const loggerKey = await this.hem.getLoggerKey(token, { nonce });
+    const loggerKey = await this.hem.getLoggerKey(undefined, { nonce });
     const signed = await verifyLoggerKey(loggerKey, nonce);
 
-    let page = await this.hem.listLogFiles(token);
+    let page = await this.hem.listLogFiles();
     const ids = [...(page.id ?? [])];
     const total = Number(page.total ?? ids.length);
     let guard = 0;
     while (ids.length < total && page.id?.length && guard++ < 100) {
-      page = await this.hem.listLogFiles(token, { offset: ids.length });
+      page = await this.hem.listLogFiles(undefined, { offset: ids.length });
       if (!page.id?.length) break;
       ids.push(...page.id);
     }
@@ -886,10 +910,9 @@ export class Session extends EventTarget {
    * ten files costs ten requests and not twenty.
    */
   async readLog(id) {
-    const token = await this.token('logger:get');
     let answer;
     try {
-      answer = await this.hem.getLogFile(token, id);
+      answer = await this.hem.getLogFile(undefined, id);
     } catch (e) {
       // The module refuses the file it is writing into right now: 409 since
       // firmware 1.3 (406 before). It is not listed any more, but its id is

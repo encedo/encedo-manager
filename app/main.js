@@ -51,11 +51,11 @@ const PAGES = {
   overview: () => renderOverview(session),
   keychain: () => { keychain.ensure(); return renderKeychain(session, keychain); },
   drive: () => renderDrive(session, drive),
-  phones: () => { keychain.ensure(); return renderPhones(session, phones); },
+  phones: () => { keychain.ensure(); phones.ensure(); return renderPhones(session, phones); },
   log: () => { log.ensure(); return renderLog(session, log); },
   hardware: () => renderHardware(session, hardware),
   software: () => renderSoftware(session, software),
-  settings: () => renderSettings(session, settings),
+  settings: () => { settings.ensure(); return renderSettings(session, settings); },
 };
 
 /** While a phone is being asked, the seconds left tick down on the modal. */
@@ -110,6 +110,14 @@ function probeAgain() {
     }
   })();
 }
+
+// The module's status every 15 s while signed in (a reboot it did not cause
+// sends this page back to the sign-in), and the check-in every 5 minutes while
+// it answers (owner, 2026-11-25).
+const STATUS_EVERY_MS = 15_000;
+const CHECKIN_EVERY_MS = 5 * 60_000;
+setInterval(() => { if (session.state.phase === 'signed-in') session.pollStatus(); }, STATUS_EVERY_MS);
+setInterval(() => { if (session.state.phase !== 'probing') session.checkIn(); }, CHECKIN_EVERY_MS);
 
 session.addEventListener('change', paint);
 onRouteChange(paint);

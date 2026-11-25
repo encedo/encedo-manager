@@ -70,9 +70,18 @@ export function createPhonesView({ session, paint, keychain }) {
       else if (!on && ticking) { clearInterval(ticking); ticking = null; }
     },
 
+    /** The broker's list of phones is read when this page shows, not at sign-in (DEV-535). */
+    ensure() {
+      if (session.state.phones || !session.state.online || view.loading || view.error) return;
+      view.loading = true;      // not busy: pairing stays possible meanwhile
+      queueMicrotask(() => session.refreshPhones()
+        .catch((e) => { view.error = describeError(e); })
+        .finally(() => { view.loading = false; paint(); }));
+    },
+
     reset() {
       view.pairing?.cancel();
-      Object.assign(view, { pairing: null, confirmUnpair: null, anyway: null, busy: null, error: null, notice: null });
+      Object.assign(view, { pairing: null, confirmUnpair: null, anyway: null, busy: null, loading: false, error: null, notice: null });
     },
   };
   return view;

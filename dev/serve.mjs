@@ -197,7 +197,8 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
     subscribers: [{ pid: PHONE_PIDS.pixel }],
     pairings: {},                             // rid -> { pid, polls }
     polls: {},
-    uptime: 3 * 86400 + 5 * 3600 + 12 * 60,
+    bootAt: Date.now() - (3 * 86400 + 5 * 3600 + 12 * 60) * 1000,   // DEV-535: uptime is real time since then
+    boot: 1,                                  // DEV-535: a token carries it; one of another boot gets 401
     temp: 42,
     selftest: null,
     // A module out of the box: /status carries `inited` (any value) and nothing
@@ -290,6 +291,9 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
 
   /** Returns [status, body] or null when the path is not a mock path. */
   return async function mock(method, p, body, req, raw = null) {
+    // DEV-535: as the firmware - a token issued before the last reboot is refused.
+    const tokenBoot = jwtPayload((req?.headers?.authorization ?? '').replace(/^Bearer /, ''))?.boot;
+    if (p.startsWith('/mock/') && tokenBoot !== undefined && tokenBoot !== state.boot) return [401, { error: 'token of another boot' }];
     // ---- device -----------------------------------------------------------------------
     // The field set a real PPA answers with — no `conf` on this firmware, and the
     // signing keys and signatures of what it is running. The values are made up.
@@ -306,7 +310,6 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
     // The fields a real PPA answers with — no hostname (that is in the config),
     // a whole-degree temperature, and `ctx`, whose meaning the firmware knows.
     if (p === '/mock/api/system/status') {
-      state.uptime += 7;
       state.temp = Math.min(52, Math.max(38, state.temp + Math.round((Math.random() - 0.5) * 2)));
       let format;
       if (state.formatPolls > 0) format = --state.formatPolls > 1 ? 'formatting' : 'done';
@@ -314,7 +317,7 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
         ...(state.personalised ? {} : { inited: false }),
         ...(format ? { format } : {}),
         ctx: 0,
-        uptime: state.uptime,
+        uptime: Math.floor((Date.now() - state.bootAt) / 1000),
         ts: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
         time: Math.floor(Date.now() / 1000),
         storage: state.storage,
@@ -342,7 +345,8 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
     if (p === '/mock/api/system/reboot') {
       if (!scopeOf(req)) return [403, { error: 'scope' }];
       state.storage = state.storage.map((entry) => entry.split(':')[0] + ':-');   // a reboot locks the drives
-      state.uptime = 0;
+      state.bootAt = Date.now();
+      state.boot += 1;
       return [200, { rebooting: true }];
     }
     if (p === '/mock/api/system/checkin' && method === 'GET') return [200, { check: 'mock-check' }];
@@ -376,7 +380,8 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
           // The module reboots into the new firmware: drives lock, uptime restarts.
           state.fwv = NEW_FIRMWARE;
           state.storage = state.storage.map((entry) => entry.split(':')[0] + ':-');
-          state.uptime = 0;
+          state.bootAt = Date.now();
+          state.boot += 1;
           return [200, { installing: true, reboot: true }];
         }
         state.uis = MANAGER_UIS;
@@ -447,7 +452,7 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
     if (p === '/mock/api/auth/token' && method === 'POST') {
       const { ok, payload } = await verifyEjwt(body.auth);
       if (!ok) return [401, { error: 'authentication failed' }];
-      return [200, { token: jwt({ scope: payload.scope, exp: payload.exp, sub: payload.iss === masterPub ? 'M' : 'U' }) }];
+      return [200, { token: jwt({ scope: payload.scope, exp: payload.exp, sub: payload.iss === masterPub ? 'M' : 'U', boot: state.boot }) }];
     }
     if (p === '/mock/api/auth/ext/request') {
       // The real authreq is a JWT with the scope sealed for each phone; the
@@ -457,7 +462,7 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
     if (p === '/mock/api/auth/ext/token') {
       // The reply names the scope the phone approved, the way the real one is bound to it.
       const scope = String(body.authreply ?? '').replace(/^mock-reply:/, '') || 'system:config';
-      return [200, { token: jwt({ scope, exp: Math.floor(Date.now() / 1000) + 300, sub: 'phone' }) }];
+      return [200, { token: jwt({ scope, exp: Math.floor(Date.now() / 1000) + 300, sub: 'phone', boot: state.boot }) }];
     }
     if (p === '/mock/api/auth/ext/mac') return [200, { nonce: 'N', mac: 'M', eid }];
     // Pairing a phone: the module's challenge, then its check of the phone's reply,
@@ -508,7 +513,8 @@ export async function createMock({ password = 'demo', eid = 'mock-eid-0001', app
       return [200, { offset, deleted: 0, invalid: 0, total: state.keys.length, listed: page.length, list: listed(page) }];
     }
     if (p.startsWith('/mock/api/keymgmt/get/')) {
-      if (scopeOf(req) !== 'keymgmt:get') return [403, { error: 'scope' }];
+      // as the firmware: keymgmt:get, keymgmt:gen or keymgmt:use of that key (SDK REQUIRED_SCOPES)
+      if (!['keymgmt:get', 'keymgmt:gen', `keymgmt:use:${p.split('/').pop()}`].includes(scopeOf(req))) return [403, { error: 'scope' }];
       const k = state.keys.find((x) => x.kid === p.split('/').pop());
       return k ? [200, { type: k.type, label: k.label, ...(k.descr ? { descr: k.descr } : {}), created: k.created, updated: k.updated, pubkey: k.pubkey }] : [404, { error: 'no such key' }];
     }
